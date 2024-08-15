@@ -11,16 +11,13 @@ class VideoPlayerElement extends HTMLElement {
   }
 
   player = new VideoPlayerService();
+  video!: HTMLVideoElement;
 
   connectedCallback() {
     this.parseAttributes();
-
-    this.player.init();
-
+    this.initElement();
     // браузер вызывает этот метод при добавлении элемента в документ
     // (может вызываться много раз, если элемент многократно добавляется/удаляется)
-
-    this.innerHTML = `<video></video>`;
   }
 
   disconnectedCallback() {
@@ -48,7 +45,23 @@ class VideoPlayerElement extends HTMLElement {
     }
 
     Env.set(name, newValue ?? oldValue ?? "");
-    this.player.init();
+
+    this.initElement();
+  }
+
+  private initElement() {
+    this.removeChild(this.video);
+
+    this.video = this.createElement();
+    this.player.init(this.video);
+
+    this.appendChild(this.video);
+  }
+
+  private createElement(): HTMLVideoElement {
+    const video = new HTMLVideoElement();
+
+    return video;
   }
 
   private parseAttributes() {
