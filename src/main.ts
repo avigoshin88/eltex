@@ -1,7 +1,9 @@
 import { ATTRIBUTE } from "./constants/attributes";
 import { CONFIG_KEY } from "./constants/configKeys";
+import { API } from "./services/api.service";
 import { Env } from "./services/env.service";
-import { VideoPlayerService } from "./services/player.service";
+import { VideoPlayerBuilderService } from "./services/player/player-builder.service";
+import { VideoPlayerService } from "./services/player/player.service";
 
 import "./style.css";
 
@@ -10,8 +12,11 @@ class VideoPlayerElement extends HTMLElement {
     super();
   }
 
-  player = new VideoPlayerService();
   video!: HTMLVideoElement;
+  container!: HTMLDivElement;
+
+  player = new VideoPlayerService();
+  builder = new VideoPlayerBuilderService();
 
   connectedCallback() {
     this.parseAttributes();
@@ -50,22 +55,22 @@ class VideoPlayerElement extends HTMLElement {
   }
 
   private initElement() {
-    this.removeChild(this.video);
+    if (this.container) {
+      this.removeChild(this.container);
+    }
 
-    this.video = this.createElement();
+    const { container, video } = this.builder.createPlayer();
+
+    this.container = container;
+    this.video = video;
+
     this.player.init(this.video);
 
-    this.appendChild(this.video);
-  }
-
-  private createElement(): HTMLVideoElement {
-    const video = new HTMLVideoElement();
-
-    return video;
+    this.appendChild(this.container);
   }
 
   private parseAttributes() {
-    Env.set(CONFIG_KEY.API, this.parseAttribute(ATTRIBUTE.API) as string);
+    API.init(this.parseAttribute(ATTRIBUTE.API) as string);
     Env.set(CONFIG_KEY.MODE, this.parseAttribute(ATTRIBUTE.MODE) as string);
 
     const connection = this.parseAttribute(ATTRIBUTE.CONNECTION, true);
@@ -85,12 +90,12 @@ class VideoPlayerElement extends HTMLElement {
   }
 }
 
-(function () {
-  customElements.define("video-player", VideoPlayerElement);
+customElements.define("video-player", VideoPlayerElement);
 
-  if (import.meta.env.DEV) {
-    document.querySelector<HTMLDivElement>("#app")!.innerHTML = `
-      <video-player API="123123"/>
-    `;
-  }
-})();
+if (import.meta.env.DEV) {
+  const { VITE_API: API } = import.meta.env;
+
+  document.getElementById(
+    "app"
+  )!.innerHTML = `<video-player API="${API}" mode="LIVE" connection="STUN"/>`;
+}
