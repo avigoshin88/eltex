@@ -6,7 +6,7 @@ export default defineConfig({
     lib: {
       entry: resolve(__dirname, "src/main.ts"),
       name: "VideoPlayer",
-      fileName: "vide-player",
+      fileName: "video-player",
     },
   },
 });
