@@ -1,16 +1,22 @@
 type LogMessage = unknown;
 
 class LoggerService {
+  private TAG: string;
+
+  constructor(tag?: string) {
+    this.TAG = tag ? `${tag}:` : "";
+  }
+
   log(...messages: LogMessage[]) {
-    console.log(...this.makeLogMessage(messages));
+    console.log(this.TAG, ...this.makeLogMessage(messages));
   }
 
   warn(...messages: LogMessage[]) {
-    console.warn(...this.makeLogMessage(messages));
+    console.warn(this.TAG, ...this.makeLogMessage(messages));
   }
 
   error(...messages: LogMessage[]) {
-    console.error(...this.makeLogMessage(messages));
+    console.error(this.TAG, ...this.makeLogMessage(messages));
   }
 
   private makeLogMessage(messages: LogMessage[]) {
@@ -23,6 +29,10 @@ class LoggerService {
     }
 
     try {
+      if (typeof message === "string") {
+        return message;
+      }
+
       return JSON.stringify(message, null, 2);
     } catch (error) {
       return "";
@@ -30,6 +40,4 @@ class LoggerService {
   }
 }
 
-const logger = new LoggerService();
-
-export { logger as Logger };
+export { LoggerService as Logger };
