@@ -34,14 +34,7 @@ export class LiveVideoService {
   }
 
   init() {
-    this.peerConnection = new RTCPeerConnection(this.servers);
-
-    this.peerConnection.onicecandidate = this._onIceCandidate.bind(this);
-    this.peerConnection.onicecandidateerror =
-      this._onIceCandidateError.bind(this);
-    this.peerConnection.ontrack = this._onTrack.bind(this);
-    this.peerConnection.onconnectionstatechange =
-      this._onConnectionStateChange.bind(this);
+    this.setupPeerConnection();
 
     this.startP2P().catch((p2pError: Error) => {
       this.logger.error(
@@ -50,6 +43,9 @@ export class LiveVideoService {
       );
 
       this.logger.log("Пробуем соединиться через TURN");
+      this.resetPeerConnection();
+      this.setupPeerConnection();
+
       this.startTURN().catch((turnError: Error) => {
         this.logger.error(
           "Не удается установить соединение через TURN, причина:",
@@ -57,6 +53,17 @@ export class LiveVideoService {
         );
       });
     });
+  }
+
+  private setupPeerConnection() {
+    this.peerConnection = new RTCPeerConnection(this.servers);
+
+    this.peerConnection.onicecandidate = this._onIceCandidate.bind(this);
+    this.peerConnection.onicecandidateerror =
+      this._onIceCandidateError.bind(this);
+    this.peerConnection.ontrack = this._onTrack.bind(this);
+    this.peerConnection.onconnectionstatechange =
+      this._onConnectionStateChange.bind(this);
   }
 
   private async startP2P() {
@@ -292,16 +299,38 @@ export class LiveVideoService {
     }
   }
 
-  _onIceCandidateError(event: RTCPeerConnectionIceErrorEvent) {
+  private _onIceCandidateError(event: RTCPeerConnectionIceErrorEvent) {
     this.logger.error("Ошибка ICE_CANDIDATE_ERROR: ", event);
   }
 
-  _onConnectionStateChange(event: Event) {
+  private _onConnectionStateChange(event: Event) {
     this.logger.log(
       "Статус подключения изменился, новый статус:",
       this.peerConnection?.connectionState,
       ", event:",
       event
     );
+  }
+
+  private resetPeerConnection() {
+    this.logger.log("Начало очистки peer connection");
+
+    this.logger.log("Peer connection очищено");
+  }
+
+  resetService() {
+    this.logger.log("Начало очистки сервиса");
+
+    this.peerConnection
+      ?.getTransceivers()
+      .forEach((transceiver) => transceiver.stop());
+
+    this.peerConnection?.close();
+    this._remoteStream = undefined;
+    this._tracks = [];
+    this.currentType = null;
+    this.peerConnection = null;
+
+    this.logger.log("Сервис очищен");
   }
 }
