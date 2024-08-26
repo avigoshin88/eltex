@@ -11,23 +11,17 @@ type Options = {
   playerElement: HTMLVideoElement;
   app: string;
   stream: string;
+  config: RTCConfiguration;
 };
 
 export class LiveVideoService {
-  private logger = new Logger("LiveVideoService");
+  private logger = new Logger(LiveVideoService.name);
 
   private peerConnection: RTCPeerConnection | null = null;
   private options!: Options;
   private currentType: null | "p2p_play" | "play" = null;
   private _remoteStream?: MediaStream;
   private _tracks: MediaStreamTrack[] = [];
-  private servers = {
-    iceServers: [
-      { urls: "stun:evi-webrtc.eltex-co.ru:3478" },
-      { urls: "stun:10.23.18.4:3478" },
-      { urls: "stun:192.168.0.105:3478" },
-    ],
-  };
 
   constructor(options: Options) {
     this.options = { ...options };
@@ -43,7 +37,7 @@ export class LiveVideoService {
       );
 
       this.logger.log("Пробуем соединиться через TURN");
-      this.resetPeerConnection();
+      this.resetService();
       this.setupPeerConnection();
 
       this.startTURN().catch((turnError: Error) => {
@@ -56,7 +50,7 @@ export class LiveVideoService {
   }
 
   private setupPeerConnection() {
-    this.peerConnection = new RTCPeerConnection(this.servers);
+    this.peerConnection = new RTCPeerConnection(this.options.config);
 
     this.peerConnection.onicecandidate = this._onIceCandidate.bind(this);
     this.peerConnection.onicecandidateerror =
@@ -277,8 +271,6 @@ export class LiveVideoService {
   private _onTrack(event: RTCTrackEvent) {
     this.logger.log("Получен новый Track event", event.track);
 
-    console.log(this.peerConnection?.getReceivers());
-
     if (!this.peerConnection) throw Error("Peer connection отсутствует");
 
     this._tracks.push(event.track);
@@ -310,12 +302,6 @@ export class LiveVideoService {
       ", event:",
       event
     );
-  }
-
-  private resetPeerConnection() {
-    this.logger.log("Начало очистки peer connection");
-
-    this.logger.log("Peer connection очищено");
   }
 
   resetService() {

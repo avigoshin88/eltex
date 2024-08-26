@@ -51,7 +51,7 @@ export const requestSDPOfferExchangeP2P = async (
 };
 
 type RequestSDPOfferExchangeTURNResponse = {
-  code: 0;
+  code: number;
   id?: string;
   sdp?: string;
   type?: RTCSdpType;

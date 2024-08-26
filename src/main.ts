@@ -39,6 +39,7 @@ class VideoPlayerElement extends HTMLElement {
       ATTRIBUTE.API_URL,
       ATTRIBUTE.APP,
       ATTRIBUTE.STREAM,
+      ATTRIBUTE.ICE_SERVERS,
     ];
   }
 
@@ -69,11 +70,20 @@ class VideoPlayerElement extends HTMLElement {
       CONFIG_KEY.API_URL,
       this.parseAttribute(ATTRIBUTE.API_URL) as string
     );
+    Env.set(
+      CONFIG_KEY.ICE_SERVERS,
+      this.parseAttribute(ATTRIBUTE.ICE_SERVERS) as string
+    );
   }
 
   private initElement() {
     const app = this.parseAttribute(ATTRIBUTE.APP);
     const stream = this.parseAttribute(ATTRIBUTE.STREAM);
+    const iceServers = this.parseAttribute(ATTRIBUTE.ICE_SERVERS)
+      ?.split(";")
+      .map((urls) => ({
+        urls,
+      }));
 
     if (!app || !stream) throw Error("Атрибуты App и Stream обязательны");
 
@@ -94,6 +104,9 @@ class VideoPlayerElement extends HTMLElement {
       playerElement: this.video,
       app,
       stream,
+      config: {
+        iceServers,
+      },
     });
   }
 
@@ -109,3 +122,9 @@ class VideoPlayerElement extends HTMLElement {
 }
 
 customElements.define("video-player", VideoPlayerElement);
+
+declare global {
+  interface HTMLElementTagNameMap {
+    "video-player": VideoPlayerElement;
+  }
+}
