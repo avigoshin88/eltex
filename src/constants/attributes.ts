@@ -1,5 +1,6 @@
 export enum ATTRIBUTE {
-  API = "api",
-  MODE = "mode",
-  CONNECTION = "connection",
+  API_URL = "apiUrl",
+  APP = "app",
+  STREAM = "stream",
+  ICE_SERVERS = "iceServers",
 }

@@ -2,6 +2,7 @@ import { ATTRIBUTE } from "./constants/attributes";
 import { CONFIG_KEY } from "./constants/configKeys";
 import { API } from "./services/api.service";
 import { Env } from "./services/env.service";
+import { LiveVideoService } from "./services/live.service";
 import { VideoPlayerBuilderService } from "./services/player/player-builder.service";
 import { VideoPlayerService } from "./services/player/player.service";
 
@@ -17,10 +18,12 @@ class VideoPlayerElement extends HTMLElement {
 
   player = new VideoPlayerService();
   builder = new VideoPlayerBuilderService();
+  live!: LiveVideoService;
 
   connectedCallback() {
     this.parseAttributes();
     this.initElement();
+    this.live.init();
     // браузер вызывает этот метод при добавлении элемента в документ
     // (может вызываться много раз, если элемент многократно добавляется/удаляется)
   }
@@ -33,6 +36,10 @@ class VideoPlayerElement extends HTMLElement {
   static get observedAttributes() {
     return [
       /* массив имён атрибутов для отслеживания их изменений */
+      ATTRIBUTE.API_URL,
+      ATTRIBUTE.APP,
+      ATTRIBUTE.STREAM,
+      ATTRIBUTE.ICE_SERVERS,
     ];
   }
 
@@ -43,7 +50,7 @@ class VideoPlayerElement extends HTMLElement {
   ) {
     if (
       !(
-        [ATTRIBUTE.API, ATTRIBUTE.CONNECTION, ATTRIBUTE.MODE] as string[]
+        [ATTRIBUTE.API_URL, ATTRIBUTE.APP, ATTRIBUTE.STREAM] as string[]
       ).includes(name)
     ) {
       return;
@@ -54,7 +61,32 @@ class VideoPlayerElement extends HTMLElement {
     this.initElement();
   }
 
+  private parseAttributes() {
+    API.init(this.parseAttribute(ATTRIBUTE.API_URL) as string);
+
+    Env.set(CONFIG_KEY.STREAM, this.parseAttribute(ATTRIBUTE.STREAM) as string);
+    Env.set(CONFIG_KEY.APP, this.parseAttribute(ATTRIBUTE.APP) as string);
+    Env.set(
+      CONFIG_KEY.API_URL,
+      this.parseAttribute(ATTRIBUTE.API_URL) as string
+    );
+    Env.set(
+      CONFIG_KEY.ICE_SERVERS,
+      this.parseAttribute(ATTRIBUTE.ICE_SERVERS) as string
+    );
+  }
+
   private initElement() {
+    const app = this.parseAttribute(ATTRIBUTE.APP);
+    const stream = this.parseAttribute(ATTRIBUTE.STREAM);
+    const iceServers = this.parseAttribute(ATTRIBUTE.ICE_SERVERS)
+      ?.split(";")
+      .map((urls) => ({
+        urls,
+      }));
+
+    if (!app || !stream) throw Error("Атрибуты App и Stream обязательны");
+
     if (this.container) {
       this.removeChild(this.container);
     }
@@ -67,21 +99,20 @@ class VideoPlayerElement extends HTMLElement {
     this.player.init(this.video);
 
     this.appendChild(this.container);
-  }
 
-  private parseAttributes() {
-    API.init(this.parseAttribute(ATTRIBUTE.API) as string);
-    Env.set(CONFIG_KEY.MODE, this.parseAttribute(ATTRIBUTE.MODE) as string);
-
-    const connection = this.parseAttribute(ATTRIBUTE.CONNECTION, true);
-
-    if (connection) {
-      Env.set(CONFIG_KEY.API, connection);
-    }
+    this.live = new LiveVideoService({
+      playerElement: this.video,
+      app,
+      stream,
+      config: {
+        iceServers,
+      },
+    });
   }
 
   private parseAttribute(attribute: string, nullable?: boolean) {
     const value = this.getAttribute(attribute);
+
     if (!nullable && !value) {
       throw new Error(`Cannot find ${attribute} attribute value`);
     }
@@ -92,10 +123,8 @@ class VideoPlayerElement extends HTMLElement {
 
 customElements.define("video-player", VideoPlayerElement);
 
-if (import.meta.env.DEV) {
-  const { VITE_API: API } = import.meta.env;
-
-  document.getElementById(
-    "app"
-  )!.innerHTML = `<video-player API="${API}" mode="LIVE" connection="STUN"/>`;
+declare global {
+  interface HTMLElementTagNameMap {
+    "video-player": VideoPlayerElement;
+  }
 }

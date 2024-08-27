@@ -3,6 +3,10 @@ export class VideoPlayerBuilderService {
     const container = this.createContainer();
 
     const video = document.createElement("video");
+    video.controls = true;
+    video.autoplay = true;
+    video.muted = true;
+    video.id = `video-player-${Math.random() * 100}`;
 
     container.appendChild(video);
 
