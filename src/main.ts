@@ -1,12 +1,15 @@
 import { ATTRIBUTE } from "./constants/attributes";
 import { CONFIG_KEY } from "./constants/configKeys";
+import { Mode } from "./constants/modes";
 import { API } from "./services/api.service";
+import { ArchiveVideoService } from "./services/archive.service";
 import { Env } from "./services/env.service";
 import { LiveVideoService } from "./services/live.service";
 import { VideoPlayerBuilderService } from "./services/player/player-builder.service";
 import { VideoPlayerService } from "./services/player/player.service";
 
 import "./style.css";
+import { ConnectionOptions } from "./types/connection-options";
 
 class VideoPlayerElement extends HTMLElement {
   constructor() {
@@ -18,12 +21,14 @@ class VideoPlayerElement extends HTMLElement {
 
   player = new VideoPlayerService();
   builder = new VideoPlayerBuilderService();
-  live!: LiveVideoService;
+
+  // Сделать через наследование
+  connection!: LiveVideoService | ArchiveVideoService;
 
   connectedCallback() {
     this.parseAttributes();
     this.initElement();
-    this.live.init();
+    this.connection.init();
     // браузер вызывает этот метод при добавлении элемента в документ
     // (может вызываться много раз, если элемент многократно добавляется/удаляется)
   }
@@ -100,14 +105,25 @@ class VideoPlayerElement extends HTMLElement {
 
     this.appendChild(this.container);
 
-    this.live = new LiveVideoService({
+    const connectionOptions: ConnectionOptions = {
       playerElement: this.video,
       app,
       stream,
       config: {
         iceServers,
       },
-    });
+    };
+    switch (app) {
+      case Mode.LIVE:
+        this.connection = new LiveVideoService(connectionOptions);
+        break;
+      case Mode.ARCHIVE:
+        this.connection = new ArchiveVideoService(connectionOptions);
+        break;
+
+      default:
+        throw new Error("Неизвестный app тип");
+    }
   }
 
   private parseAttribute(attribute: string, nullable?: boolean) {
