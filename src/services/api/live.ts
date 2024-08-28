@@ -1,13 +1,5 @@
 import { API } from "../api.service";
-
-/**
- * Тип клиента
- * - p2p - клиент, который транслирует видео по p2p
- * - p2p_play - клиент, который смотрит по p2p
- * - push - клиент, который транслирует видео через сервер
- * - play - клиент, который смотрит через сервер
- */
-export type ConnectionType = "p2p" | "p2p_play" | "play" | "push";
+import { ConnectionType } from "./common";
 
 /**
  * Ответ на запрос на получение SDP-offer-a

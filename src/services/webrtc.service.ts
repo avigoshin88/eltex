@@ -1,6 +1,6 @@
+import { ConnectionType } from "./api/common";
 import {
   Candidate,
-  ConnectionType,
   getSDPOffer,
   requestPutCandidate,
   requestSDPOfferExchangeP2P,
