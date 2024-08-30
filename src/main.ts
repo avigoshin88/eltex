@@ -1,15 +1,12 @@
 import { ATTRIBUTE } from "./constants/attributes";
 import { CONFIG_KEY } from "./constants/configKeys";
-import { Mode } from "./constants/modes";
 import { API } from "./services/api.service";
-import { ArchiveVideoService } from "./services/archive.service";
 import { Env } from "./services/env.service";
-import { LiveVideoService } from "./services/live.service";
 import { VideoPlayerBuilderService } from "./services/player/player-builder.service";
 import { VideoPlayerService } from "./services/player/player.service";
 
 import "./style.css";
-import { ConnectionOptions } from "./types/connection-options";
+import { PlayerModeService } from "./services/player/player-mode.service";
 
 class VideoPlayerElement extends HTMLElement {
   constructor() {
@@ -22,13 +19,11 @@ class VideoPlayerElement extends HTMLElement {
   player = new VideoPlayerService();
   builder = new VideoPlayerBuilderService();
 
-  // Сделать через наследование
-  connection!: LiveVideoService | ArchiveVideoService;
+  modeService!: PlayerModeService;
 
   connectedCallback() {
     this.parseAttributes();
     this.initElement();
-    this.connection.init();
     // браузер вызывает этот метод при добавлении элемента в документ
     // (может вызываться много раз, если элемент многократно добавляется/удаляется)
   }
@@ -105,25 +100,15 @@ class VideoPlayerElement extends HTMLElement {
 
     this.appendChild(this.container);
 
-    const connectionOptions: ConnectionOptions = {
+    // TODO: Вынести в отдельный метод
+    this.modeService = new PlayerModeService({
       playerElement: this.video,
       app,
       stream,
       config: {
         iceServers,
       },
-    };
-    switch (app) {
-      case Mode.LIVE:
-        this.connection = new LiveVideoService(connectionOptions);
-        break;
-      case Mode.ARCHIVE:
-        this.connection = new ArchiveVideoService(connectionOptions);
-        break;
-
-      default:
-        throw new Error("Неизвестный app тип");
-    }
+    });
   }
 
   private parseAttribute(attribute: string, nullable?: boolean) {

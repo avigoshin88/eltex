@@ -42,36 +42,10 @@ export const requestSDPOfferExchangeP2P = async (
   );
 };
 
-type RequestSDPOfferExchangeTURNResponse = {
-  code: number;
-  id?: string;
-  sdp?: string;
-  type?: RTCSdpType;
-  msg?: string;
-};
-
-/**
- * Только для TURN
- * Запрос на обмен SDP-offer-ами
- * @param app app потока
- * @param stream stream id потока
- * @returns RequestSDPOfferExchangeTURNResponse
- */
-export const requestSDPOfferExchangeTURN = async (
-  app: string,
-  stream: string,
-  offer: string
-): Promise<RequestSDPOfferExchangeTURNResponse> => {
-  return await API.post(
-    `index/api/webrtc?app=${app}&stream=${stream}&type=play`,
-    offer
-  );
-};
-
 export type Candidate = Record<string, string | number>;
 
 /**
- *
+ * Только для P2P (STUN)
  * @param app app потока
  * @param stream stream id потока
  * @param type  {@link Connection}

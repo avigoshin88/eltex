@@ -1,30 +1,27 @@
-import { ConnectionType } from "./api/common";
+import { ConnectionOptions } from "../types/connection-options";
+import {
+  ConnectionType,
+  requestSDPOfferExchangeTURN,
+  TURNConnectionType,
+} from "./api/common";
 import {
   Candidate,
   getSDPOffer,
   requestPutCandidate,
   requestSDPOfferExchangeP2P,
-  requestSDPOfferExchangeTURN,
 } from "./api/live";
 import { Logger } from "./logger/logger.service";
-
-type Options = {
-  playerElement: HTMLVideoElement;
-  app: string;
-  stream: string;
-  config: RTCConfiguration;
-};
 
 export class WebRTCService {
   private logger = new Logger(WebRTCService.name);
 
   private peerConnection: RTCPeerConnection | null = null;
-  private options!: Options;
+  private options!: ConnectionOptions;
   private currentType: null | ConnectionType = null;
   private _remoteStream?: MediaStream;
   private _tracks: MediaStreamTrack[] = [];
 
-  constructor(options: Options) {
+  constructor(options: ConnectionOptions) {
     this.options = { ...options };
   }
 
@@ -112,10 +109,10 @@ export class WebRTCService {
     this.logger.log("P2P: setLocalDescription установлено");
   }
 
-  public async startTURN() {
+  public async startTURN(connectionType: TURNConnectionType) {
     this.logger.log("TURN: Начало соединения через TURN");
 
-    this.currentType = "play";
+    this.currentType = connectionType;
 
     if (!this.peerConnection)
       throw Error("TURN: Live сервис не инициализирован");
@@ -151,6 +148,7 @@ export class WebRTCService {
     const requestSDPOfferExchangeResponse = await requestSDPOfferExchangeTURN(
       app,
       stream,
+      this.currentType,
       offer.sdp!
     );
 
@@ -195,6 +193,10 @@ export class WebRTCService {
   }
 
   private _onIceCandidate(event: RTCPeerConnectionIceEvent) {
+    if (this.currentType === "archive") {
+      return;
+    }
+
     if (event.candidate) {
       this.logger.log(
         "Удаленный ICE candidate: \n " + event.candidate.candidate
