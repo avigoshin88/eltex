@@ -3,19 +3,21 @@ import type Player from "video.js/dist/types/player";
 import "video.js/dist/video-js.css";
 
 export class VideoPlayerService {
-  player!: HTMLVideoElement;
+  container!: HTMLDivElement;
+  video!: HTMLVideoElement;
   // player!: Player;
 
-  init(video: HTMLVideoElement) {
-    this.player = video;
+  init(container: HTMLDivElement, video: HTMLVideoElement) {
+    this.container = container;
+    this.video = video;
     // this.player = videojs(video);
   }
 
   play() {
-    this.player.play();
+    this.video.play();
   }
 
   pause() {
-    this.player.pause();
+    this.video.pause();
   }
 }

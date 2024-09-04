@@ -4,6 +4,7 @@ import { ConnectionOptions } from "../../types/connection-options";
 import { Logger } from "../logger/logger.service";
 import { ArchiveVideoService } from "../mode/archive.service";
 import { LiveVideoService } from "../mode/live.service";
+import { VideoPlayerService } from "./player.service";
 
 export class PlayerModeService {
   private readonly logger = new Logger(PlayerModeService.name);
@@ -11,9 +12,11 @@ export class PlayerModeService {
   private modeConnection!: ModeService;
   private options!: ConnectionOptions;
   private currentMode: Mode = Mode.LIVE;
+  private player: VideoPlayerService;
 
-  constructor(options: ConnectionOptions) {
+  constructor(options: ConnectionOptions, player: VideoPlayerService) {
     this.options = { ...options };
+    this.player = player;
 
     this.enable(Mode.ARCHIVE);
   }
@@ -36,10 +39,13 @@ export class PlayerModeService {
 
     switch (newMode) {
       case Mode.LIVE:
-        this.modeConnection = new LiveVideoService(this.options);
+        this.modeConnection = new LiveVideoService(this.options, this.player);
         break;
       case Mode.ARCHIVE:
-        this.modeConnection = new ArchiveVideoService(this.options);
+        this.modeConnection = new ArchiveVideoService(
+          this.options,
+          this.player
+        );
         break;
     }
 

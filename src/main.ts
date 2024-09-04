@@ -58,7 +58,7 @@ class VideoPlayerElement extends HTMLElement {
 
     Env.set(name, newValue ?? oldValue ?? "");
 
-    this.initElement();
+    // this.initElement();
   }
 
   private parseAttributes() {
@@ -96,19 +96,21 @@ class VideoPlayerElement extends HTMLElement {
     this.container = container;
     this.video = video;
 
-    this.player.init(this.video);
+    this.player.init(this.container, this.video);
 
     this.appendChild(this.container);
 
     // TODO: Вынести в отдельный метод
-    this.modeService = new PlayerModeService({
-      playerElement: this.video,
-      app,
-      stream,
-      config: {
-        iceServers,
+    this.modeService = new PlayerModeService(
+      {
+        app,
+        stream,
+        config: {
+          iceServers,
+        },
       },
-    });
+      this.player
+    );
   }
 
   private parseAttribute(attribute: string, nullable?: boolean) {

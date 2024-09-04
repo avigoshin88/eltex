@@ -1,4 +1,8 @@
-import { ConnectionOptions } from "../types/connection-options";
+import { WebRTCConnectionOptions } from "../types/connection-options";
+import {
+  DatachannelNativeEventListeners,
+  DatachannelEventListeners,
+} from "../types/datachannel-listener";
 import {
   ConnectionType,
   requestSDPOfferExchangeTURN,
@@ -10,23 +14,51 @@ import {
   requestPutCandidate,
   requestSDPOfferExchangeP2P,
 } from "./api/live";
+import { DatachannelClientService } from "./datachannel/data-channel.service";
 import { Logger } from "./logger/logger.service";
 
 export class WebRTCService {
   private logger = new Logger(WebRTCService.name);
 
   private peerConnection: RTCPeerConnection | null = null;
-  private options!: ConnectionOptions;
+  private options!: WebRTCConnectionOptions;
   private currentType: null | ConnectionType = null;
-  private _remoteStream?: MediaStream;
+  private datachannelClient: DatachannelClientService;
+
+  private processStream?: (
+    stream: MediaStream,
+    track: MediaStreamTrack
+  ) => Promise<void>;
   private _tracks: MediaStreamTrack[] = [];
 
-  constructor(options: ConnectionOptions) {
+  constructor(
+    options: WebRTCConnectionOptions,
+    datachannel: DatachannelClientService,
+    processStream?: (
+      stream: MediaStream,
+      track: MediaStreamTrack
+    ) => Promise<void>
+  ) {
     this.options = { ...options };
+
+    this.datachannelClient = datachannel;
+    this.processStream = processStream;
   }
 
-  public setupPeerConnection() {
+  public setupPeerConnection({
+    nativeListeners,
+    listeners,
+  }: {
+    nativeListeners: DatachannelNativeEventListeners;
+    listeners: DatachannelEventListeners;
+  }) {
     this.peerConnection = new RTCPeerConnection(this.options.config);
+
+    this.datachannelClient.register(
+      this.peerConnection,
+      nativeListeners,
+      listeners
+    );
 
     this.peerConnection.onicecandidate = this._onIceCandidate.bind(this);
     this.peerConnection.onicecandidateerror =
@@ -184,7 +216,6 @@ export class WebRTCService {
       .forEach((transceiver) => transceiver.stop());
 
     this.peerConnection?.close();
-    this._remoteStream = undefined;
     this._tracks = [];
     this.currentType = null;
     this.peerConnection = null;
@@ -229,19 +260,25 @@ export class WebRTCService {
 
     this._tracks.push(event.track);
 
-    if (this.options.playerElement && event.streams?.length > 0) {
-      this.options.playerElement.srcObject = event.streams[0];
-      this._remoteStream = event.streams[0];
+    if (this.options.videoElement && event.streams?.length > 0) {
+      this._setStream(event.streams[0], event);
     } else if (
       this.peerConnection.getReceivers().length
       // ??? в примере идет проверка равности количества ресиверов и количества треков, но у меня 4 ресивера и 2 трека, понять бы почему
       // == this._tracks.length
     ) {
-      this._remoteStream = new MediaStream(this._tracks);
-      this.options.playerElement.srcObject = this._remoteStream;
+      this._setStream(new MediaStream(this._tracks), event);
     } else {
       // ??? хотелось бы понять что это значит
       this.logger.error("wait stream track finish");
+    }
+  }
+
+  private _setStream(stream: MediaStream, event: RTCTrackEvent) {
+    if (this.processStream) {
+      this.processStream(stream, event.track);
+    } else {
+      this.options.videoElement.srcObject = stream;
     }
   }
 
