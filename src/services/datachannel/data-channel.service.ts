@@ -51,6 +51,10 @@ export class DatachannelClientService {
   }
 
   send(type: DatachannelMessageType, data?: unknown) {
+    this.logger.log(
+      "Отправлено событие:",
+      this.datachannelTransportBuilder.build(type, data)
+    );
     this.datachannel.send(this.datachannelTransportBuilder.build(type, data));
   }
 
@@ -66,7 +70,7 @@ export class DatachannelClientService {
     try {
       const result = JSON.parse(event.data);
       if (typeof result !== "object") {
-        throw new Error("Тип ответа datachannel не объект");
+        throw new Error(`Тип ответа datachannel не объект: ${result}`);
       }
 
       const { type, data } = result;
@@ -85,7 +89,12 @@ export class DatachannelClientService {
 
       listeners[listener]?.(data);
     } catch (error) {
-      this.logger.error("Не удалось расшифровать сообщение:", error);
+      this.logger.error(
+        "Не удалось расшифровать сообщение:",
+        error,
+        "сообщение:",
+        event.data
+      );
     }
   }
 }

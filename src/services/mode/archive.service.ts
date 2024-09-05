@@ -44,7 +44,7 @@ export class ArchiveVideoService implements ModeService {
         open: this.onOpenDatachannel.bind(this),
       },
       listeners: {
-        connection: this.onConnection.bind(this),
+        [DatachannelMessageType.GET_RANGES]: this.onConnection.bind(this),
       },
     });
 
@@ -65,7 +65,17 @@ export class ArchiveVideoService implements ModeService {
   }
 
   private onConnection(data: unknown) {
-    console.log(data);
+    const { ranges } = data as { ranges: any[] };
+
+    // const firstRange = ranges[0];
+    // this.datachannelClient.send(DatachannelMessageType.GET_ARCHIVE_FRAGMENT, {
+    //   start_time: firstRange.start_time,
+    //   duration: firstRange.duration,
+    // });
+
+    // setTimeout(() => {
+    //   this.processor.call();
+    // }, 1000);
   }
 
   public async addVideoStream(
@@ -83,8 +93,6 @@ export class ArchiveVideoService implements ModeService {
     if (this.combinedStream.getTracks().length > 10) {
       this.logger.warn("Объединенный поток содержит более 10 траков");
     }
-
-    this.processor.call();
   }
 
   private async processStream() {

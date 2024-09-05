@@ -1,6 +1,7 @@
 export enum DatachannelMessageType {
   META = "meta",
-  GET_RANGES = "connection",
+  GET_RANGES = "get_ranges",
+  GET_ARCHIVE_FRAGMENT = 'get_archive_fragment'
 }
 
 export type DatachannelEventListener = (data?: unknown) => void | Promise<void>;
