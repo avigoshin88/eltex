@@ -25,8 +25,6 @@ export class DatachannelClientService {
         this.datachannel.addEventListener(listenerName, (event) => {
           this.logger.log("datachannel открыт");
           nativeListeners[listenerName]?.(event);
-
-          this.datachannel.send(JSON.stringify({ type: "get_ranges" }));
         });
       }
 
