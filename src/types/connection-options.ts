@@ -3,7 +3,3 @@ export type ConnectionOptions = {
   stream: string;
   config: RTCConfiguration;
 };
-
-export type WebRTCConnectionOptions = ConnectionOptions & {
-  videoElement: HTMLVideoElement;
-};

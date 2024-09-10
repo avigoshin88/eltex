@@ -20,8 +20,9 @@ export class LiveVideoService implements ModeService {
     this.player = player;
     this.datachannelClient = new DatachannelClientService();
     this.webRTCClient = new WebRTCService(
-      { ...options, videoElement: this.player.video },
-      this.datachannelClient
+      options,
+      this.datachannelClient,
+      this.setSource.bind(this)
     );
   }
 
@@ -57,5 +58,10 @@ export class LiveVideoService implements ModeService {
 
   async reset(): Promise<void> {
     this.webRTCClient.reset();
+  }
+
+  setSource(stream: MediaStream) {
+    this.player.setSource(stream);
+    this.player.play();
   }
 }

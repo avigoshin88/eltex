@@ -8,7 +8,13 @@ import { API } from "../api.service";
  * - play - клиент, который смотрит через сервер
  * - archive - клиент, который смотрит запись из архива
  */
-export type ConnectionType = "p2p" | "p2p_play" | "play" | "push" | "archive";
+export type ConnectionType =
+  | "p2p"
+  | "p2p_play"
+  | "play"
+  | "push"
+  | "archive"
+  | "play_analytic";
 
 export type TURNConnectionType = Exclude<ConnectionType, "p2p" | "p2p_play">;
 

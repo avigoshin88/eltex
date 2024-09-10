@@ -1,4 +1,4 @@
-import { WebRTCConnectionOptions } from "../types/connection-options";
+import { ConnectionOptions } from "../types/connection-options";
 import {
   DatachannelNativeEventListeners,
   DatachannelEventListeners,
@@ -21,28 +21,22 @@ export class WebRTCService {
   private logger = new Logger(WebRTCService.name);
 
   private peerConnection: RTCPeerConnection | null = null;
-  private options!: WebRTCConnectionOptions;
+  private options!: ConnectionOptions;
   private currentType: null | ConnectionType = null;
   private datachannelClient: DatachannelClientService;
 
-  private processStream?: (
-    stream: MediaStream,
-    track: MediaStreamTrack
-  ) => Promise<void>;
+  private setSource: (stream: MediaStream) => void;
   private _tracks: MediaStreamTrack[] = [];
 
   constructor(
-    options: WebRTCConnectionOptions,
+    options: ConnectionOptions,
     datachannel: DatachannelClientService,
-    processStream?: (
-      stream: MediaStream,
-      track: MediaStreamTrack
-    ) => Promise<void>
+    setSource: (stream: MediaStream) => void
   ) {
     this.options = { ...options };
 
     this.datachannelClient = datachannel;
-    this.processStream = processStream;
+    this.setSource = setSource;
   }
 
   public setupPeerConnection({
@@ -71,7 +65,7 @@ export class WebRTCService {
   public async startP2P() {
     this.logger.log("P2P: Начало соединения через P2P");
 
-    this.currentType = "p2p_play";
+    this.currentType = "play_analytic";
 
     if (!this.peerConnection)
       throw Error("P2P: Live сервис не инициализирован");
@@ -254,31 +248,23 @@ export class WebRTCService {
   }
 
   private _onTrack(event: RTCTrackEvent) {
-    this.logger.log("Получен новый Track event", event.track);
+    this.logger.log("Получен новый Track event", event);
 
     if (!this.peerConnection) throw Error("Peer connection отсутствует");
 
     this._tracks.push(event.track);
 
-    if (this.options.videoElement && event.streams?.length > 0) {
-      this._setStream(event.streams[0], event);
+    if (event.streams?.length > 0) {
+      this.setSource(event.streams[0]);
     } else if (
       this.peerConnection.getReceivers().length
       // ??? в примере идет проверка равности количества ресиверов и количества треков, но у меня 4 ресивера и 2 трека, понять бы почему
       // == this._tracks.length
     ) {
-      this._setStream(new MediaStream(this._tracks), event);
+      this.setSource(new MediaStream(this._tracks));
     } else {
       // ??? хотелось бы понять что это значит
       this.logger.error("wait stream track finish");
-    }
-  }
-
-  private _setStream(stream: MediaStream, event: RTCTrackEvent) {
-    if (this.processStream) {
-      this.processStream(stream, event.track);
-    } else {
-      this.options.videoElement.srcObject = stream;
     }
   }
 

@@ -1,19 +1,18 @@
-import videojs from "video.js";
-import type Player from "video.js/dist/types/player";
-import "video.js/dist/video-js.css";
-
 export class VideoPlayerService {
   container!: HTMLDivElement;
   video!: HTMLVideoElement;
-  // player!: Player;
 
   init(container: HTMLDivElement, video: HTMLVideoElement) {
     this.container = container;
     this.video = video;
-    // this.player = videojs(video);
+  }
+
+  setSource(stream: MediaStream) {
+    this.video.srcObject = stream;
   }
 
   play() {
+    this.video.preload = "none";
     this.video.play();
   }
 

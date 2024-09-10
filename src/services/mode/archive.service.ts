@@ -2,26 +2,17 @@ import { Logger } from "../logger/logger.service";
 import { WebRTCService } from "../webrtc.service";
 import { ConnectionOptions } from "../../types/connection-options";
 import { ModeService } from "../../interfaces/mode";
-import { VideoConverterService } from "../video-converter.service";
-import { debounce } from "remeda";
-import Player from "video.js/dist/types/player";
 import { DatachannelClientService } from "../datachannel/data-channel.service";
 import { DatachannelMessageType } from "../../types/datachannel-listener";
 import { VideoPlayerService } from "../player/player.service";
+import { RangeDto } from "../../dto/ranges";
 
 export class ArchiveVideoService implements ModeService {
   private logger = new Logger(ArchiveVideoService.name);
 
   private readonly webRTCClient!: WebRTCService;
   private readonly datachannelClient: DatachannelClientService;
-
-  private combinedStream: MediaStream | null = null;
-
   private readonly player: VideoPlayerService;
-
-  private readonly converter: VideoConverterService =
-    new VideoConverterService();
-  private processor!: ReturnType<typeof debounce<() => Promise<void>>>;
 
   constructor(options: ConnectionOptions, player: VideoPlayerService) {
     this.player = player;
@@ -29,22 +20,19 @@ export class ArchiveVideoService implements ModeService {
     this.datachannelClient = new DatachannelClientService();
 
     this.webRTCClient = new WebRTCService(
-      { ...options, videoElement: this.player.video },
+      options,
       this.datachannelClient,
-      (...args) => this.addVideoStream(...args)
+      this.setSource.bind(this)
     );
   }
 
   async init(): Promise<void> {
-    // @ts-ignore
-    this.processor = debounce(this.processStream.bind(this), {});
-
     this.webRTCClient.setupPeerConnection({
       nativeListeners: {
         open: this.onOpenDatachannel.bind(this),
       },
       listeners: {
-        [DatachannelMessageType.GET_RANGES]: this.onConnection.bind(this),
+        [DatachannelMessageType.RANGES]: this.onRanges.bind(this),
       },
     });
 
@@ -64,63 +52,18 @@ export class ArchiveVideoService implements ModeService {
     this.datachannelClient.send(DatachannelMessageType.GET_RANGES);
   }
 
-  private onConnection(data: unknown) {
-    const { ranges } = data as { ranges: any[] };
+  private onRanges(data: unknown) {
+    const { ranges } = data as { ranges: RangeDto[] };
 
-    // const firstRange = ranges[0];
-    // this.datachannelClient.send(DatachannelMessageType.GET_ARCHIVE_FRAGMENT, {
-    //   start_time: firstRange.start_time,
-    //   duration: firstRange.duration,
-    // });
-
-    // setTimeout(() => {
-    //   this.processor.call();
-    // }, 1000);
-  }
-
-  public async addVideoStream(
-    stream: MediaStream,
-    track: MediaStreamTrack
-  ): Promise<void> {
-    if (!this.combinedStream) {
-      this.combinedStream = new MediaStream();
-    }
-
-    stream.getTracks().forEach((track) => {
-      this.combinedStream!.addTrack(track);
+    const firstRange = ranges[0];
+    this.datachannelClient.send(DatachannelMessageType.GET_ARCHIVE_FRAGMENT, {
+      start_time: firstRange.start_time,
+      duration: firstRange.duration,
     });
-
-    if (this.combinedStream.getTracks().length > 10) {
-      this.logger.warn("Объединенный поток содержит более 10 траков");
-    }
   }
 
-  private async processStream() {
-    await this.processCombinedStream(await this.combineStreams());
-  }
-
-  private async combineStreams(): Promise<MediaStream> {
-    if (!this.combinedStream) {
-      throw new Error("No streams added yet");
-    }
-
-    const combinedMediaStream = new MediaStream(
-      this.combinedStream.getTracks()
-    );
-    this.combinedStream = null; // Очищаем комбинированный поток после объединения
-    return combinedMediaStream;
-  }
-
-  // Метод для обработки объединенного потока
-  private async processCombinedStream(
-    combinedStream: MediaStream
-  ): Promise<void> {
-    const blob = await this.converter.convertMediaStreamToBlob(combinedStream);
-    console.log("🚀 ~ ArchiveVideoService ~ blob:", blob);
-    // this.player.play();
-    // this.video.srcObject = combinedStream;
-    // this.video.preload = "auto";
-    // this.video.play();
-    // Например, можно использовать этот метод в методе init()
+  setSource(stream: MediaStream) {
+    this.player.setSource(stream);
+    this.player.play();
   }
 }
