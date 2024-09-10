@@ -18,6 +18,16 @@ export type ConnectionType =
 
 export type TURNConnectionType = Exclude<ConnectionType, "p2p" | "p2p_play">;
 
+export type LiveConnectionType = Exclude<
+  ConnectionType,
+  "p2p" | "push" | "archive"
+>;
+
+export type ArchiveConnectionType = Exclude<
+  ConnectionType,
+  "p2p" | "p2p_play" | "play" | "push"
+>;
+
 type RequestSDPOfferExchangeTURNResponse = {
   code: number;
   id?: string;
