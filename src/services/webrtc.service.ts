@@ -213,6 +213,7 @@ export class WebRTCService {
     this._tracks = [];
     this.currentType = null;
     this.peerConnection = null;
+    this.datachannelClient.close();
 
     this.logger.log("Сервис очищен");
   }

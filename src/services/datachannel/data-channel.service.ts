@@ -95,4 +95,8 @@ export class DatachannelClientService {
       );
     }
   }
+
+  close() {
+    this.datachannel?.close();
+  }
 }

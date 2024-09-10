@@ -43,11 +43,15 @@ class VideoPlayerElement extends HTMLElement {
     ];
   }
 
-  attributeChangedCallback(
+  async attributeChangedCallback(
     name: string,
-    oldValue: string,
+    oldValue: string | null,
     newValue: string | undefined
   ) {
+    if (oldValue === null || oldValue === newValue) {
+      return;
+    }
+
     if (
       !(
         [ATTRIBUTE.API_URL, ATTRIBUTE.APP, ATTRIBUTE.STREAM] as string[]
@@ -58,7 +62,8 @@ class VideoPlayerElement extends HTMLElement {
 
     Env.set(name, newValue ?? oldValue ?? "");
 
-    // this.initElement();
+    await this.modeService.clear();
+    this.initElement();
   }
 
   private parseAttributes() {
