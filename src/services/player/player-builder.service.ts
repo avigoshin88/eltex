@@ -16,6 +16,8 @@ export class VideoPlayerBuilderService {
   private createContainer() {
     const container = document.createElement("div");
 
+    container.style.position = "relative";
+
     return container;
   }
 }

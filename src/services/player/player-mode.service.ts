@@ -4,6 +4,7 @@ import { ConnectionOptions } from "../../types/connection-options";
 import { Logger } from "../logger/logger.service";
 import { ArchiveVideoService } from "../mode/archive.service";
 import { LiveVideoService } from "../mode/live.service";
+import { ControlsOverflowDrawerService } from "./overflow-elements/controls-drawer.service";
 import { VideoPlayerService } from "./player.service";
 
 export class PlayerModeService {
@@ -14,11 +15,15 @@ export class PlayerModeService {
   private currentMode: Mode = Mode.LIVE;
   private player: VideoPlayerService;
 
+  private readonly controlsDrawer = new ControlsOverflowDrawerService();
+
   constructor(options: ConnectionOptions, player: VideoPlayerService) {
     this.options = { ...options };
     this.player = player;
 
-    this.enable(Mode.ARCHIVE);
+    this.controlsDrawer.draw(this.player.container);
+
+    this.enable(Mode.LIVE);
   }
 
   async switch() {

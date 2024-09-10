@@ -8,6 +8,7 @@ import {
 } from "../../types/datachannel-listener";
 import { DatachannelClientService } from "../datachannel/data-channel.service";
 import { VideoPlayerService } from "../player/player.service";
+import { MetaOverflowDrawerService } from "../player/overflow-elements/meta-drawer.service";
 
 export class LiveVideoService implements ModeService {
   private logger = new Logger(LiveVideoService.name);
@@ -15,6 +16,9 @@ export class LiveVideoService implements ModeService {
   private readonly webRTCClient!: WebRTCService;
   private readonly datachannelClient: DatachannelClientService;
   private readonly player: VideoPlayerService;
+
+  private readonly metaDrawer: MetaOverflowDrawerService =
+    new MetaOverflowDrawerService();
 
   constructor(options: ConnectionOptions, player: VideoPlayerService) {
     this.player = player;
@@ -47,7 +51,7 @@ export class LiveVideoService implements ModeService {
       this.webRTCClient.reset();
       this.webRTCClient.setupPeerConnection(datachannelListeners);
 
-      this.webRTCClient.startTURN("play").catch((turnError: Error) => {
+      this.webRTCClient.startTURN("play_analytic").catch((turnError: Error) => {
         this.logger.error(
           "Не удается установить соединение через TURN, причина:",
           turnError.message
