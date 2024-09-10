@@ -2,7 +2,7 @@ import { OverflowElementDrawer } from "../../../interfaces/overflow-element-buil
 
 export class ControlsOverflowDrawerService implements OverflowElementDrawer {
   draw(container: HTMLDivElement): void {
-    throw new Error("Method not implemented.");
+    console.log('draw controls')
   }
 
   setOptions(options: unknown): void {
