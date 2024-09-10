@@ -27,7 +27,7 @@ export class PlayerModeService {
   }
 
   async switch() {
-    await this.clearCurrent();
+    await this.clear();
     if (this.currentMode === Mode.LIVE) {
       this.enable(Mode.ARCHIVE);
     } else {
@@ -59,7 +59,7 @@ export class PlayerModeService {
     await this.modeConnection.init();
   }
 
-  private async clearCurrent() {
+  async clear() {
     await this.modeConnection.reset();
   }
 }
