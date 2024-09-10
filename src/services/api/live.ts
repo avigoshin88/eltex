@@ -1,13 +1,5 @@
 import { API } from "../api.service";
-
-/**
- * Тип клиента
- * - p2p - клиент, который транслирует видео по p2p
- * - p2p_play - клиент, который смотрит по p2p
- * - push - клиент, который транслирует видео через сервер
- * - play - клиент, который смотрит через сервер
- */
-type ConnectionType = "p2p" | "p2p_play" | "play" | "push";
+import { ConnectionType } from "./common";
 
 /**
  * Ответ на запрос на получение SDP-offer-a
@@ -45,33 +37,7 @@ export const requestSDPOfferExchangeP2P = async (
   offer: string
 ): Promise<never> => {
   return await API.post(
-    `index/api/webrtc?app=${app}&stream=${stream}&type=p2p_play`,
-    offer
-  );
-};
-
-type RequestSDPOfferExchangeTURNResponse = {
-  code: number;
-  id?: string;
-  sdp?: string;
-  type?: RTCSdpType;
-  msg?: string;
-};
-
-/**
- * Только для TURN
- * Запрос на обмен SDP-offer-ами
- * @param app app потока
- * @param stream stream id потока
- * @returns RequestSDPOfferExchangeTURNResponse
- */
-export const requestSDPOfferExchangeTURN = async (
-  app: string,
-  stream: string,
-  offer: string
-): Promise<RequestSDPOfferExchangeTURNResponse> => {
-  return await API.post(
-    `index/api/webrtc?app=${app}&stream=${stream}&type=play`,
+    `index/api/webrtc?app=${app}&stream=${stream}&type=play_analytic`,
     offer
   );
 };
@@ -79,7 +45,7 @@ export const requestSDPOfferExchangeTURN = async (
 export type Candidate = Record<string, string | number>;
 
 /**
- *
+ * Только для P2P (STUN)
  * @param app app потока
  * @param stream stream id потока
  * @param type  {@link Connection}

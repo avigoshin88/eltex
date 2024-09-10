@@ -2,11 +2,11 @@ import { ATTRIBUTE } from "./constants/attributes";
 import { CONFIG_KEY } from "./constants/configKeys";
 import { API } from "./services/api.service";
 import { Env } from "./services/env.service";
-import { LiveVideoService } from "./services/live.service";
 import { VideoPlayerBuilderService } from "./services/player/player-builder.service";
 import { VideoPlayerService } from "./services/player/player.service";
 
 import "./style.css";
+import { PlayerModeService } from "./services/player/player-mode.service";
 
 class VideoPlayerElement extends HTMLElement {
   constructor() {
@@ -18,12 +18,12 @@ class VideoPlayerElement extends HTMLElement {
 
   player = new VideoPlayerService();
   builder = new VideoPlayerBuilderService();
-  live!: LiveVideoService;
+
+  modeService!: PlayerModeService;
 
   connectedCallback() {
     this.parseAttributes();
     this.initElement();
-    this.live.init();
     // браузер вызывает этот метод при добавлении элемента в документ
     // (может вызываться много раз, если элемент многократно добавляется/удаляется)
   }
@@ -43,11 +43,15 @@ class VideoPlayerElement extends HTMLElement {
     ];
   }
 
-  attributeChangedCallback(
+  async attributeChangedCallback(
     name: string,
-    oldValue: string,
+    oldValue: string | null,
     newValue: string | undefined
   ) {
+    if (oldValue === null || oldValue === newValue) {
+      return;
+    }
+
     if (
       !(
         [ATTRIBUTE.API_URL, ATTRIBUTE.APP, ATTRIBUTE.STREAM] as string[]
@@ -58,6 +62,7 @@ class VideoPlayerElement extends HTMLElement {
 
     Env.set(name, newValue ?? oldValue ?? "");
 
+    await this.modeService.clear();
     this.initElement();
   }
 
@@ -96,18 +101,21 @@ class VideoPlayerElement extends HTMLElement {
     this.container = container;
     this.video = video;
 
-    this.player.init(this.video);
+    this.player.init(this.container, this.video);
 
     this.appendChild(this.container);
 
-    this.live = new LiveVideoService({
-      playerElement: this.video,
-      app,
-      stream,
-      config: {
-        iceServers,
+    // TODO: Вынести в отдельный метод
+    this.modeService = new PlayerModeService(
+      {
+        app,
+        stream,
+        config: {
+          iceServers,
+        },
       },
-    });
+      this.player
+    );
   }
 
   private parseAttribute(attribute: string, nullable?: boolean) {
