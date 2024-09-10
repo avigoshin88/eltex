@@ -14,12 +14,18 @@ export class PlayerModeService {
   private options!: ConnectionOptions;
   private currentMode: Mode = Mode.LIVE;
   private player: VideoPlayerService;
+  private container: HTMLDivElement;
 
   private readonly controlsDrawer = new ControlsOverflowDrawerService();
 
-  constructor(options: ConnectionOptions, player: VideoPlayerService) {
+  constructor(
+    options: ConnectionOptions,
+    player: VideoPlayerService,
+    container: HTMLDivElement
+  ) {
     this.options = { ...options };
     this.player = player;
+    this.container = container;
 
     this.controlsDrawer.draw(this.player.container);
 
@@ -44,7 +50,11 @@ export class PlayerModeService {
 
     switch (newMode) {
       case Mode.LIVE:
-        this.modeConnection = new LiveVideoService(this.options, this.player);
+        this.modeConnection = new LiveVideoService(
+          this.options,
+          this.player,
+          this.container
+        );
         break;
       case Mode.ARCHIVE:
         this.modeConnection = new ArchiveVideoService(

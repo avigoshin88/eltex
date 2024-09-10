@@ -6,11 +6,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Eltex WebRTC Video Player Demo</title>
 
+    <style>
+      body {
+        width: 100vw;
+        min-height: 100vh;
+        margin: 0;
+      }
+    </style>
+
     <script type="module" src="./src/main.ts"></script>
   </head>
 
   <body>
-    <div id="app">
+    <div id="app" style="width: 60%">
       <video-player
         apiUrl="https://evi-webrtc.eltex-co.ru:18083"
         app="live"
