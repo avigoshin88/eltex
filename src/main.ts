@@ -114,8 +114,7 @@ class VideoPlayerElement extends HTMLElement {
           iceServers,
         },
       },
-      this.player,
-      this.container
+      this.player
     );
   }
 
