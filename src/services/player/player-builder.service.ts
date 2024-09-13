@@ -7,6 +7,7 @@ export class VideoPlayerBuilderService {
     video.autoplay = false;
     video.muted = true;
     video.id = `video-player-${Math.random() * 100}`;
+    video.style.width = "100%";
 
     container.appendChild(video);
 
@@ -17,6 +18,7 @@ export class VideoPlayerBuilderService {
     const container = document.createElement("div");
 
     container.style.position = "relative";
+    container.style.width = "100%";
 
     return container;
   }
