@@ -1,3 +1,4 @@
+import { DatachannelMessageType } from "./../../types/datachannel-listener";
 import { Logger } from "../logger/logger.service";
 import { WebRTCService } from "../webrtc.service";
 import { ConnectionOptions } from "../../types/connection-options";
@@ -17,17 +18,18 @@ export class LiveVideoService implements ModeService {
   private readonly datachannelClient: DatachannelClientService;
   private readonly player: VideoPlayerService;
 
-  private readonly metaDrawer: MetaOverflowDrawerService =
-    new MetaOverflowDrawerService();
+  private readonly metaDrawer: MetaOverflowDrawerService;
 
   constructor(options: ConnectionOptions, player: VideoPlayerService) {
     this.player = player;
+    this.metaDrawer = new MetaOverflowDrawerService(this.player.container);
     this.datachannelClient = new DatachannelClientService();
     this.webRTCClient = new WebRTCService(
       options,
       this.datachannelClient,
       this.setSource.bind(this)
     );
+    this.metaDrawer.init();
   }
 
   async init(): Promise<void> {
@@ -35,7 +37,11 @@ export class LiveVideoService implements ModeService {
       nativeListeners: DatachannelNativeEventListeners;
       listeners: DatachannelEventListeners;
     } = {
-      listeners: {},
+      listeners: {
+        // ругается на unknown
+        // @ts-ignore
+        [DatachannelMessageType.META]: this.metaDrawer.draw,
+      },
       nativeListeners: {},
     };
 

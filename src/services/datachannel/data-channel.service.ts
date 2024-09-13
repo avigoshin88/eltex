@@ -67,11 +67,19 @@ export class DatachannelClientService {
 
     try {
       const result = JSON.parse(event.data);
+
       if (typeof result !== "object") {
         throw new Error(`Тип ответа datachannel не объект: ${result}`);
       }
 
       const { type, data } = result;
+
+      // времянка пока не поменяли формат данных
+      if (listenerNames.includes(DatachannelMessageType.META) && !type) {
+        listeners[DatachannelMessageType.META]?.(result);
+        return;
+      }
+
       if (type == null) {
         throw new Error("Неправильный тип ответа, отсутствует тип");
       }
