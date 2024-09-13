@@ -72,8 +72,6 @@ export class ArchiveVideoService implements ModeService {
     });
   }
 
-  // private
-
   setSource(stream: MediaStream) {
     this.player.setSource(stream);
     this.player.play();

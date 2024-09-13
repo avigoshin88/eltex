@@ -33,8 +33,6 @@ export class TimelineOverflowDrawer implements OverflowElementDrawer {
     });
 
     container.appendChild(timelineContainer);
-
-    this.animateTrack(trackElement, totalDuration);
   }
 
   setOptions(ranges: RangeData[]): void {
