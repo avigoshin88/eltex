@@ -5,8 +5,9 @@ import { ModeService } from "../../interfaces/mode";
 import { DatachannelClientService } from "../datachannel/data-channel.service";
 import { DatachannelMessageType } from "../../types/datachannel-listener";
 import { VideoPlayerService } from "../player/player.service";
-import { RangeDto } from "../../dto/range";
+import { RangeDto } from "../../dto/ranges";
 import { TimelineOverflowDrawer } from "../player/overflow-elements/timeline-drawer.service";
+import { RangeMapperService } from "../range-mapper.service";
 
 export class ArchiveVideoService implements ModeService {
   private logger = new Logger(ArchiveVideoService.name);
@@ -16,6 +17,7 @@ export class ArchiveVideoService implements ModeService {
   private readonly player: VideoPlayerService;
 
   private readonly timelineDrawer = new TimelineOverflowDrawer();
+  private readonly rangeMapper = new RangeMapperService();
 
   constructor(options: ConnectionOptions, player: VideoPlayerService) {
     this.player = player;
@@ -56,9 +58,11 @@ export class ArchiveVideoService implements ModeService {
   }
 
   private onRanges(data: unknown) {
-    const { ranges } = data as { ranges: RangeDto[] };
+    const { ranges: unsortedRanges } = data as { ranges: RangeDto[] };
 
-    this.timelineDrawer.setOptions(ranges);
+    const ranges = unsortedRanges.sort((a, b) => a.start_time - b.start_time);
+
+    this.timelineDrawer.setOptions(this.rangeMapper.calc(ranges));
     this.timelineDrawer.draw(this.player.container);
 
     const firstRange = ranges[0];
@@ -67,6 +71,8 @@ export class ArchiveVideoService implements ModeService {
       duration: firstRange.duration,
     });
   }
+
+  // private
 
   setSource(stream: MediaStream) {
     this.player.setSource(stream);

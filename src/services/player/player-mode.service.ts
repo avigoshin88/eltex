@@ -23,7 +23,7 @@ export class PlayerModeService {
 
     this.controlsDrawer.draw(this.player.container);
 
-    this.enable(Mode.LIVE);
+    this.enable(Mode.ARCHIVE);
   }
 
   async switch() {
