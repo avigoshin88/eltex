@@ -1,5 +1,6 @@
 import { Mode } from "../../constants/mode";
 import { ModeService } from "../../interfaces/mode";
+import { ButtonCallbackType } from "../../types/button-callback";
 import { ConnectionOptions } from "../../types/connection-options";
 import { Logger } from "../logger/logger.service";
 import { ArchiveVideoService } from "../mode/archive.service";
@@ -21,6 +22,10 @@ export class PlayerModeService {
     this.options = { ...options };
     this.player = player;
 
+    this.controlsDrawer.setOptions({
+      [ButtonCallbackType.PLAY]: this.player.play.bind(this.player),
+      [ButtonCallbackType.STOP]: this.player.stop.bind(this.player),
+    });
     this.controlsDrawer.draw(this.player.container);
 
     this.enable(Mode.ARCHIVE);

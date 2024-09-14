@@ -4,7 +4,8 @@ export class VideoPlayerBuilderService {
 
     const video = document.createElement("video");
     video.controls = false;
-    video.autoplay = false;
+    video.autoplay = true;
+    video.preload = "none";
     video.muted = true;
     video.id = `video-player-${Math.random() * 100}`;
     video.style.width = "100%";
