@@ -68,12 +68,12 @@ export class TimelineOverflowDrawer implements OverflowElementDrawer {
       const periodElement = document.createElement("div");
       const periodElementClasses = ["video-player_timeline_period"];
 
-      // if (index % 4 === 0 && index !== 0) {
-      //   const timeElement = document.createElement("span");
-      //   timeElement.textContent = this.formatDate(date);
-      //   timeElement.className = "video-player_timeline_period_text";
-      //   periodContainer.appendChild(timeElement);
-      // }
+      if (i % 4 === 0 && i !== 0) {
+        const timeElement = document.createElement("span");
+        timeElement.textContent = this.formatDate(new Date());
+        timeElement.className = "video-player_timeline_period_text";
+        periodContainer.appendChild(timeElement);
+      }
 
       periodElement.className = periodElementClasses.join(" ");
 
