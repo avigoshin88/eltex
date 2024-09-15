@@ -1,6 +1,6 @@
 import { Mode } from "../../constants/mode";
 import { ModeService } from "../../interfaces/mode";
-import { ButtonCallbackType } from "../../types/button-callback";
+import { ButtonType } from "../../types/button-callback";
 import { ConnectionOptions } from "../../types/connection-options";
 import { Logger } from "../logger/logger.service";
 import { ArchiveVideoService } from "../mode/archive.service";
@@ -23,14 +23,13 @@ export class PlayerModeService {
     this.player = player;
 
     this.controlsDrawer.setOptions({
-      [ButtonCallbackType.PLAY]: this.player.play.bind(this.player),
-      [ButtonCallbackType.STOP]: this.player.stop.bind(this.player),
-      [ButtonCallbackType.NEXT_FRAGMENT]: () => {},
-      [ButtonCallbackType.PREV_FRAGMENT]: () => {},
-      [ButtonCallbackType.EXPORT]: () => {},
-      [ButtonCallbackType.SCREENSHOT]: () => {},
+      [ButtonType.PLAY]: this.player.play.bind(this.player),
+      [ButtonType.STOP]: this.player.stop.bind(this.player),
+      [ButtonType.NEXT_FRAGMENT]: () => {},
+      [ButtonType.PREV_FRAGMENT]: () => {},
+      [ButtonType.EXPORT]: () => {},
+      [ButtonType.SCREENSHOT]: () => {},
     });
-    this.controlsDrawer.draw(this.player.container);
 
     this.enable(Mode.ARCHIVE);
   }
@@ -54,17 +53,26 @@ export class PlayerModeService {
     switch (newMode) {
       case Mode.LIVE:
         this.modeConnection = new LiveVideoService(this.options, this.player);
+        this.controlsDrawer.setDisabled({
+          [ButtonType.EXPORT]: true,
+          [ButtonType.NEXT_FRAGMENT]: true,
+          [ButtonType.PREV_FRAGMENT]: true,
+        });
+
         break;
       case Mode.ARCHIVE:
         this.modeConnection = new ArchiveVideoService(
           this.options,
           this.player
         );
+        this.controlsDrawer.setDisabled({});
+
         break;
     }
 
     this.currentMode = newMode;
 
+    this.controlsDrawer.draw(this.player.container);
     await this.modeConnection.init();
   }
 

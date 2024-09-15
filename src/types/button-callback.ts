@@ -1,4 +1,4 @@
-export enum ButtonCallbackType {
+export enum ButtonType {
   PLAY = "play",
   STOP = "stop",
   // PAUSE = "pause",
@@ -14,4 +14,4 @@ export enum ButtonCallbackType {
 
 export type ButtonCallback = () => void;
 
-export type ButtonCallbacks = Record<ButtonCallbackType, ButtonCallback>;
+export type ButtonCallbacks = Record<ButtonType, ButtonCallback>;
