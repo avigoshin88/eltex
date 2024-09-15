@@ -2,7 +2,6 @@ import { Logger } from "../logger/logger.service";
 
 export class VideoPlayerService {
   private readonly logger = new Logger();
-  // private stream: MediaStream | null = null;
 
   container!: HTMLDivElement;
   video!: HTMLVideoElement;
