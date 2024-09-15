@@ -8,6 +8,11 @@
   --timeline_range_border: #3d405b;
 }
 
+.video-player-controls-container {
+  display: flex;
+  column-gap: 8px;
+}
+
 .video-player_timeline {
   position: relative;
   bottom: 0;

@@ -8,47 +8,49 @@ import {
 const icons: Record<ButtonCallbackType, string> = {
   [ButtonCallbackType.PLAY]: "/play.svg",
   [ButtonCallbackType.STOP]: "/stop.svg",
-  [ButtonCallbackType.PAUSE]: "/pause.svg",
-  [ButtonCallbackType.MUTE]: "/stop.svg",
+  // [ButtonCallbackType.PAUSE]: "/pause.svg",
+  // [ButtonCallbackType.MUTE]: "/stop.svg",
   [ButtonCallbackType.EXPORT]: "/export.svg",
   [ButtonCallbackType.SCREENSHOT]: "/screenshot.svg",
-  [ButtonCallbackType.NEXT_FRAME]: "/stop.svg",
-  [ButtonCallbackType.PREV_FRAME]: "/stop.svg",
+  // [ButtonCallbackType.NEXT_FRAME]: "/stop.svg",
+  // [ButtonCallbackType.PREV_FRAME]: "/stop.svg",
   [ButtonCallbackType.NEXT_FRAGMENT]: "/step-forward.svg",
   [ButtonCallbackType.PREV_FRAGMENT]: "/step-backward.svg",
-  [ButtonCallbackType.INFO]: "/stop.svg",
+  // [ButtonCallbackType.INFO]: "/stop.svg",
 };
 
 export class ControlsOverflowDrawerService implements OverflowElementDrawer {
-  callbacks: ButtonCallbacks = {};
+  callbacks: ButtonCallbacks | null = null;
 
   draw(container: HTMLDivElement): void {
     const controlsContainer = document.createElement("div");
+    controlsContainer.className = "video-player-controls-container";
 
-    for (const type in this.callbacks) {
-      const callback = this.callbacks[type as ButtonCallbackType];
-
-      if (!callback) {
-        continue;
-      }
-
-      controlsContainer.appendChild(
-        this.makeButton(icons[type as ButtonCallbackType], callback)
-      );
-    }
+    controlsContainer.appendChild(
+      this.makeButton(ButtonCallbackType.PREV_FRAGMENT)
+    );
+    controlsContainer.appendChild(this.makeButton(ButtonCallbackType.PLAY));
+    controlsContainer.appendChild(this.makeButton(ButtonCallbackType.STOP));
+    controlsContainer.appendChild(
+      this.makeButton(ButtonCallbackType.NEXT_FRAGMENT)
+    );
+    controlsContainer.appendChild(
+      this.makeButton(ButtonCallbackType.SCREENSHOT)
+    );
+    controlsContainer.appendChild(this.makeButton(ButtonCallbackType.EXPORT));
 
     container.appendChild(controlsContainer);
   }
 
-  private makeButton(iconLink: string, callback: ButtonCallback) {
+  private makeButton(type: ButtonCallbackType) {
     const buttonContainer = document.createElement("a");
     const image = document.createElement("img");
 
-    image.src = iconLink;
+    image.src = icons[type];
 
     buttonContainer.appendChild(image);
 
-    buttonContainer.onclick = callback;
+    buttonContainer.onclick = this.callbacks![type];
 
     return buttonContainer;
   }

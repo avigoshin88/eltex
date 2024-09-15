@@ -25,6 +25,10 @@ export class PlayerModeService {
     this.controlsDrawer.setOptions({
       [ButtonCallbackType.PLAY]: this.player.play.bind(this.player),
       [ButtonCallbackType.STOP]: this.player.stop.bind(this.player),
+      [ButtonCallbackType.NEXT_FRAGMENT]: () => {},
+      [ButtonCallbackType.PREV_FRAGMENT]: () => {},
+      [ButtonCallbackType.EXPORT]: () => {},
+      [ButtonCallbackType.SCREENSHOT]: () => {},
     });
     this.controlsDrawer.draw(this.player.container);
 
