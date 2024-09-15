@@ -21,7 +21,11 @@ export class ArchiveVideoService implements ModeService {
   private readonly rangeMapper = new RangeMapperService();
   private readonly archiveControl!: ArchiveControlService;
 
-  constructor(options: ConnectionOptions, player: VideoPlayerService) {
+  constructor(
+    options: ConnectionOptions,
+    player: VideoPlayerService,
+    setControl: (control: ArchiveControlService) => void
+  ) {
     this.player = player;
 
     this.datachannelClient = new DatachannelClientService();
@@ -35,6 +39,8 @@ export class ArchiveVideoService implements ModeService {
     this.archiveControl = new ArchiveControlService(
       this.emitNewFragment.bind(this)
     );
+
+    setControl(this.archiveControl);
   }
 
   async init(): Promise<void> {

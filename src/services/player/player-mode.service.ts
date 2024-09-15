@@ -2,6 +2,7 @@ import { Mode } from "../../constants/mode";
 import { ModeService } from "../../interfaces/mode";
 import { ButtonType } from "../../types/button-callback";
 import { ConnectionOptions } from "../../types/connection-options";
+import { ArchiveControlService } from "../archive-control.service";
 import { Logger } from "../logger/logger.service";
 import { ArchiveVideoService } from "../mode/archive.service";
 import { LiveVideoService } from "../mode/live.service";
@@ -15,6 +16,7 @@ export class PlayerModeService {
   private options!: ConnectionOptions;
   private currentMode: Mode = Mode.LIVE;
   private player: VideoPlayerService;
+  private archiveControl!: ArchiveControlService;
 
   private readonly controlsDrawer = new ControlsOverflowDrawerService();
 
@@ -25,8 +27,8 @@ export class PlayerModeService {
     this.controlsDrawer.setOptions({
       [ButtonType.PLAY]: this.player.play.bind(this.player),
       [ButtonType.STOP]: this.player.stop.bind(this.player),
-      [ButtonType.NEXT_FRAGMENT]: () => {},
-      [ButtonType.PREV_FRAGMENT]: () => {},
+      [ButtonType.NEXT_FRAGMENT]: this.toNextFragment.bind(this),
+      [ButtonType.PREV_FRAGMENT]: this.toPrevFragment.bind(this),
       [ButtonType.EXPORT]: () => {},
       [ButtonType.SCREENSHOT]: () => {},
     });
@@ -63,7 +65,8 @@ export class PlayerModeService {
       case Mode.ARCHIVE:
         this.modeConnection = new ArchiveVideoService(
           this.options,
-          this.player
+          this.player,
+          (archiveControl) => (this.archiveControl = archiveControl)
         );
         this.controlsDrawer.setDisabled({});
 
@@ -78,5 +81,13 @@ export class PlayerModeService {
 
   async clear() {
     await this.modeConnection.reset();
+  }
+
+  private toNextFragment() {
+    this.archiveControl?.toNextFragment();
+  }
+
+  private toPrevFragment() {
+    this.archiveControl?.toPrevFragment();
   }
 }
