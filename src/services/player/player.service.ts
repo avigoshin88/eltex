@@ -1,3 +1,4 @@
+import { Nullable } from "../../types/global";
 import { Logger } from "../logger/logger.service";
 
 export class VideoPlayerService {
@@ -22,7 +23,7 @@ export class VideoPlayerService {
   }
 
   play() {
-    const stream = this.video.srcObject as MediaStream | null;
+    const stream = this.video.srcObject as Nullable<MediaStream>;
 
     if (!stream) {
       this.logger.warn("Нельзя запустить поток, тк его не существует");
@@ -39,7 +40,7 @@ export class VideoPlayerService {
   }
 
   stop() {
-    const stream = this.video.srcObject as MediaStream | null;
+    const stream = this.video.srcObject as Nullable<MediaStream>;
 
     if (!stream) {
       this.logger.warn("Нельзя остановить поток, тк его не существует");

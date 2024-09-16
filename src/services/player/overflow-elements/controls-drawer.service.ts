@@ -1,4 +1,5 @@
 import { ButtonCallbacks, ButtonType } from "../../../types/button-callback";
+import { Nullable } from "../../../types/global";
 
 type CommonButtonType = Exclude<ButtonType, ButtonType.MODE>;
 type BinaryButtonType = Exclude<ButtonType, CommonButtonType>;
@@ -25,11 +26,13 @@ const icons: Record<CommonButtonType, string> = {
 };
 
 export class ControlsOverflowDrawerService {
-  private container!: HTMLDivElement;
+  private readonly container!: HTMLDivElement;
 
-  private callbacks: ButtonCallbacks | null = null;
+  private callbacks: Nullable<ButtonCallbacks> = null;
   private disabledButtons: Partial<Record<ButtonType, boolean>> = {};
   private binaryButtonsState: Partial<Record<BinaryButtonType, boolean>> = {};
+
+  private controlsContainer: Nullable<HTMLDivElement> = null;
 
   constructor(container: HTMLDivElement, callbacks: ButtonCallbacks) {
     this.container = container;
@@ -68,6 +71,7 @@ export class ControlsOverflowDrawerService {
     }
 
     this.clear();
+    this.controlsContainer = controlsContainer;
     this.container.appendChild(controlsContainer);
   }
 
@@ -106,13 +110,10 @@ export class ControlsOverflowDrawerService {
   }
 
   private clear() {
-    const controlsContainer = document.getElementsByClassName(
-      "video-player-controls-container"
-    )[0];
-    if (!controlsContainer) {
+    if (!this.controlsContainer) {
       return;
     }
 
-    this.container.removeChild(controlsContainer);
+    this.container.removeChild(this.controlsContainer);
   }
 }

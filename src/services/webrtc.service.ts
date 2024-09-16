@@ -3,6 +3,7 @@ import {
   DatachannelNativeEventListeners,
   DatachannelEventListeners,
 } from "../types/datachannel-listener";
+import { Nullable } from "../types/global";
 import {
   ConnectionType,
   requestSDPOfferExchangeTURN,
@@ -20,7 +21,7 @@ import { Logger } from "./logger/logger.service";
 export class WebRTCService {
   private logger = new Logger(WebRTCService.name);
 
-  private peerConnection: RTCPeerConnection | null = null;
+  private peerConnection: Nullable<RTCPeerConnection> = null;
   private options!: ConnectionOptions;
   private currentType: null | ConnectionType = null;
   private datachannelClient: DatachannelClientService;

@@ -43,6 +43,7 @@ export class PlayerModeService {
   }
 
   async switch() {
+    await this.reset();
     if (this.currentMode === Mode.LIVE) {
       this.enable(Mode.ARCHIVE);
     } else {
@@ -78,7 +79,6 @@ export class PlayerModeService {
         break;
     }
 
-    await this.reset();
     this.currentMode = newMode;
 
     this.controlsDrawer.setBinaryButtonsState({
