@@ -10,7 +10,7 @@ import { ArchiveVideoService } from "../mode/archive.service";
 import { LiveVideoService } from "../mode/live.service";
 import { SnapshotService } from "../snapshot.service";
 import { ControlsOverflowDrawerService } from "./overflow-elements/controls-drawer.service";
-import { PlayerStatsService } from "./player.-stats.service";
+import { PlayerStatsService } from "./player-stats.service";
 import { VideoPlayerService } from "./player.service";
 
 export class PlayerModeService {
