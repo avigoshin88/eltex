@@ -43,7 +43,7 @@ export class VideoPlayerService {
 
     const tracks = stream.getTracks();
     tracks.forEach((track) => {
-      track.enabled = true;
+      track.enabled = false;
     });
 
     this.video.pause();
