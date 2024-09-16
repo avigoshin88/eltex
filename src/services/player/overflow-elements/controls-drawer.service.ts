@@ -37,6 +37,7 @@ export class ControlsOverflowDrawerService {
   private readonly container!: HTMLDivElement;
 
   private callbacks: Nullable<ButtonCallbacks> = null;
+  private hiddenButtons: Partial<Record<ButtonType, boolean>> = {};
   private disabledButtons: Partial<Record<ButtonType, boolean>> = {};
   private binaryButtonsState: Partial<Record<BinaryButtonType, boolean>> = {};
 
@@ -51,7 +52,7 @@ export class ControlsOverflowDrawerService {
     const controlsContainer = document.createElement("div");
     controlsContainer.className = "video-player-controls-container";
 
-    if (!this.disabledButtons[ButtonType.MODE]) {
+    if (!this.hiddenButtons[ButtonType.MODE]) {
       controlsContainer.appendChild(
         this.makeBinaryButton(
           ButtonType.MODE,
@@ -59,10 +60,10 @@ export class ControlsOverflowDrawerService {
         )
       );
     }
-    if (!this.disabledButtons[ButtonType.PREV_FRAGMENT]) {
+    if (!this.hiddenButtons[ButtonType.PREV_FRAGMENT]) {
       controlsContainer.appendChild(this.makeButton(ButtonType.PREV_FRAGMENT));
     }
-    if (!this.disabledButtons[ButtonType.PLAY]) {
+    if (!this.hiddenButtons[ButtonType.PLAY]) {
       controlsContainer.appendChild(
         this.makeBinaryButton(
           ButtonType.PLAY,
@@ -70,7 +71,7 @@ export class ControlsOverflowDrawerService {
         )
       );
     }
-    if (!this.disabledButtons[ButtonType.VOLUME]) {
+    if (!this.hiddenButtons[ButtonType.VOLUME]) {
       controlsContainer.appendChild(
         this.makeBinaryButton(
           ButtonType.VOLUME,
@@ -78,19 +79,23 @@ export class ControlsOverflowDrawerService {
         )
       );
     }
-    if (!this.disabledButtons[ButtonType.NEXT_FRAGMENT]) {
+    if (!this.hiddenButtons[ButtonType.NEXT_FRAGMENT]) {
       controlsContainer.appendChild(this.makeButton(ButtonType.NEXT_FRAGMENT));
     }
-    if (!this.disabledButtons[ButtonType.SNAPSHOT]) {
+    if (!this.hiddenButtons[ButtonType.SNAPSHOT]) {
       controlsContainer.appendChild(this.makeButton(ButtonType.SNAPSHOT));
     }
-    if (!this.disabledButtons[ButtonType.EXPORT]) {
+    if (!this.hiddenButtons[ButtonType.EXPORT]) {
       controlsContainer.appendChild(this.makeButton(ButtonType.EXPORT));
     }
 
     this.clear();
     this.controlsContainer = controlsContainer;
     this.container.appendChild(controlsContainer);
+  }
+
+  setHidden(hiddenButtons: Partial<Record<ButtonType, boolean>>) {
+    this.hiddenButtons = hiddenButtons;
   }
 
   setDisabled(disabledButtons: Partial<Record<ButtonType, boolean>>) {
@@ -124,8 +129,11 @@ export class ControlsOverflowDrawerService {
   }
 
   private makeBaseButton(type: ButtonType, icon: string) {
-    const buttonContainer = document.createElement("a");
+    const buttonContainer = document.createElement("button");
     const image = document.createElement("img");
+
+    buttonContainer.className = "video-player__controls__button";
+    buttonContainer.disabled = Boolean(this.disabledButtons[type]);
 
     image.src = icon;
 

@@ -2,12 +2,15 @@ import { Mode } from "../../constants/mode";
 import { ModeService } from "../../interfaces/mode";
 import { ButtonType } from "../../types/button-callback";
 import { ConnectionOptions } from "../../types/connection-options";
+import { Nullable } from "../../types/global";
+import { VideoStats } from "../../types/video";
 import { ArchiveControlService } from "../archive-control.service";
 import { Logger } from "../logger/logger.service";
 import { ArchiveVideoService } from "../mode/archive.service";
 import { LiveVideoService } from "../mode/live.service";
 import { SnapshotService } from "../snapshot.service";
 import { ControlsOverflowDrawerService } from "./overflow-elements/controls-drawer.service";
+import { PlayerStatsService } from "./player.-stats.service";
 import { VideoPlayerService } from "./player.service";
 
 export class PlayerModeService {
@@ -19,12 +22,18 @@ export class PlayerModeService {
   private player: VideoPlayerService;
   private archiveControl!: ArchiveControlService;
   private readonly snapshotManager = new SnapshotService();
+  private readonly playerStats!: PlayerStatsService;
 
   private readonly controlsDrawer!: ControlsOverflowDrawerService;
 
   constructor(options: ConnectionOptions, player: VideoPlayerService) {
     this.options = { ...options };
     this.player = player;
+
+    this.playerStats = new PlayerStatsService(
+      this.player.video,
+      this.onUpdateStats.bind(this)
+    );
 
     this.controlsDrawer = new ControlsOverflowDrawerService(
       this.player.container,
@@ -38,6 +47,9 @@ export class PlayerModeService {
         [ButtonType.SNAPSHOT]: this.snap.bind(this),
       }
     );
+    this.controlsDrawer.setDisabled({
+      [ButtonType.SNAPSHOT]: true,
+    });
 
     this.enable(Mode.ARCHIVE);
   }
@@ -61,7 +73,7 @@ export class PlayerModeService {
     switch (newMode) {
       case Mode.LIVE:
         this.modeConnection = new LiveVideoService(this.options, this.player);
-        this.controlsDrawer.setDisabled({
+        this.controlsDrawer.setHidden({
           [ButtonType.EXPORT]: true,
           [ButtonType.NEXT_FRAGMENT]: true,
           [ButtonType.PREV_FRAGMENT]: true,
@@ -74,7 +86,7 @@ export class PlayerModeService {
           this.player,
           (archiveControl) => (this.archiveControl = archiveControl)
         );
-        this.controlsDrawer.setDisabled({});
+        this.controlsDrawer.setHidden({});
 
         break;
     }
@@ -132,8 +144,16 @@ export class PlayerModeService {
   private snap() {
     this.snapshotManager.snap(
       this.player.video,
-      window.innerWidth,
-      window.innerHeight
+      this.playerStats.stats?.width,
+      this.playerStats.stats?.height
     );
+  }
+
+  private onUpdateStats(stats: Nullable<VideoStats>) {
+    this.controlsDrawer.setDisabled({
+      [ButtonType.SNAPSHOT]: stats === null,
+    });
+
+    this.controlsDrawer.draw();
   }
 }

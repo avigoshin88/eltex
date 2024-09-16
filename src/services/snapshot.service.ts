@@ -15,19 +15,19 @@ export class SnapshotService {
 
   snap(
     video: HTMLVideoElement,
-    width: number,
-    height: number,
+    width?: number,
+    height?: number,
     {
       download = defaultSnapConfig.download,
       title = defaultSnapConfig.title,
     }: SnapConfig = defaultSnapConfig
   ) {
-    const snapWidth = width ?? video.width;
-    const snapHeight = height ?? video.height;
+    const snapWidth = width ?? video.videoWidth;
+    const snapHeight = height ?? video.videoHeight;
 
     const canvas = window.document.createElement("canvas");
-    canvas.width = width;
-    canvas.height = height;
+    canvas.width = snapWidth;
+    canvas.height = snapHeight;
 
     const context = canvas.getContext("2d");
     if (!context) {
