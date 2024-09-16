@@ -61,7 +61,7 @@ class VideoPlayerElement extends HTMLElement {
 
     Env.set(name, newValue ?? oldValue ?? "");
 
-    await this.modeService.clear();
+    await this.modeService.reset();
     this.initElement();
   }
 
