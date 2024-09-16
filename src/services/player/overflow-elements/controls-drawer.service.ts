@@ -56,7 +56,6 @@ export class ControlsOverflowDrawerService {
       controlsContainer.appendChild(this.makeButton(ButtonType.PREV_FRAGMENT));
     }
     if (!this.disabledButtons[ButtonType.PLAY]) {
-      console.log(ButtonType.PLAY, this.binaryButtonsState?.[ButtonType.PLAY]);
       controlsContainer.appendChild(
         this.makeBinaryButton(
           ButtonType.PLAY,
