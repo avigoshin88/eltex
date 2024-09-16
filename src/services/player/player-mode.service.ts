@@ -31,6 +31,7 @@ export class PlayerModeService {
       {
         [ButtonType.MODE]: this.switch.bind(this),
         [ButtonType.PLAY]: this.switchPlayState.bind(this),
+        [ButtonType.VOLUME]: this.switchVolumeState.bind(this),
         [ButtonType.NEXT_FRAGMENT]: this.toNextFragment.bind(this),
         [ButtonType.PREV_FRAGMENT]: this.toPrevFragment.bind(this),
         [ButtonType.EXPORT]: () => {},
@@ -83,6 +84,7 @@ export class PlayerModeService {
     this.controlsDrawer.setBinaryButtonsState({
       [ButtonType.MODE]: newMode === Mode.LIVE,
       [ButtonType.PLAY]: this.player.isPlaying,
+      [ButtonType.VOLUME]: this.player.isVolumeOn,
     });
     this.controlsDrawer.draw();
 
@@ -102,6 +104,19 @@ export class PlayerModeService {
 
     this.controlsDrawer.updateBinaryButtonsState({
       [ButtonType.PLAY]: this.player.isPlaying,
+    });
+    this.controlsDrawer.draw();
+  }
+
+  private switchVolumeState() {
+    if (!this.player.isVolumeOn) {
+      this.player.volumeOn();
+    } else {
+      this.player.volumeMute();
+    }
+
+    this.controlsDrawer.updateBinaryButtonsState({
+      [ButtonType.VOLUME]: this.player.isVolumeOn,
     });
     this.controlsDrawer.draw();
   }

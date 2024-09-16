@@ -1,13 +1,20 @@
 import { ButtonCallbacks, ButtonType } from "../../../types/button-callback";
 import { Nullable } from "../../../types/global";
 
-type CommonButtonType = Exclude<ButtonType, ButtonType.MODE | ButtonType.PLAY>;
+type CommonButtonType = Exclude<
+  ButtonType,
+  ButtonType.MODE | ButtonType.PLAY | ButtonType.VOLUME
+>;
 type BinaryButtonType = Exclude<ButtonType, CommonButtonType>;
 
 const binaryIcons: Record<BinaryButtonType, { on: string; off: string }> = {
   [ButtonType.PLAY]: {
     on: "/play.svg",
     off: "/pause.svg",
+  },
+  [ButtonType.VOLUME]: {
+    on: "/volume-on.svg",
+    off: "/volume-mute.svg",
   },
   [ButtonType.MODE]: {
     on: "/live-mode.svg",
@@ -60,6 +67,14 @@ export class ControlsOverflowDrawerService {
         this.makeBinaryButton(
           ButtonType.PLAY,
           Boolean(this.binaryButtonsState?.[ButtonType.PLAY])
+        )
+      );
+    }
+    if (!this.disabledButtons[ButtonType.VOLUME]) {
+      controlsContainer.appendChild(
+        this.makeBinaryButton(
+          ButtonType.VOLUME,
+          Boolean(this.binaryButtonsState?.[ButtonType.VOLUME])
         )
       );
     }

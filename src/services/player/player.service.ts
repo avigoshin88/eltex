@@ -9,6 +9,7 @@ export class VideoPlayerService {
   video!: HTMLVideoElement;
 
   isPlaying = true;
+  isVolumeOn = true;
 
   init(
     container: HTMLDivElement,
@@ -28,7 +29,7 @@ export class VideoPlayerService {
     const stream = this.video.srcObject as Nullable<MediaStream>;
 
     if (!stream) {
-      this.logger.warn("Нельзя запустить поток, тк его не существует");
+      this.logger.warn("Нельзя запустить поток: потока не существует");
 
       return;
     }
@@ -47,7 +48,7 @@ export class VideoPlayerService {
     const stream = this.video.srcObject as Nullable<MediaStream>;
 
     if (!stream) {
-      this.logger.warn("Нельзя остановить поток, тк его не существует");
+      this.logger.warn("Нельзя остановить поток: потока не существует");
 
       return;
     }
@@ -60,5 +61,39 @@ export class VideoPlayerService {
     this.video.pause();
 
     this.isPlaying = false;
+  }
+
+  volumeOn() {
+    const stream = this.video.srcObject as Nullable<MediaStream>;
+
+    if (!stream) {
+      this.logger.warn("Нельзя включить звук потока: потока не существует");
+
+      return;
+    }
+
+    const tracks = stream.getAudioTracks();
+    tracks.forEach((track) => {
+      track.enabled = true;
+    });
+
+    this.isVolumeOn = true;
+  }
+
+  volumeMute() {
+    const stream = this.video.srcObject as Nullable<MediaStream>;
+
+    if (!stream) {
+      this.logger.warn("Нельзя выключить звук потока: потока не существует");
+
+      return;
+    }
+
+    const tracks = stream.getAudioTracks();
+    tracks.forEach((track) => {
+      track.enabled = true;
+    });
+
+    this.isVolumeOn = false;
   }
 }
