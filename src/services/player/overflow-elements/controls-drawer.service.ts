@@ -1,7 +1,17 @@
 import { OverflowElementDrawer } from "../../../interfaces/overflow-element-builder";
 import { ButtonCallbacks, ButtonType } from "../../../types/button-callback";
 
-const icons: Record<ButtonType, string> = {
+type CommonButtonType = Exclude<ButtonType, ButtonType.MODE>;
+type BinaryButtonType = Exclude<ButtonType, CommonButtonType>;
+
+const binaryIcons: Record<BinaryButtonType, { on: string; off: string }> = {
+  [ButtonType.MODE]: {
+    on: "/live-mode.svg",
+    off: "/archive-mode.svg",
+  },
+};
+
+const icons: Record<CommonButtonType, string> = {
   [ButtonType.PLAY]: "/play.svg",
   [ButtonType.STOP]: "/stop.svg",
   // [ButtonType.PAUSE]: "/pause.svg",
@@ -18,11 +28,20 @@ const icons: Record<ButtonType, string> = {
 export class ControlsOverflowDrawerService implements OverflowElementDrawer {
   callbacks: ButtonCallbacks | null = null;
   disabledButtons: Partial<Record<ButtonType, boolean>> = {};
+  binaryButtonsState: Partial<Record<BinaryButtonType, boolean>> = {};
 
   draw(container: HTMLDivElement): void {
     const controlsContainer = document.createElement("div");
     controlsContainer.className = "video-player-controls-container";
 
+    if (!this.disabledButtons[ButtonType.MODE]) {
+      controlsContainer.appendChild(
+        this.makeBinaryButton(
+          ButtonType.MODE,
+          Boolean(this.binaryButtonsState?.[ButtonType.MODE])
+        )
+      );
+    }
     if (!this.disabledButtons[ButtonType.PREV_FRAGMENT]) {
       controlsContainer.appendChild(this.makeButton(ButtonType.PREV_FRAGMENT));
     }
@@ -42,6 +61,7 @@ export class ControlsOverflowDrawerService implements OverflowElementDrawer {
       controlsContainer.appendChild(this.makeButton(ButtonType.EXPORT));
     }
 
+    this.clear(container);
     container.appendChild(controlsContainer);
   }
 
@@ -49,11 +69,32 @@ export class ControlsOverflowDrawerService implements OverflowElementDrawer {
     this.disabledButtons = disabledButtons;
   }
 
-  private makeButton(type: ButtonType) {
+  setOptions(callbacks: ButtonCallbacks): void {
+    this.callbacks = callbacks;
+  }
+
+  setBinaryButtonsState(
+    binaryButtonsState: Partial<Record<BinaryButtonType, boolean>>
+  ) {
+    this.binaryButtonsState = binaryButtonsState;
+  }
+
+  private makeButton(type: CommonButtonType) {
+    return this.makeBaseButton(type, icons[type]);
+  }
+
+  private makeBinaryButton(type: BinaryButtonType, enabled: boolean) {
+    return this.makeBaseButton(
+      type,
+      enabled ? binaryIcons[type].on : binaryIcons[type].off
+    );
+  }
+
+  private makeBaseButton(type: ButtonType, icon: string) {
     const buttonContainer = document.createElement("a");
     const image = document.createElement("img");
 
-    image.src = icons[type];
+    image.src = icon;
 
     buttonContainer.appendChild(image);
 
@@ -62,7 +103,14 @@ export class ControlsOverflowDrawerService implements OverflowElementDrawer {
     return buttonContainer;
   }
 
-  setOptions(callbacks: ButtonCallbacks): void {
-    this.callbacks = callbacks;
+  private clear(container: HTMLDivElement) {
+    const controlsContainer = document.getElementsByClassName(
+      "video-player-controls-container"
+    )[0];
+    if (!controlsContainer) {
+      return;
+    }
+
+    container.removeChild(controlsContainer);
   }
 }

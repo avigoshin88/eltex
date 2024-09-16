@@ -18,8 +18,7 @@ export class VideoPlayerBuilderService {
   private createContainer() {
     const container = document.createElement("div");
 
-    container.style.position = "relative";
-    container.style.width = "100%";
+    container.className = "video-player-container";
 
     return container;
   }

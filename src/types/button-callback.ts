@@ -1,4 +1,5 @@
 export enum ButtonType {
+  MODE = "mode",
   PLAY = "play",
   STOP = "stop",
   // PAUSE = "pause",

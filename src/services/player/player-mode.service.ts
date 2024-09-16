@@ -27,6 +27,7 @@ export class PlayerModeService {
     this.player = player;
 
     this.controlsDrawer.setOptions({
+      [ButtonType.MODE]: this.switch.bind(this),
       [ButtonType.PLAY]: this.player.play.bind(this.player),
       [ButtonType.STOP]: this.player.stop.bind(this.player),
       [ButtonType.NEXT_FRAGMENT]: this.toNextFragment.bind(this),
@@ -77,6 +78,9 @@ export class PlayerModeService {
 
     this.currentMode = newMode;
 
+    this.controlsDrawer.setBinaryButtonsState({
+      [ButtonType.MODE]: newMode === Mode.LIVE,
+    });
     this.controlsDrawer.draw(this.player.container);
     await this.modeConnection.init();
   }
