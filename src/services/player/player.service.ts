@@ -8,6 +8,8 @@ export class VideoPlayerService {
   videoContainer!: HTMLDivElement;
   video!: HTMLVideoElement;
 
+  isPlaying = true;
+
   init(
     container: HTMLDivElement,
     videoContainer: HTMLDivElement,
@@ -37,9 +39,11 @@ export class VideoPlayerService {
     });
 
     this.video.play();
+
+    this.isPlaying = true;
   }
 
-  stop() {
+  pause() {
     const stream = this.video.srcObject as Nullable<MediaStream>;
 
     if (!stream) {
@@ -54,5 +58,7 @@ export class VideoPlayerService {
     });
 
     this.video.pause();
+
+    this.isPlaying = false;
   }
 }

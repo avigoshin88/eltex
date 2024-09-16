@@ -1,10 +1,14 @@
 import { ButtonCallbacks, ButtonType } from "../../../types/button-callback";
 import { Nullable } from "../../../types/global";
 
-type CommonButtonType = Exclude<ButtonType, ButtonType.MODE>;
+type CommonButtonType = Exclude<ButtonType, ButtonType.MODE | ButtonType.PLAY>;
 type BinaryButtonType = Exclude<ButtonType, CommonButtonType>;
 
 const binaryIcons: Record<BinaryButtonType, { on: string; off: string }> = {
+  [ButtonType.PLAY]: {
+    on: "/play.svg",
+    off: "/pause.svg",
+  },
   [ButtonType.MODE]: {
     on: "/live-mode.svg",
     off: "/archive-mode.svg",
@@ -12,9 +16,6 @@ const binaryIcons: Record<BinaryButtonType, { on: string; off: string }> = {
 };
 
 const icons: Record<CommonButtonType, string> = {
-  [ButtonType.PLAY]: "/play.svg",
-  [ButtonType.STOP]: "/stop.svg",
-  // [ButtonType.PAUSE]: "/pause.svg",
   // [ButtonType.MUTE]: "/stop.svg",
   [ButtonType.EXPORT]: "/export.svg",
   [ButtonType.SNAPSHOT]: "/snapshot.svg",
@@ -55,10 +56,13 @@ export class ControlsOverflowDrawerService {
       controlsContainer.appendChild(this.makeButton(ButtonType.PREV_FRAGMENT));
     }
     if (!this.disabledButtons[ButtonType.PLAY]) {
-      controlsContainer.appendChild(this.makeButton(ButtonType.PLAY));
-    }
-    if (!this.disabledButtons[ButtonType.STOP]) {
-      controlsContainer.appendChild(this.makeButton(ButtonType.STOP));
+      console.log(ButtonType.PLAY, this.binaryButtonsState?.[ButtonType.PLAY]);
+      controlsContainer.appendChild(
+        this.makeBinaryButton(
+          ButtonType.PLAY,
+          Boolean(this.binaryButtonsState?.[ButtonType.PLAY])
+        )
+      );
     }
     if (!this.disabledButtons[ButtonType.NEXT_FRAGMENT]) {
       controlsContainer.appendChild(this.makeButton(ButtonType.NEXT_FRAGMENT));
@@ -83,6 +87,15 @@ export class ControlsOverflowDrawerService {
     binaryButtonsState: Partial<Record<BinaryButtonType, boolean>>
   ) {
     this.binaryButtonsState = binaryButtonsState;
+  }
+
+  updateBinaryButtonsState(
+    binaryButtonsState: Partial<Record<BinaryButtonType, boolean>>
+  ) {
+    this.binaryButtonsState = {
+      ...this.binaryButtonsState,
+      ...binaryButtonsState,
+    };
   }
 
   private makeButton(type: CommonButtonType) {
