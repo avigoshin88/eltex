@@ -20,7 +20,7 @@ export class VideoPlayerBuilderService {
   private createVideoContainer() {
     const container = document.createElement("div");
 
-    container.className = "video-player-container";
+    container.className = "video-player__container";
 
     return container;
   }

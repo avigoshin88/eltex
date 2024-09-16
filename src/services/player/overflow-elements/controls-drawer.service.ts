@@ -50,7 +50,7 @@ export class ControlsOverflowDrawerService {
 
   draw(): void {
     const controlsContainer = document.createElement("div");
-    controlsContainer.className = "video-player-controls-container";
+    controlsContainer.className = "video-player__controls__container";
 
     if (!this.hiddenButtons[ButtonType.MODE]) {
       controlsContainer.appendChild(
