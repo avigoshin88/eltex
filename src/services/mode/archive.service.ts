@@ -17,7 +17,7 @@ export class ArchiveVideoService implements ModeService {
   private readonly datachannelClient: DatachannelClientService;
   private readonly player: VideoPlayerService;
 
-  private readonly timelineDrawer = new TimelineOverflowDrawer();
+  private readonly timelineDrawer!: TimelineOverflowDrawer;
   private readonly rangeMapper = new RangeMapperService();
   private readonly archiveControl!: ArchiveControlService;
 
@@ -39,6 +39,7 @@ export class ArchiveVideoService implements ModeService {
     this.archiveControl = new ArchiveControlService(
       this.emitNewFragment.bind(this)
     );
+    this.timelineDrawer = new TimelineOverflowDrawer(this.player.container);
 
     setControl(this.archiveControl);
   }
@@ -63,6 +64,7 @@ export class ArchiveVideoService implements ModeService {
 
   async reset(): Promise<void> {
     this.webRTCClient.reset();
+    this.timelineDrawer.clear();
   }
 
   private async onOpenDatachannel() {
@@ -77,7 +79,7 @@ export class ArchiveVideoService implements ModeService {
     this.archiveControl.init();
 
     this.timelineDrawer.setOptions(this.rangeMapper.calc(ranges));
-    this.timelineDrawer.draw(this.player.container);
+    this.timelineDrawer.draw();
   }
 
   private emitNewFragment(fragment: RangeDto) {

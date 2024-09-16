@@ -20,11 +20,15 @@ export class PlayerModeService {
   private archiveControl!: ArchiveControlService;
   private readonly snapshotManager = new SnapshotService();
 
-  private readonly controlsDrawer = new ControlsOverflowDrawerService();
+  private readonly controlsDrawer!: ControlsOverflowDrawerService;
 
   constructor(options: ConnectionOptions, player: VideoPlayerService) {
     this.options = { ...options };
     this.player = player;
+
+    this.controlsDrawer = new ControlsOverflowDrawerService(
+      this.player.container
+    );
 
     this.controlsDrawer.setOptions({
       [ButtonType.MODE]: this.switch.bind(this),
@@ -40,7 +44,6 @@ export class PlayerModeService {
   }
 
   async switch() {
-    await this.clear();
     if (this.currentMode === Mode.LIVE) {
       this.enable(Mode.ARCHIVE);
     } else {
@@ -76,12 +79,14 @@ export class PlayerModeService {
         break;
     }
 
+    await this.clear();
     this.currentMode = newMode;
 
     this.controlsDrawer.setBinaryButtonsState({
       [ButtonType.MODE]: newMode === Mode.LIVE,
     });
-    this.controlsDrawer.draw(this.player.container);
+    this.controlsDrawer.draw();
+
     await this.modeConnection.init();
   }
 

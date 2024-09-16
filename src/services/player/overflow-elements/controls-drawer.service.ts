@@ -1,4 +1,3 @@
-import { OverflowElementDrawer } from "../../../interfaces/overflow-element-builder";
 import { ButtonCallbacks, ButtonType } from "../../../types/button-callback";
 
 type CommonButtonType = Exclude<ButtonType, ButtonType.MODE>;
@@ -25,12 +24,18 @@ const icons: Record<CommonButtonType, string> = {
   // [ButtonType.INFO]: "/stop.svg",
 };
 
-export class ControlsOverflowDrawerService implements OverflowElementDrawer {
-  callbacks: ButtonCallbacks | null = null;
-  disabledButtons: Partial<Record<ButtonType, boolean>> = {};
-  binaryButtonsState: Partial<Record<BinaryButtonType, boolean>> = {};
+export class ControlsOverflowDrawerService {
+  private container!: HTMLDivElement;
 
-  draw(container: HTMLDivElement): void {
+  private callbacks: ButtonCallbacks | null = null;
+  private disabledButtons: Partial<Record<ButtonType, boolean>> = {};
+  private binaryButtonsState: Partial<Record<BinaryButtonType, boolean>> = {};
+
+  constructor(container: HTMLDivElement) {
+    this.container = container;
+  }
+
+  draw(): void {
     const controlsContainer = document.createElement("div");
     controlsContainer.className = "video-player-controls-container";
 
@@ -61,8 +66,8 @@ export class ControlsOverflowDrawerService implements OverflowElementDrawer {
       controlsContainer.appendChild(this.makeButton(ButtonType.EXPORT));
     }
 
-    this.clear(container);
-    container.appendChild(controlsContainer);
+    this.clear();
+    this.container.appendChild(controlsContainer);
   }
 
   setDisabled(disabledButtons: Partial<Record<ButtonType, boolean>>) {
@@ -103,7 +108,7 @@ export class ControlsOverflowDrawerService implements OverflowElementDrawer {
     return buttonContainer;
   }
 
-  private clear(container: HTMLDivElement) {
+  private clear() {
     const controlsContainer = document.getElementsByClassName(
       "video-player-controls-container"
     )[0];
@@ -111,6 +116,6 @@ export class ControlsOverflowDrawerService implements OverflowElementDrawer {
       return;
     }
 
-    container.removeChild(controlsContainer);
+    this.container.removeChild(controlsContainer);
   }
 }

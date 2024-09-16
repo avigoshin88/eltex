@@ -1,11 +1,11 @@
 import { RangePeriod } from "../../../dto/ranges";
-import { OverflowElementDrawer } from "../../../interfaces/overflow-element-builder";
 import { RangeData } from "../../../types/range";
 
 const STATES_COUNT = 58;
 
-export class TimelineOverflowDrawer implements OverflowElementDrawer {
+export class TimelineOverflowDrawer {
   private ranges: RangeData[] = [];
+  private container!: HTMLDivElement;
 
   formatter = new Intl.DateTimeFormat("ru", {
     hour: "numeric",
@@ -13,7 +13,11 @@ export class TimelineOverflowDrawer implements OverflowElementDrawer {
     second: "numeric",
   });
 
-  draw(container: HTMLDivElement): void {
+  constructor(container: HTMLDivElement) {
+    this.container = container;
+  }
+
+  draw(): void {
     const timelineContainer = document.createElement("div");
 
     const totalDuration =
@@ -32,7 +36,20 @@ export class TimelineOverflowDrawer implements OverflowElementDrawer {
       timelineContainer.appendChild(rangeElement);
     });
 
-    container.appendChild(timelineContainer);
+    this.clear();
+    this.container.appendChild(timelineContainer);
+  }
+
+  public clear() {
+    const timelineContainer = document.getElementsByClassName(
+      "video-player_timeline"
+    )[0];
+
+    if (!timelineContainer) {
+      return;
+    }
+
+    this.container.removeChild(timelineContainer);
   }
 
   setOptions(ranges: RangeData[]): void {
