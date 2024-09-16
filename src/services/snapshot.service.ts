@@ -44,7 +44,7 @@ export class SnapshotService {
       const downloadLink = document.createElement("a");
 
       downloadLink.href = dataURI;
-      downloadLink.download = `${{ title }}.jpg`;
+      downloadLink.download = `${title}.jpg`;
       downloadLink.click();
 
       return;
