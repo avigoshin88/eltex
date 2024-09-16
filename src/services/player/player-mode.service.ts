@@ -27,18 +27,17 @@ export class PlayerModeService {
     this.player = player;
 
     this.controlsDrawer = new ControlsOverflowDrawerService(
-      this.player.container
+      this.player.container,
+      {
+        [ButtonType.MODE]: this.switch.bind(this),
+        [ButtonType.PLAY]: this.player.play.bind(this.player),
+        [ButtonType.STOP]: this.player.stop.bind(this.player),
+        [ButtonType.NEXT_FRAGMENT]: this.toNextFragment.bind(this),
+        [ButtonType.PREV_FRAGMENT]: this.toPrevFragment.bind(this),
+        [ButtonType.EXPORT]: () => {},
+        [ButtonType.SNAPSHOT]: this.snap.bind(this),
+      }
     );
-
-    this.controlsDrawer.setOptions({
-      [ButtonType.MODE]: this.switch.bind(this),
-      [ButtonType.PLAY]: this.player.play.bind(this.player),
-      [ButtonType.STOP]: this.player.stop.bind(this.player),
-      [ButtonType.NEXT_FRAGMENT]: this.toNextFragment.bind(this),
-      [ButtonType.PREV_FRAGMENT]: this.toPrevFragment.bind(this),
-      [ButtonType.EXPORT]: () => {},
-      [ButtonType.SNAPSHOT]: this.snap.bind(this),
-    });
 
     this.enable(Mode.ARCHIVE);
   }
@@ -79,7 +78,7 @@ export class PlayerModeService {
         break;
     }
 
-    await this.clear();
+    await this.reset();
     this.currentMode = newMode;
 
     this.controlsDrawer.setBinaryButtonsState({
@@ -90,7 +89,7 @@ export class PlayerModeService {
     await this.modeConnection.init();
   }
 
-  async clear() {
+  async reset() {
     await this.modeConnection.reset();
   }
 

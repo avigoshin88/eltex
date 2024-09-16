@@ -31,8 +31,9 @@ export class ControlsOverflowDrawerService {
   private disabledButtons: Partial<Record<ButtonType, boolean>> = {};
   private binaryButtonsState: Partial<Record<BinaryButtonType, boolean>> = {};
 
-  constructor(container: HTMLDivElement) {
+  constructor(container: HTMLDivElement, callbacks: ButtonCallbacks) {
     this.container = container;
+    this.callbacks = callbacks;
   }
 
   draw(): void {
@@ -72,10 +73,6 @@ export class ControlsOverflowDrawerService {
 
   setDisabled(disabledButtons: Partial<Record<ButtonType, boolean>>) {
     this.disabledButtons = disabledButtons;
-  }
-
-  setOptions(callbacks: ButtonCallbacks): void {
-    this.callbacks = callbacks;
   }
 
   setBinaryButtonsState(
