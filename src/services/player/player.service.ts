@@ -1,13 +1,22 @@
+import { Nullable } from "../../types/global";
 import { Logger } from "../logger/logger.service";
 
 export class VideoPlayerService {
   private readonly logger = new Logger(VideoPlayerService.name);
 
   container!: HTMLDivElement;
+  videoContainer!: HTMLDivElement;
   video!: HTMLVideoElement;
 
-  init(container: HTMLDivElement, video: HTMLVideoElement) {
+  isPlaying = true;
+
+  init(
+    container: HTMLDivElement,
+    videoContainer: HTMLDivElement,
+    video: HTMLVideoElement
+  ) {
     this.container = container;
+    this.videoContainer = videoContainer;
     this.video = video;
   }
 
@@ -16,7 +25,7 @@ export class VideoPlayerService {
   }
 
   play() {
-    const stream = this.video.srcObject as MediaStream | null;
+    const stream = this.video.srcObject as Nullable<MediaStream>;
 
     if (!stream) {
       this.logger.warn("Нельзя запустить поток, тк его не существует");
@@ -30,10 +39,12 @@ export class VideoPlayerService {
     });
 
     this.video.play();
+
+    this.isPlaying = true;
   }
 
-  stop() {
-    const stream = this.video.srcObject as MediaStream | null;
+  pause() {
+    const stream = this.video.srcObject as Nullable<MediaStream>;
 
     if (!stream) {
       this.logger.warn("Нельзя остановить поток, тк его не существует");
@@ -47,5 +58,7 @@ export class VideoPlayerService {
     });
 
     this.video.pause();
+
+    this.isPlaying = false;
   }
 }

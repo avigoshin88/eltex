@@ -13,7 +13,6 @@ class VideoPlayerElement extends HTMLElement {
     super();
   }
 
-  video!: HTMLVideoElement;
   container!: HTMLDivElement;
 
   player = new VideoPlayerService();
@@ -96,12 +95,11 @@ class VideoPlayerElement extends HTMLElement {
       this.removeChild(this.container);
     }
 
-    const { container, video } = this.builder.createPlayer();
+    const { container, videoContainer, video } = this.builder.createPlayer();
 
     this.container = container;
-    this.video = video;
 
-    this.player.init(this.container, this.video);
+    this.player.init(this.container, videoContainer, video);
 
     this.appendChild(this.container);
 

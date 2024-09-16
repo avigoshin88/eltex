@@ -20,26 +20,29 @@ export class PlayerModeService {
   private archiveControl!: ArchiveControlService;
   private readonly snapshotManager = new SnapshotService();
 
-  private readonly controlsDrawer = new ControlsOverflowDrawerService();
+  private readonly controlsDrawer!: ControlsOverflowDrawerService;
 
   constructor(options: ConnectionOptions, player: VideoPlayerService) {
     this.options = { ...options };
     this.player = player;
 
-    this.controlsDrawer.setOptions({
-      [ButtonType.PLAY]: this.player.play.bind(this.player),
-      [ButtonType.STOP]: this.player.stop.bind(this.player),
-      [ButtonType.NEXT_FRAGMENT]: this.toNextFragment.bind(this),
-      [ButtonType.PREV_FRAGMENT]: this.toPrevFragment.bind(this),
-      [ButtonType.EXPORT]: () => {},
-      [ButtonType.SNAPSHOT]: this.snap.bind(this),
-    });
+    this.controlsDrawer = new ControlsOverflowDrawerService(
+      this.player.container,
+      {
+        [ButtonType.MODE]: this.switch.bind(this),
+        [ButtonType.PLAY]: this.switchPlayState.bind(this),
+        [ButtonType.NEXT_FRAGMENT]: this.toNextFragment.bind(this),
+        [ButtonType.PREV_FRAGMENT]: this.toPrevFragment.bind(this),
+        [ButtonType.EXPORT]: () => {},
+        [ButtonType.SNAPSHOT]: this.snap.bind(this),
+      }
+    );
 
     this.enable(Mode.ARCHIVE);
   }
 
   async switch() {
-    await this.clear();
+    await this.reset();
     if (this.currentMode === Mode.LIVE) {
       this.enable(Mode.ARCHIVE);
     } else {
@@ -77,12 +80,30 @@ export class PlayerModeService {
 
     this.currentMode = newMode;
 
-    this.controlsDrawer.draw(this.player.container);
+    this.controlsDrawer.setBinaryButtonsState({
+      [ButtonType.MODE]: newMode === Mode.LIVE,
+      [ButtonType.PLAY]: this.player.isPlaying,
+    });
+    this.controlsDrawer.draw();
+
     await this.modeConnection.init();
   }
 
-  async clear() {
+  async reset() {
     await this.modeConnection.reset();
+  }
+
+  private switchPlayState() {
+    if (!this.player.isPlaying) {
+      this.player.play();
+    } else {
+      this.player.pause();
+    }
+
+    this.controlsDrawer.updateBinaryButtonsState({
+      [ButtonType.PLAY]: this.player.isPlaying,
+    });
+    this.controlsDrawer.draw();
   }
 
   private toNextFragment() {

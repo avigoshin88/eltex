@@ -1,10 +1,21 @@
-import { OverflowElementDrawer } from "../../../interfaces/overflow-element-builder";
 import { ButtonCallbacks, ButtonType } from "../../../types/button-callback";
+import { Nullable } from "../../../types/global";
 
-const icons: Record<ButtonType, string> = {
-  [ButtonType.PLAY]: "/play.svg",
-  [ButtonType.STOP]: "/stop.svg",
-  // [ButtonType.PAUSE]: "/pause.svg",
+type CommonButtonType = Exclude<ButtonType, ButtonType.MODE | ButtonType.PLAY>;
+type BinaryButtonType = Exclude<ButtonType, CommonButtonType>;
+
+const binaryIcons: Record<BinaryButtonType, { on: string; off: string }> = {
+  [ButtonType.PLAY]: {
+    on: "/play.svg",
+    off: "/pause.svg",
+  },
+  [ButtonType.MODE]: {
+    on: "/live-mode.svg",
+    off: "/archive-mode.svg",
+  },
+};
+
+const icons: Record<CommonButtonType, string> = {
   // [ButtonType.MUTE]: "/stop.svg",
   [ButtonType.EXPORT]: "/export.svg",
   [ButtonType.SNAPSHOT]: "/snapshot.svg",
@@ -15,22 +26,42 @@ const icons: Record<ButtonType, string> = {
   // [ButtonType.INFO]: "/stop.svg",
 };
 
-export class ControlsOverflowDrawerService implements OverflowElementDrawer {
-  callbacks: ButtonCallbacks | null = null;
-  disabledButtons: Partial<Record<ButtonType, boolean>> = {};
+export class ControlsOverflowDrawerService {
+  private readonly container!: HTMLDivElement;
 
-  draw(container: HTMLDivElement): void {
+  private callbacks: Nullable<ButtonCallbacks> = null;
+  private disabledButtons: Partial<Record<ButtonType, boolean>> = {};
+  private binaryButtonsState: Partial<Record<BinaryButtonType, boolean>> = {};
+
+  private controlsContainer: Nullable<HTMLDivElement> = null;
+
+  constructor(container: HTMLDivElement, callbacks: ButtonCallbacks) {
+    this.container = container;
+    this.callbacks = callbacks;
+  }
+
+  draw(): void {
     const controlsContainer = document.createElement("div");
     controlsContainer.className = "video-player-controls-container";
 
+    if (!this.disabledButtons[ButtonType.MODE]) {
+      controlsContainer.appendChild(
+        this.makeBinaryButton(
+          ButtonType.MODE,
+          Boolean(this.binaryButtonsState?.[ButtonType.MODE])
+        )
+      );
+    }
     if (!this.disabledButtons[ButtonType.PREV_FRAGMENT]) {
       controlsContainer.appendChild(this.makeButton(ButtonType.PREV_FRAGMENT));
     }
     if (!this.disabledButtons[ButtonType.PLAY]) {
-      controlsContainer.appendChild(this.makeButton(ButtonType.PLAY));
-    }
-    if (!this.disabledButtons[ButtonType.STOP]) {
-      controlsContainer.appendChild(this.makeButton(ButtonType.STOP));
+      controlsContainer.appendChild(
+        this.makeBinaryButton(
+          ButtonType.PLAY,
+          Boolean(this.binaryButtonsState?.[ButtonType.PLAY])
+        )
+      );
     }
     if (!this.disabledButtons[ButtonType.NEXT_FRAGMENT]) {
       controlsContainer.appendChild(this.makeButton(ButtonType.NEXT_FRAGMENT));
@@ -42,18 +73,46 @@ export class ControlsOverflowDrawerService implements OverflowElementDrawer {
       controlsContainer.appendChild(this.makeButton(ButtonType.EXPORT));
     }
 
-    container.appendChild(controlsContainer);
+    this.clear();
+    this.controlsContainer = controlsContainer;
+    this.container.appendChild(controlsContainer);
   }
 
   setDisabled(disabledButtons: Partial<Record<ButtonType, boolean>>) {
     this.disabledButtons = disabledButtons;
   }
 
-  private makeButton(type: ButtonType) {
+  setBinaryButtonsState(
+    binaryButtonsState: Partial<Record<BinaryButtonType, boolean>>
+  ) {
+    this.binaryButtonsState = binaryButtonsState;
+  }
+
+  updateBinaryButtonsState(
+    binaryButtonsState: Partial<Record<BinaryButtonType, boolean>>
+  ) {
+    this.binaryButtonsState = {
+      ...this.binaryButtonsState,
+      ...binaryButtonsState,
+    };
+  }
+
+  private makeButton(type: CommonButtonType) {
+    return this.makeBaseButton(type, icons[type]);
+  }
+
+  private makeBinaryButton(type: BinaryButtonType, enabled: boolean) {
+    return this.makeBaseButton(
+      type,
+      enabled ? binaryIcons[type].on : binaryIcons[type].off
+    );
+  }
+
+  private makeBaseButton(type: ButtonType, icon: string) {
     const buttonContainer = document.createElement("a");
     const image = document.createElement("img");
 
-    image.src = icons[type];
+    image.src = icon;
 
     buttonContainer.appendChild(image);
 
@@ -62,7 +121,11 @@ export class ControlsOverflowDrawerService implements OverflowElementDrawer {
     return buttonContainer;
   }
 
-  setOptions(callbacks: ButtonCallbacks): void {
-    this.callbacks = callbacks;
+  private clear() {
+    if (!this.controlsContainer) {
+      return;
+    }
+
+    this.container.removeChild(this.controlsContainer);
   }
 }
