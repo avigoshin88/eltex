@@ -1,4 +1,8 @@
+import { Logger } from "../logger/logger.service";
+
 export class VideoPlayerService {
+  private readonly logger = new Logger(VideoPlayerService.name);
+
   container!: HTMLDivElement;
   video!: HTMLVideoElement;
 
@@ -12,11 +16,36 @@ export class VideoPlayerService {
   }
 
   play() {
-    this.video.preload = "none";
+    const stream = this.video.srcObject as MediaStream | null;
+
+    if (!stream) {
+      this.logger.warn("Нельзя запустить поток, тк его не существует");
+
+      return;
+    }
+
+    const tracks = stream.getTracks();
+    tracks.forEach((track) => {
+      track.enabled = true;
+    });
+
     this.video.play();
   }
 
-  pause() {
+  stop() {
+    const stream = this.video.srcObject as MediaStream | null;
+
+    if (!stream) {
+      this.logger.warn("Нельзя остановить поток, тк его не существует");
+
+      return;
+    }
+
+    const tracks = stream.getTracks();
+    tracks.forEach((track) => {
+      track.enabled = false;
+    });
+
     this.video.pause();
   }
 }

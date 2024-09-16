@@ -1,6 +1,8 @@
 import { Mode } from "../../constants/mode";
 import { ModeService } from "../../interfaces/mode";
+import { ButtonType } from "../../types/button-callback";
 import { ConnectionOptions } from "../../types/connection-options";
+import { ArchiveControlService } from "../archive-control.service";
 import { Logger } from "../logger/logger.service";
 import { ArchiveVideoService } from "../mode/archive.service";
 import { LiveVideoService } from "../mode/live.service";
@@ -14,6 +16,7 @@ export class PlayerModeService {
   private options!: ConnectionOptions;
   private currentMode: Mode = Mode.LIVE;
   private player: VideoPlayerService;
+  private archiveControl!: ArchiveControlService;
 
   private readonly controlsDrawer = new ControlsOverflowDrawerService();
 
@@ -21,7 +24,14 @@ export class PlayerModeService {
     this.options = { ...options };
     this.player = player;
 
-    this.controlsDrawer.draw(this.player.container);
+    this.controlsDrawer.setOptions({
+      [ButtonType.PLAY]: this.player.play.bind(this.player),
+      [ButtonType.STOP]: this.player.stop.bind(this.player),
+      [ButtonType.NEXT_FRAGMENT]: this.toNextFragment.bind(this),
+      [ButtonType.PREV_FRAGMENT]: this.toPrevFragment.bind(this),
+      [ButtonType.EXPORT]: () => {},
+      [ButtonType.SCREENSHOT]: () => {},
+    });
 
     this.enable(Mode.ARCHIVE);
   }
@@ -45,21 +55,39 @@ export class PlayerModeService {
     switch (newMode) {
       case Mode.LIVE:
         this.modeConnection = new LiveVideoService(this.options, this.player);
+        this.controlsDrawer.setDisabled({
+          [ButtonType.EXPORT]: true,
+          [ButtonType.NEXT_FRAGMENT]: true,
+          [ButtonType.PREV_FRAGMENT]: true,
+        });
+
         break;
       case Mode.ARCHIVE:
         this.modeConnection = new ArchiveVideoService(
           this.options,
-          this.player
+          this.player,
+          (archiveControl) => (this.archiveControl = archiveControl)
         );
+        this.controlsDrawer.setDisabled({});
+
         break;
     }
 
     this.currentMode = newMode;
 
+    this.controlsDrawer.draw(this.player.container);
     await this.modeConnection.init();
   }
 
   async clear() {
     await this.modeConnection.reset();
+  }
+
+  private toNextFragment() {
+    this.archiveControl?.toNextFragment();
+  }
+
+  private toPrevFragment() {
+    this.archiveControl?.toPrevFragment();
   }
 }

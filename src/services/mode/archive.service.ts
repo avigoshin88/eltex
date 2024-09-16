@@ -8,6 +8,7 @@ import { VideoPlayerService } from "../player/player.service";
 import { RangeDto } from "../../dto/ranges";
 import { TimelineOverflowDrawer } from "../player/overflow-elements/timeline-drawer.service";
 import { RangeMapperService } from "../range-mapper.service";
+import { ArchiveControlService } from "../archive-control.service";
 
 export class ArchiveVideoService implements ModeService {
   private logger = new Logger(ArchiveVideoService.name);
@@ -18,8 +19,13 @@ export class ArchiveVideoService implements ModeService {
 
   private readonly timelineDrawer = new TimelineOverflowDrawer();
   private readonly rangeMapper = new RangeMapperService();
+  private readonly archiveControl!: ArchiveControlService;
 
-  constructor(options: ConnectionOptions, player: VideoPlayerService) {
+  constructor(
+    options: ConnectionOptions,
+    player: VideoPlayerService,
+    setControl: (control: ArchiveControlService) => void
+  ) {
     this.player = player;
 
     this.datachannelClient = new DatachannelClientService();
@@ -29,6 +35,12 @@ export class ArchiveVideoService implements ModeService {
       this.datachannelClient,
       this.setSource.bind(this)
     );
+
+    this.archiveControl = new ArchiveControlService(
+      this.emitNewFragment.bind(this)
+    );
+
+    setControl(this.archiveControl);
   }
 
   async init(): Promise<void> {
@@ -61,14 +73,17 @@ export class ArchiveVideoService implements ModeService {
     const { ranges: unsortedRanges } = data as { ranges: RangeDto[] };
 
     const ranges = unsortedRanges.sort((a, b) => a.start_time - b.start_time);
+    this.archiveControl.setRanges(ranges);
+    this.archiveControl.init();
 
     this.timelineDrawer.setOptions(this.rangeMapper.calc(ranges));
     this.timelineDrawer.draw(this.player.container);
+  }
 
-    const firstRange = ranges[0];
+  private emitNewFragment(fragment: RangeDto) {
     this.datachannelClient.send(DatachannelMessageType.GET_ARCHIVE_FRAGMENT, {
-      start_time: firstRange.start_time,
-      duration: firstRange.duration,
+      start_time: fragment.start_time,
+      duration: fragment.duration,
     });
   }
 
