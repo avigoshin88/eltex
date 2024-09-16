@@ -33,10 +33,56 @@
       app="live"
       stream="test"
       iceServers="stun:evi-webrtc.eltex-co.ru:3478;stun:10.23.18.4:3478;stun:192.168.0.105:3478"
-    />
+    ></video-player>
   </body>
 </html>
 ```
+
+**Закрывающий тэг обязателен**
+
+**Неправильно**
+```
+<video-player/>
+```
+**Правильно**
+```
+<video-player></video-player>
+```
+
+При одиночном тэге наблюдается ошибка:
+
+Вместо
+
+```
+<video-player/>
+<video-player/>
+```
+
+**получается**
+
+```
+<video-player>
+  <video-player/>
+</video-player>
+```
+
+Пример с множеством плееров:
+```
+<video-player
+  apiUrl="https://evi-webrtc.eltex-co.ru:18083"
+  app="live"
+  stream="test"
+  iceServers="stun:evi-webrtc.eltex-co.ru:3478;stun:10.23.18.4:3478;stun:192.168.0.105:3478"
+></video-player>
+
+<video-player
+  apiUrl="https://evi-webrtc.eltex-co.ru:18083"
+  app="live"
+  stream="test"
+  iceServers="stun:evi-webrtc.eltex-co.ru:3478;stun:10.23.18.4:3478;stun:192.168.0.105:3478"
+></video-player>
+```
+
 
 ## Стилизация
 
