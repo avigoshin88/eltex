@@ -4,10 +4,16 @@ export class VideoPlayerService {
   private readonly logger = new Logger(VideoPlayerService.name);
 
   container!: HTMLDivElement;
+  videoContainer!: HTMLDivElement;
   video!: HTMLVideoElement;
 
-  init(container: HTMLDivElement, video: HTMLVideoElement) {
+  init(
+    container: HTMLDivElement,
+    videoContainer: HTMLDivElement,
+    video: HTMLVideoElement
+  ) {
     this.container = container;
+    this.videoContainer = videoContainer;
     this.video = video;
   }
 

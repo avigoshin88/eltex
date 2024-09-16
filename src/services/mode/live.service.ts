@@ -22,7 +22,7 @@ export class LiveVideoService implements ModeService {
 
   constructor(options: ConnectionOptions, player: VideoPlayerService) {
     this.player = player;
-    this.metaDrawer = new MetaOverflowDrawerService(this.player.container);
+    this.metaDrawer = new MetaOverflowDrawerService(this.player.videoContainer);
     this.datachannelClient = new DatachannelClientService();
     this.webRTCClient = new WebRTCService(
       options,
