@@ -7,7 +7,7 @@ const icons: Record<ButtonType, string> = {
   // [ButtonType.PAUSE]: "/pause.svg",
   // [ButtonType.MUTE]: "/stop.svg",
   [ButtonType.EXPORT]: "/export.svg",
-  [ButtonType.SCREENSHOT]: "/screenshot.svg",
+  [ButtonType.SNAPSHOT]: "/snapshot.svg",
   // [ButtonType.NEXT_FRAME]: "/stop.svg",
   // [ButtonType.PREV_FRAME]: "/stop.svg",
   [ButtonType.NEXT_FRAGMENT]: "/step-forward.svg",
@@ -35,8 +35,8 @@ export class ControlsOverflowDrawerService implements OverflowElementDrawer {
     if (!this.disabledButtons[ButtonType.NEXT_FRAGMENT]) {
       controlsContainer.appendChild(this.makeButton(ButtonType.NEXT_FRAGMENT));
     }
-    if (!this.disabledButtons[ButtonType.SCREENSHOT]) {
-      controlsContainer.appendChild(this.makeButton(ButtonType.SCREENSHOT));
+    if (!this.disabledButtons[ButtonType.SNAPSHOT]) {
+      controlsContainer.appendChild(this.makeButton(ButtonType.SNAPSHOT));
     }
     if (!this.disabledButtons[ButtonType.EXPORT]) {
       controlsContainer.appendChild(this.makeButton(ButtonType.EXPORT));
