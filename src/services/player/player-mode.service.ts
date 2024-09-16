@@ -6,6 +6,7 @@ import { ArchiveControlService } from "../archive-control.service";
 import { Logger } from "../logger/logger.service";
 import { ArchiveVideoService } from "../mode/archive.service";
 import { LiveVideoService } from "../mode/live.service";
+import { SnapshotService } from "../snapshot.service";
 import { ControlsOverflowDrawerService } from "./overflow-elements/controls-drawer.service";
 import { VideoPlayerService } from "./player.service";
 
@@ -17,6 +18,7 @@ export class PlayerModeService {
   private currentMode: Mode = Mode.LIVE;
   private player: VideoPlayerService;
   private archiveControl!: ArchiveControlService;
+  private readonly snapshotManager = new SnapshotService();
 
   private readonly controlsDrawer = new ControlsOverflowDrawerService();
 
@@ -30,7 +32,7 @@ export class PlayerModeService {
       [ButtonType.NEXT_FRAGMENT]: this.toNextFragment.bind(this),
       [ButtonType.PREV_FRAGMENT]: this.toPrevFragment.bind(this),
       [ButtonType.EXPORT]: () => {},
-      [ButtonType.SCREENSHOT]: () => {},
+      [ButtonType.SNAPSHOT]: this.snap.bind(this),
     });
 
     this.enable(Mode.ARCHIVE);
@@ -89,5 +91,13 @@ export class PlayerModeService {
 
   private toPrevFragment() {
     this.archiveControl?.toPrevFragment();
+  }
+
+  private snap() {
+    this.snapshotManager.snap(
+      this.player.video,
+      window.innerWidth,
+      window.innerHeight
+    );
   }
 }

@@ -4,7 +4,7 @@ export enum ButtonType {
   // PAUSE = "pause",
   // MUTE = "mute",
   EXPORT = "export",
-  SCREENSHOT = "screenshot",
+  SNAPSHOT = "snapshot",
   // NEXT_FRAME = "next_frame",
   // PREV_FRAME = "prev_frame",
   NEXT_FRAGMENT = "next_fragment",
