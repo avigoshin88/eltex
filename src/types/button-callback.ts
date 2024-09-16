@@ -1,7 +1,7 @@
 export enum ButtonType {
   MODE = "mode",
   PLAY = "play",
-  // MUTE = "mute",
+  VOLUME = "volume",
   EXPORT = "export",
   SNAPSHOT = "snapshot",
   // NEXT_FRAME = "next_frame",

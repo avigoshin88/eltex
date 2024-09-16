@@ -59,9 +59,9 @@ export class TimelineOverflowDrawer {
   private makeRange(range: RangeData): HTMLDivElement {
     const rangeContainer = document.createElement("div");
 
-    const classNames = ["video-player_timeline_range"];
+    const classNames = ["video-player__timeline__range"];
     if (range.type === "break") {
-      classNames.push("video-player_timeline_range_break");
+      classNames.push("video-player__timeline__range_break");
     }
 
     rangeContainer.className = classNames.join(" ");
@@ -73,22 +73,25 @@ export class TimelineOverflowDrawer {
     // Получаем периоды для отображения
 
     const periodsContainer = document.createElement("div");
-    periodsContainer.className = "video-player_timeline_periods_container";
+    periodsContainer.className = "video-player__timeline__periods-container";
 
     const periodElements: HTMLDivElement[] = [];
 
     for (let i = 0; i < STATES_COUNT; i++) {
       const periodContainer = document.createElement("div");
 
-      periodContainer.className = "video-player_timeline_period_container";
+      periodContainer.className = "video-player__timeline__period-container";
 
       const periodElement = document.createElement("div");
-      const periodElementClasses = ["video-player_timeline_period"];
+      const periodElementClasses = ["video-player__timeline__period"];
 
       if (i % 4 === 0 && i !== 0) {
         const timeElement = document.createElement("span");
         timeElement.textContent = this.formatDate(new Date());
-        timeElement.className = "video-player_timeline_period_text";
+        timeElement.className = "video-player__timeline__period__text";
+
+        periodElementClasses.push("video-player__timeline__period_with_text");
+
         periodContainer.appendChild(timeElement);
       }
 
@@ -110,13 +113,13 @@ export class TimelineOverflowDrawer {
 
     trackElement.style.left = `${(totalDuration / 60000) * 100}%`;
 
-    trackElement.className = "video-player_timeline_track";
+    trackElement.className = "video-player__timeline__track";
 
     return trackElement;
   }
 
   private setTimelineStyles(timelineContainer: HTMLDivElement) {
-    timelineContainer.className = "video-player_timeline";
+    timelineContainer.className = "video-player__timeline";
   }
 
   private formatDate(date: Date) {
