@@ -3,7 +3,8 @@
   --timeline_range_break_background: #8d99ae;
   --timeline_range_period: black;
   --timeline_range_period_text: #2b2d42;
-  --timeline_range_track: #edf2f4;
+  /* --timeline_range_track: #edf2f4; */
+  --timeline_range_track: tomato;
   --timeline_range_border: #3d405b;
 }
 
@@ -90,9 +91,9 @@
   position: absolute;
 
   width: 12px;
-  height: 46px;
+  height: 32px;
 
-  top: -8px;
+  top: -6px;
 
   z-index: 1;
 

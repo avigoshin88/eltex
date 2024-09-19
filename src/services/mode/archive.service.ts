@@ -9,6 +9,7 @@ import { RangeDto } from "../../dto/ranges";
 import { TimelineOverflowDrawer } from "../player/overflow-elements/timeline-drawer.service";
 import { RangeMapperService } from "../range-mapper.service";
 import { ArchiveControlService } from "../archive-control.service";
+import { MetaOverflowDrawerService } from "../player/overflow-elements/meta-drawer.service";
 
 export class ArchiveVideoService implements ModeService {
   private logger = new Logger(ArchiveVideoService.name);
@@ -18,8 +19,12 @@ export class ArchiveVideoService implements ModeService {
   private readonly player: VideoPlayerService;
 
   private readonly timelineDrawer!: TimelineOverflowDrawer;
+  private readonly metaDrawer!: MetaOverflowDrawerService;
+
   private readonly rangeMapper = new RangeMapperService();
   private readonly archiveControl!: ArchiveControlService;
+
+  private isLoaded = false;
 
   constructor(
     options: ConnectionOptions,
@@ -27,6 +32,9 @@ export class ArchiveVideoService implements ModeService {
     setControl: (control: ArchiveControlService) => void
   ) {
     this.player = player;
+
+    this.player.video.onloadeddata = this.onLoadedChange.bind(this);
+    this.player.video.ontimeupdate = this.onTimeUpdate.bind(this);
 
     this.datachannelClient = new DatachannelClientService();
 
@@ -39,7 +47,9 @@ export class ArchiveVideoService implements ModeService {
     this.archiveControl = new ArchiveControlService(
       this.emitNewFragment.bind(this)
     );
+
     this.timelineDrawer = new TimelineOverflowDrawer(this.player.container);
+    this.metaDrawer = new MetaOverflowDrawerService(this.player.videoContainer);
 
     setControl(this.archiveControl);
   }
@@ -51,6 +61,9 @@ export class ArchiveVideoService implements ModeService {
       },
       listeners: {
         [DatachannelMessageType.RANGES]: this.onRanges.bind(this),
+        // ругается на unknown
+        // @ts-ignore
+        [DatachannelMessageType.META]: this.metaDrawer.draw,
       },
     });
 
@@ -65,6 +78,7 @@ export class ArchiveVideoService implements ModeService {
   async reset(): Promise<void> {
     this.webRTCClient.reset();
     this.timelineDrawer.clear();
+    // this.metaDrawer.destroy();
   }
 
   private async onOpenDatachannel() {
@@ -75,18 +89,54 @@ export class ArchiveVideoService implements ModeService {
     const { ranges: unsortedRanges } = data as { ranges: RangeDto[] };
 
     const ranges = unsortedRanges.sort((a, b) => a.start_time - b.start_time);
-    this.archiveControl.setRanges(ranges);
+
+    const allRanges = this.rangeMapper.calc(ranges);
+    // console.log(
+    //   JSON.stringify(
+    //     allRanges.map((r) => ({
+    //       start: new Date(r.start_time).toISOString(),
+    //       end: new Date(r.end_time).toISOString(),
+    //       start_time: r.start_time,
+    //       end_time: r.end_time,
+    //       duration: r.duration,
+    //       type: r.type,
+    //     })),
+    //     null,
+    //     2
+    //   )
+    // );
+
+    this.archiveControl.setRanges(ranges, allRanges);
     this.archiveControl.init();
+    this.play();
 
     this.timelineDrawer.setOptions(this.rangeMapper.calc(ranges));
-    this.timelineDrawer.draw();
+    this.timelineDrawer.draw(0);
   }
+
+  private onLoadedChange() {
+    this.isLoaded = true;
+  }
+
+  private onTimeUpdate = (event: Event) => {
+    if (!this.isLoaded) {
+      return;
+    }
+
+    const currentTime = event.timeStamp;
+
+    // this.timelineDrawer.draw(currentTime);
+  };
 
   private emitNewFragment(fragment: RangeDto) {
     this.datachannelClient.send(DatachannelMessageType.GET_ARCHIVE_FRAGMENT, {
       start_time: fragment.start_time,
       duration: fragment.duration,
     });
+  }
+
+  private play() {
+    this.datachannelClient.send(DatachannelMessageType.PLAY_STREAM);
   }
 
   setSource(stream: MediaStream) {

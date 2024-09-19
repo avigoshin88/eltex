@@ -1,4 +1,5 @@
 import { RangeDto } from "../dto/ranges";
+import { RangeData } from "../types/range";
 import { Logger } from "./logger/logger.service";
 
 type Emitter = (fragment: RangeDto) => void;
@@ -7,6 +8,7 @@ export class ArchiveControlService {
   private readonly logger = new Logger(ArchiveControlService.name);
 
   private ranges: RangeDto[] = [];
+  private allRanges: RangeData[] = [];
   private fragmentIndex = 0;
   private emit!: Emitter;
 
@@ -34,8 +36,9 @@ export class ArchiveControlService {
     return this.ranges[this.fragmentIndex - 1];
   }
 
-  setRanges(ranges: RangeDto[]) {
+  setRanges(ranges: RangeDto[], allRanges: RangeData[]) {
     this.ranges = ranges;
+    this.allRanges = allRanges;
   }
 
   init() {

@@ -68,6 +68,7 @@ export class LiveVideoService implements ModeService {
 
   async reset(): Promise<void> {
     this.webRTCClient.reset();
+    // this.metaDrawer.destroy();
   }
 
   setSource(stream: MediaStream) {
