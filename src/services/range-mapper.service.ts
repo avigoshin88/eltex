@@ -20,7 +20,7 @@ export class RangeMapperService {
       if (intervalDuration > 0) {
         result.push({
           start_time: prevRange.end_time || 0,
-          end_time: prevRange.end_time || 0 + intervalDuration,
+          end_time: (prevRange.end_time || 0) + intervalDuration,
           duration: intervalDuration,
           type: "break",
         });
