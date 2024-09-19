@@ -106,7 +106,6 @@ export class TimelineOverflowDrawer {
     currentTime: number,
     period: RangePeriod
   ): HTMLDivElement {
-    console.log("🚀 ~ TimelineOverflowDrawer ~ period:", period);
     const periodsContainer = document.createElement("div");
     periodsContainer.className = "video-player__timeline__periods-container";
 

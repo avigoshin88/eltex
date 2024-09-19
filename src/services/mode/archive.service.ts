@@ -91,20 +91,6 @@ export class ArchiveVideoService implements ModeService {
     const ranges = unsortedRanges.sort((a, b) => a.start_time - b.start_time);
 
     const allRanges = this.rangeMapper.calc(ranges);
-    // console.log(
-    //   JSON.stringify(
-    //     allRanges.map((r) => ({
-    //       start: new Date(r.start_time).toISOString(),
-    //       end: new Date(r.end_time).toISOString(),
-    //       start_time: r.start_time,
-    //       end_time: r.end_time,
-    //       duration: r.duration,
-    //       type: r.type,
-    //     })),
-    //     null,
-    //     2
-    //   )
-    // );
 
     this.archiveControl.setRanges(ranges, allRanges);
     this.archiveControl.init();
