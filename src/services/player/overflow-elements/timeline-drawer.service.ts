@@ -2,272 +2,197 @@ import { RangePeriod } from "../../../dto/ranges";
 import { Nullable } from "../../../types/global";
 import { RangeData } from "../../../types/range";
 
+// import { debounce } from "es-toolkit";
+
 const PERIODS_COUNT = 58;
-
-const periodSizeMS: Record<RangePeriod, number> = {
-  [RangePeriod["week"]]: 604_800_000,
-  [RangePeriod["day"]]: 86_400_000,
-  [RangePeriod["16hours"]]: 57_600_000,
-  [RangePeriod["12hours"]]: 43_200_000,
-  [RangePeriod["6hours"]]: 21_600_000,
-  [RangePeriod["1hour"]]: 3_600_000,
-  [RangePeriod["30min"]]: 1_800_000,
-  [RangePeriod["10min"]]: 600_000,
-  [RangePeriod["5min"]]: 300_000,
-  [RangePeriod["1min"]]: 60_000,
-};
-
-const periodStep: Record<RangePeriod, number> = {
-  [RangePeriod["week"]]:
-    (periodSizeMS[RangePeriod["week"]] / PERIODS_COUNT) * 10080,
-  [RangePeriod["day"]]:
-    (periodSizeMS[RangePeriod["day"]] / PERIODS_COUNT) * 1440,
-  [RangePeriod["16hours"]]:
-    (periodSizeMS[RangePeriod["16hours"]] / PERIODS_COUNT) * 960,
-  [RangePeriod["12hours"]]:
-    (periodSizeMS[RangePeriod["12hours"]] / PERIODS_COUNT) * 720,
-  [RangePeriod["6hours"]]:
-    (periodSizeMS[RangePeriod["6hours"]] / PERIODS_COUNT) * 360,
-  [RangePeriod["1hour"]]:
-    (periodSizeMS[RangePeriod["1hour"]] / PERIODS_COUNT) * 60,
-  [RangePeriod["30min"]]:
-    (periodSizeMS[RangePeriod["30min"]] / PERIODS_COUNT) * 30,
-  [RangePeriod["10min"]]:
-    (periodSizeMS[RangePeriod["10min"]] / PERIODS_COUNT) * 10,
-  [RangePeriod["5min"]]:
-    (periodSizeMS[RangePeriod["5min"]] / PERIODS_COUNT) * 5,
-  [RangePeriod["1min"]]:
-    (periodSizeMS[RangePeriod["1min"]] / PERIODS_COUNT) * 1,
-};
 
 export class TimelineOverflowDrawer {
   private ranges: RangeData[] = [];
-  private readonly container!: HTMLDivElement;
-
-  private readonly periodManager = new PeriodManager();
-
+  private readonly container: HTMLDivElement;
   private timelineContainer: Nullable<HTMLDivElement> = null;
-  private startTime: Nullable<number> = null;
-
-  formatter = new Intl.DateTimeFormat("ru", {
-    hour: "numeric",
-    minute: "numeric",
-    second: "numeric",
-  });
+  private scale: number = 1; // Начальный масштаб
+  private currentStartTime: number = 0; // Текущее начало времени
+  private isReady: boolean = false; // Флаг, указывающий готовность к отрисовке
 
   constructor(container: HTMLDivElement) {
     this.container = container;
+    this.timelineContainer = document.createElement("div");
+
+    // Устанавливаем CSS класс для timelineContainer
+    this.timelineContainer.classList.add("timelineContainer");
+
+    // Изначально скролл отключен
+    this.container.style.overflowX = "hidden";
+    this.container.style.whiteSpace = "nowrap";
+
+    this.container.appendChild(this.timelineContainer);
+
+    // Добавляем слушатель на колесо мыши
+    this.addWheelEventListener();
   }
 
   draw(currentTime: number): void {
-    const timelineContainer = document.createElement("div");
-
-    this.setTimelineStyles(timelineContainer);
-
-    const currentTimestamp = this.mapVideoTime(currentTime);
-
-    // this.periodManager.period = RangePeriod["10min"];
-    this.periodManager.calcPeriod(this.startTime ?? 0, currentTimestamp);
-
-    timelineContainer.append(
-      ...this.makeRanges(
-        this.periodManager.period,
-        this.ranges[this.ranges.length - 1].end_time
-      )
-    );
-    timelineContainer.appendChild(
-      this.makePeriods(currentTimestamp, this.periodManager.period)
-    );
-    timelineContainer.appendChild(this.makeTrack());
-
-    this.clear();
-    this.timelineContainer = timelineContainer;
-    this.container.appendChild(timelineContainer);
-  }
-
-  public clear() {
-    if (!this.timelineContainer) {
+    if (!this.isReady || !this.timelineContainer || this.ranges.length === 0)
       return;
+
+    this.timelineContainer.innerHTML = ""; // Очистка контейнера перед отрисовкой
+
+    const startTime = this.ranges[0]?.start_time || 0;
+    const endTime = this.ranges[this.ranges.length - 1]?.end_time || 0;
+    const totalTimeRange = endTime - startTime; // Общее время от начала до конца всех диапазонов
+
+    // Преобразуем currentTime в миллисекунды для корректного отображения
+    const videoTimestamp = startTime + currentTime;
+
+    const containerWidth = this.container.offsetWidth; // Ширина контейнера
+
+    // Рассчитываем ширину диапазонов с учетом масштаба
+    const totalRangeWidth = totalTimeRange * this.scale; // totalTimeRange в масштабе
+
+    // Если ширина всех диапазонов больше ширины контейнера, включаем скролл
+    if (totalRangeWidth > containerWidth) {
+      this.container.style.overflowX = "auto"; // Включаем скролл
+      this.timelineContainer.style.width = `${totalRangeWidth}px`; // Задаем большую ширину таймлайна
+    } else {
+      this.container.style.overflowX = "hidden"; // Отключаем скролл
+      this.timelineContainer.style.width = `${containerWidth}px`; // Устанавливаем стандартную ширину
     }
 
-    this.container.removeChild(this.timelineContainer);
+    // Отрисовка делений времени в зависимости от масштаба
+    this.drawTimeDivisions(startTime, totalTimeRange, totalRangeWidth);
+
+    // Отрисовка самих диапазонов (ranges) с учётом масштаба
+    this.ranges.forEach((range) => {
+      const rangeStartPosition =
+        ((range.start_time - startTime) / totalTimeRange) * totalRangeWidth;
+      const rangeWidth = (range.duration / totalTimeRange) * totalRangeWidth;
+
+      const rangeBlock = document.createElement("div");
+      rangeBlock.classList.add("rangeBlock");
+      rangeBlock.style.left = `${rangeStartPosition}px`;
+      rangeBlock.style.width = `${rangeWidth}px`;
+      rangeBlock.style.backgroundColor =
+        range.type === "data" ? "#4caf50" : "#f44336"; // Цвета для разных типов
+
+      this.timelineContainer!.appendChild(rangeBlock);
+    });
+
+    // Отрисовка трека текущего времени
+    const trackPosition =
+      ((videoTimestamp - startTime) / totalTimeRange) * totalRangeWidth;
+
+    const track = document.createElement("div");
+    track.classList.add("track");
+    track.style.left = `${trackPosition}px`;
+
+    this.timelineContainer.appendChild(track);
+  }
+
+  drawTimeDivisions(
+    startTime: number,
+    totalTimeRange: number,
+    totalRangeWidth: number
+  ): void {
+    const divisionStep = this.getDivisionStep(); // Получаем шаг делений в зависимости от масштаба
+    const numDivisions = Math.floor(totalTimeRange / divisionStep);
+
+    for (let i = 0; i <= numDivisions; i++) {
+      const divisionTime = startTime + i * divisionStep;
+      const position =
+        ((divisionTime - startTime) / totalTimeRange) * totalRangeWidth;
+
+      const division = document.createElement("div");
+      division.classList.add("division");
+      division.style.left = `${position}px`;
+
+      // Отображаем время только на каждом 5-м делении
+      if (i % 5 === 0) {
+        const timeLabel = document.createElement("span");
+        timeLabel.innerText = this.formatTime(divisionTime);
+        division.appendChild(timeLabel);
+      }
+
+      this.timelineContainer!.appendChild(division);
+    }
   }
 
   setOptions(ranges: RangeData[]): void {
-    if (!ranges.length) {
-      return;
-    }
-
     this.ranges = ranges;
-    this.startTime = this.ranges[0].start_time;
+    this.currentStartTime = this.ranges[0]?.start_time || 0;
+    this.isReady = true; // Устанавливаем флаг готовности к отрисовке
+
+    const totalTimeRange =
+      ranges[ranges.length - 1].end_time - ranges[0].start_time;
+    const containerWidth = this.container.offsetWidth;
+
+    // Устанавливаем начальный масштаб так, чтобы диапазоны занимали всю ширину контейнера
+    this.scale = containerWidth / totalTimeRange;
+
+    this.draw(this.currentStartTime); // Отрисовка шкалы после установки диапазонов
   }
 
-  private makePeriods(
-    currentTime: number,
-    period: RangePeriod
-  ): HTMLDivElement {
-    const periodsContainer = document.createElement("div");
-    periodsContainer.className = "video-player__timeline__periods-container";
-
-    const periodElements: HTMLDivElement[] = [];
-    const fistPeriodTime = this.startTime ?? 0;
-
-    let periodTime = fistPeriodTime;
-
-    const stepTime = Math.round(periodSizeMS[period] / PERIODS_COUNT);
-
-    const dates: Date[] = [];
-
-    // Создаем все периоды
-    for (let i = 0; i < PERIODS_COUNT; i++) {
-      const periodContainer = document.createElement("div");
-      periodContainer.className = "video-player__timeline__period-container";
-
-      const periodElement = document.createElement("div");
-      const periodElementClasses = ["video-player__timeline__period"];
-
-      // Проверяем, нужно ли отображать текст для этого периода
-      if ((i + 1) % 4 === 0 && i !== 0) {
-        const timeElement = document.createElement("span");
-
-        timeElement.textContent = this.formatDate(new Date(periodTime));
-        timeElement.className = "video-player__timeline__period__text";
-        periodElementClasses.push("video-player__timeline__period_with_text");
-
-        periodElement.appendChild(timeElement);
-      }
-
-      periodElement.className = periodElementClasses.join(" ");
-
-      periodContainer.appendChild(periodElement);
-
-      periodElements.push(periodContainer);
-
-      dates.push(new Date(periodTime));
-      periodTime += stepTime;
+  clear(): void {
+    if (this.timelineContainer) {
+      this.container.removeChild(this.timelineContainer);
+      this.timelineContainer = null;
+      this.isReady = false; // Сбрасываем флаг готовности
     }
-
-    periodElements.forEach((element) => periodsContainer.appendChild(element));
-
-    return periodsContainer;
   }
 
-  private makeRanges(period: RangePeriod, now: number) {
-    const allDuration = periodSizeMS[period];
+  private formatTime(time: number): string {
+    const date = new Date(time);
+    return `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
+  }
 
-    // const now = this.ranges[this.ranges.length - 1].end_time;
+  // Определяет шаг делений в зависимости от масштаба
+  private getDivisionStep(): number {
+    const scaleFactor = this.scale;
 
-    const startTime = now - allDuration;
+    // Уменьшаем шаг делений для увеличения их количества
+    if (scaleFactor > 0.8) {
+      return 30 * 1000; // Шаг 30 секунд
+    } else if (scaleFactor > 0.5) {
+      return 1 * 60 * 1000; // Шаг 1 минута
+    } else if (scaleFactor > 0.3) {
+      return 2 * 60 * 1000; // Шаг 2 минуты
+    } else {
+      return 5 * 60 * 1000; // Шаг 5 минут
+    }
+  }
 
-    const ranges = this.ranges.filter((range) => {
-      if (
-        range.start_time < startTime &&
-        startTime <= range.end_time &&
-        range.end_time <= now
-      ) {
-        return true;
+  // Добавляем слушатель на колесо мыши для изменения масштаба и прокрутки
+  private addWheelEventListener() {
+    this.timelineContainer?.addEventListener("wheel", (event: WheelEvent) => {
+      event.preventDefault();
+
+      if (event.shiftKey) {
+        // Если зажата клавиша Shift — горизонтальная прокрутка
+        this.container.scrollLeft += event.deltaY;
+      } else {
+        // Иначе — изменение масштаба
+
+        // Ограничим максимальные изменения при каждом событии скролла
+        const scaleChange = Math.sign(event.deltaY) * 0.000002; // Более мелкий шаг для плавности
+
+        const totalTimeRange =
+          this.ranges[this.ranges.length - 1].end_time -
+          this.ranges[0].start_time;
+        const containerWidth = this.container.offsetWidth;
+
+        // Рассчитаем максимальный масштаб так, чтобы диапазоны не могли выходить за пределы контейнера
+        const maxScale = 1; // Масштабирование не должно превышать единичный масштаб
+        const minScale = containerWidth / totalTimeRange; // Минимальный масштаб, при котором диапазоны занимают контейнер
+
+        // Ограничиваем масштаб значениями от minScale до maxScale
+        this.scale = Math.min(
+          maxScale,
+          Math.max(minScale, this.scale + scaleChange)
+        );
+
+        if (this.isReady) {
+          this.draw(this.currentStartTime);
+        }
       }
-
-      if (
-        range.start_time >= startTime &&
-        startTime >= range.end_time &&
-        range.end_time > now
-      ) {
-        return true;
-      }
-
-      if (range.start_time >= startTime && range.end_time <= now) {
-        return true;
-      }
-
-      return false;
     });
-
-    return ranges.map((range) => {
-      const width = this.calcRangePercentageWidth(range, allDuration);
-
-      return this.makeRange(range, width);
-    });
-  }
-
-  private makeTrack(): HTMLDivElement {
-    const trackElement = document.createElement("div");
-
-    trackElement.style.right = "0";
-
-    trackElement.className = "video-player__timeline__track";
-
-    return trackElement;
-  }
-
-  private setTimelineStyles(timelineContainer: HTMLDivElement) {
-    timelineContainer.className = "video-player__timeline";
-  }
-
-  private makeRange(range: RangeData, width: number): HTMLDivElement {
-    const rangeContainer = document.createElement("div");
-    const classNames = ["video-player__timeline__range"];
-
-    rangeContainer.onclick = console.log;
-
-    if (range.type === "break") {
-      classNames.push("video-player__timeline__range_break");
-    }
-    rangeContainer.className = classNames.join(" ");
-
-    rangeContainer.style.width = `${width}%`;
-
-    return rangeContainer;
-  }
-
-  private calcRangePercentageWidth(
-    range: RangeData,
-    allDuration: number
-  ): number {
-    return (range.duration / allDuration) * 100;
-  }
-
-  private mapVideoTime(videoTime: number) {
-    return (this.startTime ?? 0) + videoTime * 1000;
-  }
-
-  private formatDate(date: Date) {
-    return this.formatter.format(date);
-  }
-}
-
-class PeriodManager {
-  period: RangePeriod = RangePeriod["1min"];
-
-  changePeriod(newPeriod: RangePeriod) {
-    this.period = newPeriod;
-  }
-
-  calcPeriod(startTime: number, videoTimestamp: number) {
-    this.period = this.getPeriod(startTime, videoTimestamp);
-  }
-
-  private getPeriod(startTime: number, videoTimestamp: number) {
-    // Периоды находятся в определенном поря��ке проверки, всегда должно быть от большего к меньшему
-    const periods: RangePeriod[] = [
-      RangePeriod["week"],
-      RangePeriod["day"],
-      RangePeriod["16hours"],
-      RangePeriod["12hours"],
-      RangePeriod["6hours"],
-      RangePeriod["1hour"],
-      RangePeriod["30min"],
-      RangePeriod["10min"],
-      RangePeriod["5min"],
-      RangePeriod["1min"],
-    ];
-
-    for (const period of periods) {
-      if (videoTimestamp - startTime >= periodSizeMS[period]) {
-        return period;
-      }
-    }
-
-    return periods[periods.length - 1];
   }
 }
