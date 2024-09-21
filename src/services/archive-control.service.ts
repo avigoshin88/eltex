@@ -1,6 +1,18 @@
 import { RangeDto } from "../dto/ranges";
-import { RangeData } from "../types/range";
+import { Nullable } from "../types/global";
 import { Logger } from "./logger/logger.service";
+
+const connectionSupportInterval = Number(
+  import.meta.env.VITE_ARCHIVE_CONNECT_SUPPORT_INTERVAL
+);
+
+if (isNaN(connectionSupportInterval)) {
+  throw new Error(
+    `VITE_ARCHIVE_CONNECT_SUPPORT_INTERVAL must be a number. Currently is ${
+      import.meta.env.VITE_ARCHIVE_CONNECT_SUPPORT_INTERVAL
+    } `
+  );
+}
 
 type Emitter = (fragment: RangeDto) => void;
 
@@ -8,12 +20,16 @@ export class ArchiveControlService {
   private readonly logger = new Logger(ArchiveControlService.name);
 
   private ranges: RangeDto[] = [];
-  private allRanges: RangeData[] = [];
   private fragmentIndex = 0;
-  private emit!: Emitter;
 
-  constructor(emit: Emitter) {
+  private connectionSupporterId: Nullable<number> = null;
+
+  private emit!: Emitter;
+  private supportConnect: () => void;
+
+  constructor(emit: Emitter, supportConnect: () => void) {
     this.emit = emit;
+    this.supportConnect = supportConnect;
   }
 
   get currentFragment() {
@@ -36,13 +52,25 @@ export class ArchiveControlService {
     return this.ranges[this.fragmentIndex - 1];
   }
 
-  setRanges(ranges: RangeDto[], allRanges: RangeData[]) {
+  setRanges(ranges: RangeDto[]) {
     this.ranges = ranges;
-    this.allRanges = allRanges;
   }
 
   init() {
     this.emit(this.currentFragment);
+
+    this.connectionSupporterId = setInterval(() => {
+      this.supportConnect();
+    }, connectionSupportInterval);
+  }
+
+  clear() {
+    if (this.connectionSupporterId === null) {
+      return;
+    }
+
+    clearInterval(this.connectionSupporterId);
+    this.connectionSupporterId = null;
   }
 
   toNextFragment() {

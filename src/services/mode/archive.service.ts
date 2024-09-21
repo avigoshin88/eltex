@@ -46,7 +46,8 @@ export class ArchiveVideoService implements ModeService {
     );
 
     this.archiveControl = new ArchiveControlService(
-      this.emitNewFragment.bind(this)
+      this.emitNewFragment.bind(this),
+      this.supportConnect.bind(this)
     );
 
     this.timelineDrawer = new TimelineOverflowDrawer(
@@ -80,8 +81,10 @@ export class ArchiveVideoService implements ModeService {
   }
 
   async reset(): Promise<void> {
+    this.archiveControl.clear();
     this.webRTCClient.reset();
     this.timelineDrawer.clear();
+
     // this.metaDrawer.destroy();
   }
 
@@ -94,9 +97,7 @@ export class ArchiveVideoService implements ModeService {
 
     const ranges = unsortedRanges.sort((a, b) => a.start_time - b.start_time);
 
-    const allRanges = this.rangeMapper.calc(ranges);
-
-    this.archiveControl.setRanges(ranges, allRanges);
+    this.archiveControl.setRanges(ranges);
     this.archiveControl.init();
     this.play();
 
@@ -116,6 +117,10 @@ export class ArchiveVideoService implements ModeService {
 
     this.timelineDrawer.draw(currentTime);
   };
+
+  private supportConnect() {
+    this.datachannelClient.send(DatachannelMessageType.ARCHIVE_CONNECT_SUPPORT);
+  }
 
   private onChangeCurrentTime(...args: Parameters<TimelineClickCallback>) {}
 

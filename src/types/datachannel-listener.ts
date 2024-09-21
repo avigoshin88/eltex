@@ -7,6 +7,7 @@ export enum DatachannelMessageType {
   STOP_STREAM = "stop_stream",
   PLAY_STREAM = "play_stream",
   DROP_BUFFER = "drop_buffer",
+  ARCHIVE_CONNECT_SUPPORT = "archive_connect_support",
 }
 
 export type DatachannelEventListener = (data?: unknown) => void | Promise<void>;
