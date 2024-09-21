@@ -10,6 +10,7 @@ import { TimelineOverflowDrawer } from "../player/overflow-elements/timeline-dra
 import { RangeMapperService } from "../range-mapper.service";
 import { ArchiveControlService } from "../archive-control.service";
 import { MetaOverflowDrawerService } from "../player/overflow-elements/meta-drawer.service";
+import { TimelineClickCallback } from "../../types/timeline";
 
 export class ArchiveVideoService implements ModeService {
   private logger = new Logger(ArchiveVideoService.name);
@@ -48,7 +49,12 @@ export class ArchiveVideoService implements ModeService {
       this.emitNewFragment.bind(this)
     );
 
-    this.timelineDrawer = new TimelineOverflowDrawer(this.player.container);
+    this.timelineDrawer = new TimelineOverflowDrawer(
+      this.player.container,
+      (timestamp, range) => {
+        console.log(timestamp, range);
+      }
+    );
     this.metaDrawer = new MetaOverflowDrawerService(this.player.videoContainer);
 
     setControl(this.archiveControl);
@@ -112,6 +118,10 @@ export class ArchiveVideoService implements ModeService {
 
     this.timelineDrawer.draw(currentTime);
   };
+
+  private onChangeCurrentTime(...args: Parameters<TimelineClickCallback>) {
+    
+  }
 
   private emitNewFragment(fragment: RangeDto) {
     this.datachannelClient.send(DatachannelMessageType.GET_ARCHIVE_FRAGMENT, {

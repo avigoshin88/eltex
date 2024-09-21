@@ -1,5 +1,6 @@
 import { Nullable } from "../../../types/global";
 import { RangeData } from "../../../types/range";
+import { TimelineClickCallback } from "../../../types/timeline";
 
 export class TimelineOverflowDrawer {
   private ranges: RangeData[] = [];
@@ -8,10 +9,15 @@ export class TimelineOverflowDrawer {
   private scale: number = 1; // Начальный масштаб
   private currentStartTime: number = 0; // Текущее начало времени
   private isReady: boolean = false; // Флаг, указывающий готовность к отрисовке
+  private clickCallback: TimelineClickCallback; // Callback для кликов
 
-  constructor(container: HTMLDivElement) {
+  constructor(
+    container: HTMLDivElement,
+    clickCallback?: TimelineClickCallback
+  ) {
     this.container = container;
     this.timelineContainer = document.createElement("div");
+    this.clickCallback = clickCallback || (() => {}); // Используем переданную функцию или пустой callback
 
     // Устанавливаем CSS класс для timelineContainer
     this.timelineContainer.classList.add("timelineContainer");
@@ -22,9 +28,10 @@ export class TimelineOverflowDrawer {
 
     this.container.appendChild(this.timelineContainer);
 
-    // Добавляем слушатель на колесо мыши и скролл
+    // Добавляем слушатели
     this.addScrollEventListener();
     this.addWheelEventListener();
+    this.addClickEventListener(); // Обработчик клика
   }
 
   draw(currentTime: number): void {
@@ -146,6 +153,64 @@ export class TimelineOverflowDrawer {
     const totalRangeWidth = totalTimeRange * this.scale;
 
     this.drawVirtualizedDivisions(startTime, totalTimeRange, totalRangeWidth);
+  }
+
+  private addClickEventListener(): void {
+    this.timelineContainer?.addEventListener("click", (event: MouseEvent) => {
+      const clickX = event.offsetX; // Координата клика по оси X
+      const containerWidth = this.container.offsetWidth;
+      const startTime = this.ranges[0]?.start_time || 0;
+      const endTime = this.ranges[this.ranges.length - 1]?.end_time || 0;
+      const totalTimeRange = endTime - startTime;
+
+      // Вычисляем время на основе позиции клика
+      let clickedTimestamp =
+        startTime + (clickX / containerWidth) * totalTimeRange;
+
+      // Ищем диапазон, на который пришелся клик
+      let clickedRange = this.findRangeByTimestamp(clickedTimestamp);
+
+      // Если диапазон типа break, устанавливаем timestamp на начало диапазона
+      if (clickedRange && clickedRange.type === "break") {
+        clickedRange = this.findNearestDataRange(clickedTimestamp);
+        clickedTimestamp = clickedRange?.start_time ?? startTime;
+      }
+
+      if (clickedRange === null) {
+        return;
+      }
+
+      // Вызов callback-функции с найденным timestamp и range
+      this.clickCallback?.(clickedTimestamp, clickedRange);
+    });
+  }
+
+  private findRangeByTimestamp(timestamp: number): RangeData | null {
+    // Находим диапазон, который включает timestamp
+    for (const range of this.ranges) {
+      if (timestamp >= range.start_time && timestamp <= range.end_time) {
+        return range;
+      }
+    }
+    return null; // Если не найден диапазон
+  }
+
+  private findNearestDataRange(timestamp: number): RangeData | null {
+    // Находим ближайший диапазон с типом "data"
+    let nearestRange: RangeData | null = null;
+    let minDistance = Infinity;
+
+    for (const range of this.ranges) {
+      if (range.type === "data") {
+        const distance = Math.abs(timestamp - range.start_time);
+        if (distance < minDistance) {
+          minDistance = distance;
+          nearestRange = range;
+        }
+      }
+    }
+
+    return nearestRange;
   }
 
   setOptions(ranges: RangeData[]): void {
