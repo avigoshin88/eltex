@@ -97,7 +97,6 @@ export class ArchiveVideoService implements ModeService {
     this.play();
 
     this.timelineDrawer.setOptions(this.rangeMapper.calc(ranges));
-    this.timelineDrawer.draw(0);
   }
 
   private onLoadedChange() {
@@ -111,7 +110,7 @@ export class ArchiveVideoService implements ModeService {
 
     const currentTime = event.timeStamp;
 
-    // this.timelineDrawer.draw(currentTime);
+    this.timelineDrawer.draw(currentTime);
   };
 
   private emitNewFragment(fragment: RangeDto) {
