@@ -11,6 +11,7 @@ import { RangeMapperService } from "../range-mapper.service";
 import { ArchiveControlService } from "../archive-control.service";
 import { MetaOverflowDrawerService } from "../player/overflow-elements/meta-drawer.service";
 import { TimelineClickCallback } from "../../types/timeline";
+import { Nullable } from "../../types/global";
 
 export class ArchiveVideoService implements ModeService {
   private logger = new Logger(ArchiveVideoService.name);
@@ -24,6 +25,8 @@ export class ArchiveVideoService implements ModeService {
 
   private readonly rangeMapper = new RangeMapperService();
   private readonly archiveControl!: ArchiveControlService;
+
+  private nextProcessedRange: Nullable<RangeDto> = null;
 
   private isLoaded = false;
 
@@ -46,7 +49,7 @@ export class ArchiveVideoService implements ModeService {
     );
 
     this.archiveControl = new ArchiveControlService(
-      this.emitNewFragment.bind(this),
+      this.emitStartNewFragment.bind(this),
       this.supportConnect.bind(this)
     );
 
@@ -66,6 +69,10 @@ export class ArchiveVideoService implements ModeService {
       },
       listeners: {
         [DatachannelMessageType.RANGES]: this.onRanges.bind(this),
+        [DatachannelMessageType.DROP]: this.onDropComplete.bind(this),
+        [DatachannelMessageType.ARCHIVE_FRAGMENT]:
+          this.onSaveArchiveFragment.bind(this),
+        [DatachannelMessageType.PLAY]: this.onStreamStarted.bind(this),
         // ругается на unknown
         // @ts-ignore
         [DatachannelMessageType.META]: this.metaDrawer.draw,
@@ -99,7 +106,6 @@ export class ArchiveVideoService implements ModeService {
 
     this.archiveControl.setRanges(ranges);
     this.archiveControl.init();
-    this.play();
 
     this.timelineDrawer.setOptions(this.rangeMapper.calc(ranges));
   }
@@ -122,17 +128,43 @@ export class ArchiveVideoService implements ModeService {
     this.datachannelClient.send(DatachannelMessageType.ARCHIVE_CONNECT_SUPPORT);
   }
 
-  private onChangeCurrentTime(...args: Parameters<TimelineClickCallback>) {}
+  private emitStartNewFragment(fragment: RangeDto) {
+    this.nextProcessedRange = fragment;
 
-  private emitNewFragment(fragment: RangeDto) {
+    this.datachannelClient.send(DatachannelMessageType.DROP_BUFFER);
+  }
+
+  private onChangeCurrentTime(
+    ...[timestamp, range]: Parameters<TimelineClickCallback>
+  ) {
+    const customRange: RangeDto = {
+      ...range,
+      start_time: timestamp,
+      duration: range.end_time - timestamp,
+    };
+
+    this.emitStartNewFragment(customRange);
+  }
+
+  private onDropComplete() {
+    if (!this.nextProcessedRange) {
+      return;
+    }
+
     this.datachannelClient.send(DatachannelMessageType.GET_ARCHIVE_FRAGMENT, {
-      start_time: fragment.start_time,
-      duration: fragment.duration,
+      start_time: this.nextProcessedRange.start_time,
+      duration: this.nextProcessedRange.duration,
     });
   }
 
-  private play() {
+  private onSaveArchiveFragment() {
     this.datachannelClient.send(DatachannelMessageType.PLAY_STREAM);
+  }
+
+  private onStreamStarted() {
+    this.logger.log("Фрагмент стрима начался: ", this.nextProcessedRange);
+
+    this.nextProcessedRange = null;
   }
 
   setSource(stream: MediaStream) {
