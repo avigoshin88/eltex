@@ -20,7 +20,7 @@ export class TimelineOverflowDrawer {
     this.clickCallback = clickCallback || (() => {}); // Используем переданную функцию или пустой callback
 
     // Устанавливаем CSS класс для timelineContainer
-    this.timelineContainer.classList.add("timelineContainer");
+    this.timelineContainer.classList.add("video-player__timeline");
 
     // Изначально скролл отключен
     this.timelineContainer.style.overflowX = "hidden";
@@ -64,11 +64,11 @@ export class TimelineOverflowDrawer {
       const rangeWidth = (range.duration / totalTimeRange) * totalRangeWidth;
 
       const rangeBlock = document.createElement("div");
-      rangeBlock.classList.add("rangeBlock");
+      rangeBlock.classList.add("video-player__timeline__range");
       rangeBlock.style.left = `${rangeStartPosition}px`;
       rangeBlock.style.width = `${rangeWidth}px`;
-      rangeBlock.style.backgroundColor =
-        range.type === "data" ? "#4caf50" : "#f44336"; // Цвета для разных типов
+
+      rangeBlock.setAttribute("data-type", range.type);
 
       this.timelineContainer!.appendChild(rangeBlock);
     });
@@ -80,7 +80,7 @@ export class TimelineOverflowDrawer {
       ((currentTimestamp - startTime) / totalTimeRange) * totalRangeWidth;
 
     const track = document.createElement("div");
-    track.classList.add("track");
+    track.classList.add("video-player__timeline__track");
     track.style.left = `${trackPosition}px`;
 
     this.timelineContainer.appendChild(track);
@@ -123,13 +123,18 @@ export class TimelineOverflowDrawer {
         ((divisionTime - startTime) / totalTimeRange) * totalRangeWidth;
 
       const division = document.createElement("div");
-      division.classList.add("division");
+      division.classList.add("video-player__timeline__period");
       division.style.left = `${position}px`;
 
       // Отображаем время на каждом 5-м делении
       if (i % 5 === 0) {
         const timeLabel = document.createElement("span");
+
+        timeLabel.classList.add("video-player__timeline__period__text");
+
         timeLabel.innerText = this.formatTime(divisionTime);
+
+        division.classList.add("video-player__timeline__period_with_text");
         division.appendChild(timeLabel);
       }
 
