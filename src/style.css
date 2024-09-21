@@ -100,3 +100,57 @@
   background: var(--timeline_range_track);
 }
 
+/* Контейнер для временной шкалы */
+.timelineContainer {
+  position: relative;
+  height: 50px; /* Высота таймлайна */
+  background-color: #f0f0f0;
+  overflow: hidden;
+  white-space: nowrap;
+
+  order: 2;
+}
+
+/* Индивидуальные деления на временной шкале */
+.division {
+  position: absolute;
+  width: 1px;
+  height: 50%;
+  transform: translateY(50%);
+  z-index: 1;
+  background-color: #000;
+}
+
+/* Метки времени над делениями */
+.division span {
+  position: absolute;
+  bottom: -12px;
+  font-size: 10px; /* Размер шрифта метки */
+  color: #333; /* Цвет шрифта */
+  white-space: nowrap; /* Чтобы текст не переносился */
+  transform: translateX(-50%); /* Центровка текста */
+}
+
+/* Трек, который отображает текущий момент времени */
+.track {
+  position: absolute;
+  width: 2px; /* Ширина трека */
+  height: 100%; /* Высота трека */
+  background-color: red; /* Цвет трека */
+  z-index: 1; /* Поверх других элементов */
+}
+
+/* Блоки диапазонов времени (ranges) */
+.rangeBlock {
+  position: absolute;
+  height: 50%; /* Высота блока */
+  top: 25%; /* Центрируем по вертикали */
+  background-color: #4caf50; /* Цвет для блока типа 'data' */
+  border-radius: 4px;
+  z-index: 0; /* Ниже трека */
+}
+
+/* Дополнительные стили для диапазонов типа 'break' */
+.rangeBlock[data-type="break"] {
+  background-color: #f44336; /* Цвет для блока типа 'break' */
+}

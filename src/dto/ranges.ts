@@ -4,6 +4,10 @@ export interface RangeDto {
   duration: number;
 }
 
+// TODO: DEPRECATED
+/**
+ * DEPRECATED
+ */
 export enum RangePeriod {
   "week" = "week",
   "day" = "day",
