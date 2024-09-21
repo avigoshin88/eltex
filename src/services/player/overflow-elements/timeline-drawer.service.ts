@@ -1,10 +1,5 @@
-import { RangePeriod } from "../../../dto/ranges";
 import { Nullable } from "../../../types/global";
 import { RangeData } from "../../../types/range";
-
-// import { debounce } from "es-toolkit";
-
-const PERIODS_COUNT = 58;
 
 export class TimelineOverflowDrawer {
   private ranges: RangeData[] = [];
@@ -27,7 +22,8 @@ export class TimelineOverflowDrawer {
 
     this.container.appendChild(this.timelineContainer);
 
-    // Добавляем слушатель на колесо мыши
+    // Добавляем слушатель на колесо мыши и скролл
+    this.addScrollEventListener();
     this.addWheelEventListener();
   }
 
@@ -40,9 +36,6 @@ export class TimelineOverflowDrawer {
     const startTime = this.ranges[0]?.start_time || 0;
     const endTime = this.ranges[this.ranges.length - 1]?.end_time || 0;
     const totalTimeRange = endTime - startTime; // Общее время от начала до конца всех диапазонов
-
-    // Преобразуем currentTime в миллисекунды для корректного отображения
-    const videoTimestamp = startTime + currentTime;
 
     const containerWidth = this.container.offsetWidth; // Ширина контейнера
 
@@ -58,8 +51,8 @@ export class TimelineOverflowDrawer {
       this.timelineContainer.style.width = `${containerWidth}px`; // Устанавливаем стандартную ширину
     }
 
-    // Отрисовка делений времени в зависимости от масштаба
-    this.drawTimeDivisions(startTime, totalTimeRange, totalRangeWidth);
+    // Виртуализация делений
+    this.drawVirtualizedDivisions(startTime, totalTimeRange, totalRangeWidth);
 
     // Отрисовка самих диапазонов (ranges) с учётом масштаба
     this.ranges.forEach((range) => {
@@ -79,7 +72,7 @@ export class TimelineOverflowDrawer {
 
     // Отрисовка трека текущего времени
     const trackPosition =
-      ((videoTimestamp - startTime) / totalTimeRange) * totalRangeWidth;
+      ((currentTime - startTime) / totalTimeRange) * totalRangeWidth;
 
     const track = document.createElement("div");
     track.classList.add("track");
@@ -88,15 +81,38 @@ export class TimelineOverflowDrawer {
     this.timelineContainer.appendChild(track);
   }
 
-  drawTimeDivisions(
+  private drawVirtualizedDivisions(
     startTime: number,
     totalTimeRange: number,
     totalRangeWidth: number
   ): void {
     const divisionStep = this.getDivisionStep(); // Получаем шаг делений в зависимости от масштаба
-    const numDivisions = Math.floor(totalTimeRange / divisionStep);
 
-    for (let i = 0; i <= numDivisions; i++) {
+    // Получаем текущие границы прокрутки (начало и конец видимой области)
+    const scrollLeft = this.container.scrollLeft;
+    const containerWidth = this.container.offsetWidth;
+
+    // Рассчитываем границы видимой области по времени
+    const visibleStartTime =
+      startTime + (scrollLeft / totalRangeWidth) * totalTimeRange;
+    const visibleEndTime =
+      startTime +
+      ((scrollLeft + containerWidth) / totalRangeWidth) * totalTimeRange;
+
+    // Рассчитываем индекс первого и последнего видимого деления
+    const firstVisibleDivision = Math.floor(
+      (visibleStartTime - startTime) / divisionStep
+    );
+    const lastVisibleDivision = Math.floor(
+      (visibleEndTime - startTime) / divisionStep
+    );
+
+    // Удаляем только старые деления
+    const oldDivisions = this.timelineContainer!.querySelectorAll(".division");
+    oldDivisions.forEach((division) => division.remove());
+
+    // Отрисовываем только видимые деления
+    for (let i = firstVisibleDivision; i <= lastVisibleDivision; i++) {
       const divisionTime = startTime + i * divisionStep;
       const position =
         ((divisionTime - startTime) / totalTimeRange) * totalRangeWidth;
@@ -105,15 +121,31 @@ export class TimelineOverflowDrawer {
       division.classList.add("division");
       division.style.left = `${position}px`;
 
-      // Отображаем время только на каждом 5-м делении
+      // Отображаем время на каждом 5-м делении
       if (i % 5 === 0) {
         const timeLabel = document.createElement("span");
         timeLabel.innerText = this.formatTime(divisionTime);
         division.appendChild(timeLabel);
       }
 
+      // Добавляем только видимые деления в контейнер
       this.timelineContainer!.appendChild(division);
     }
+  }
+
+  private addScrollEventListener() {
+    this.container.addEventListener("scroll", () => {
+      this.updateVirtualizedDivisions();
+    });
+  }
+
+  private updateVirtualizedDivisions() {
+    const startTime = this.ranges[0]?.start_time || 0;
+    const endTime = this.ranges[this.ranges.length - 1]?.end_time || 0;
+    const totalTimeRange = endTime - startTime;
+    const totalRangeWidth = totalTimeRange * this.scale;
+
+    this.drawVirtualizedDivisions(startTime, totalTimeRange, totalRangeWidth);
   }
 
   setOptions(ranges: RangeData[]): void {
@@ -144,23 +176,32 @@ export class TimelineOverflowDrawer {
     return `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
   }
 
-  // Определяет шаг делений в зависимости от масштаба
   private getDivisionStep(): number {
     const scaleFactor = this.scale;
 
-    // Уменьшаем шаг делений для увеличения их количества
-    if (scaleFactor > 0.8) {
+    if (scaleFactor > 0.004) {
+      return 5 * 1000; // Шаг 5 секунд
+    } else if (scaleFactor > 0.002) {
+      return 10 * 1000; // Шаг 10 секунд
+    } else if (scaleFactor > 0.001) {
+      return 20 * 1000; // Шаг 20 секунд
+    } else if (scaleFactor > 0.0005) {
       return 30 * 1000; // Шаг 30 секунд
-    } else if (scaleFactor > 0.5) {
+    } else if (scaleFactor > 0.0002) {
       return 1 * 60 * 1000; // Шаг 1 минута
-    } else if (scaleFactor > 0.3) {
+    } else if (scaleFactor > 0.0001) {
       return 2 * 60 * 1000; // Шаг 2 минуты
-    } else {
+    } else if (scaleFactor > 0.00005) {
       return 5 * 60 * 1000; // Шаг 5 минут
+    } else if (scaleFactor > 0.00002) {
+      return 10 * 60 * 1000; // Шаг 10 минут
+    } else if (scaleFactor > 0.00001) {
+      return 15 * 60 * 1000; // Шаг 15 минут
+    } else {
+      return 30 * 60 * 1000; // Шаг 30 минут
     }
   }
 
-  // Добавляем слушатель на колесо мыши для изменения масштаба и прокрутки
   private addWheelEventListener() {
     this.timelineContainer?.addEventListener("wheel", (event: WheelEvent) => {
       event.preventDefault();
