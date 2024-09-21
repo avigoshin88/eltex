@@ -4,14 +4,19 @@ export interface RangeDto {
   duration: number;
 }
 
-export const RangePeriod = {
-  "7days": "7days",
-  "1day": "1day",
-  "24hours": "24hours",
-  "12hours": "12hours",
-  "6hours": "6hours",
-  "1hour": "1hour",
-  "30min": "30min",
-  "10min": "10min",
-  "5min": "5min",
-} as const;
+// TODO: DEPRECATED
+/**
+ * DEPRECATED
+ */
+export enum RangePeriod {
+  "week" = "week",
+  "day" = "day",
+  "16hours" = "16hours",
+  "12hours" = "12hours",
+  "6hours" = "6hours",
+  "1hour" = "1hour",
+  "30min" = "30min",
+  "10min" = "10min",
+  "5min" = "5min",
+  "1min" = "1min",
+}

@@ -11,9 +11,6 @@ export class VideoPlayerService {
   isPlaying = true;
   isVolumeOn = true;
 
-  private height: Nullable<null> = null;
-  private width: Nullable<null> = null;
-
   init(
     container: HTMLDivElement,
     videoContainer: HTMLDivElement,
