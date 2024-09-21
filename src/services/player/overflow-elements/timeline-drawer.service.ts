@@ -77,9 +77,11 @@ export class TimelineOverflowDrawer {
       this.timelineContainer!.appendChild(rangeBlock);
     });
 
+    const currentTimestamp = startTime + currentTime;
+
     // Отрисовка трека текущего времени
     const trackPosition =
-      ((currentTime - startTime) / totalTimeRange) * totalRangeWidth;
+      ((currentTimestamp - startTime) / totalTimeRange) * totalRangeWidth;
 
     const track = document.createElement("div");
     track.classList.add("track");
