@@ -55,9 +55,9 @@ export class WebRTCService {
       listeners
     );
 
-    // this.peerConnection.onicecandidate = this._onIceCandidate.bind(this);
-    // this.peerConnection.onicecandidateerror =
-    //   this._onIceCandidateError.bind(this);
+    this.peerConnection.onicecandidate = this._onIceCandidate.bind(this);
+    this.peerConnection.onicecandidateerror =
+      this._onIceCandidateError.bind(this);
     this.peerConnection.ontrack = this._onTrack.bind(this);
     this.peerConnection.onconnectionstatechange =
       this._onConnectionStateChange.bind(this);
