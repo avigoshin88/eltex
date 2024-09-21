@@ -51,9 +51,7 @@ export class ArchiveVideoService implements ModeService {
 
     this.timelineDrawer = new TimelineOverflowDrawer(
       this.player.container,
-      (timestamp, range) => {
-        console.log(timestamp, range);
-      }
+      this.onChangeCurrentTime.bind(this)
     );
     this.metaDrawer = new MetaOverflowDrawerService(this.player.videoContainer);
 
@@ -119,9 +117,7 @@ export class ArchiveVideoService implements ModeService {
     this.timelineDrawer.draw(currentTime);
   };
 
-  private onChangeCurrentTime(...args: Parameters<TimelineClickCallback>) {
-    
-  }
+  private onChangeCurrentTime(...args: Parameters<TimelineClickCallback>) {}
 
   private emitNewFragment(fragment: RangeDto) {
     this.datachannelClient.send(DatachannelMessageType.GET_ARCHIVE_FRAGMENT, {
