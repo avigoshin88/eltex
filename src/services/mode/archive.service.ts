@@ -85,6 +85,8 @@ export class ArchiveVideoService implements ModeService {
         turnError.message
       );
     });
+
+    this.metaDrawer.init();
   }
 
   async reset(): Promise<void> {
@@ -92,7 +94,7 @@ export class ArchiveVideoService implements ModeService {
     this.webRTCClient.reset();
     this.timelineDrawer.clear();
 
-    // this.metaDrawer.destroy();
+    this.metaDrawer.destroy();
   }
 
   private async onOpenDatachannel() {
