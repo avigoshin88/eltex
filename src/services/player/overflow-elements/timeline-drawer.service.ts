@@ -23,15 +23,11 @@ export class TimelineOverflowDrawer {
     this.timelineContainer.classList.add("timelineContainer");
 
     // Изначально скролл отключен
-    this.container.style.overflowX = "hidden";
-    this.container.style.whiteSpace = "nowrap";
+    this.timelineContainer.style.overflowX = "hidden";
+    this.timelineContainer.style.whiteSpace = "nowrap";
+    this.registerListeners();
 
     this.container.appendChild(this.timelineContainer);
-
-    // Добавляем слушатели
-    this.addScrollEventListener();
-    this.addWheelEventListener();
-    this.addClickEventListener(); // Обработчик клика
   }
 
   draw(currentTime: number): void {
@@ -142,12 +138,6 @@ export class TimelineOverflowDrawer {
     }
   }
 
-  private addScrollEventListener() {
-    this.container.addEventListener("scroll", () => {
-      this.updateVirtualizedDivisions();
-    });
-  }
-
   private updateVirtualizedDivisions() {
     const startTime = this.ranges[0]?.start_time || 0;
     const endTime = this.ranges[this.ranges.length - 1]?.end_time || 0;
@@ -155,36 +145,6 @@ export class TimelineOverflowDrawer {
     const totalRangeWidth = totalTimeRange * this.scale;
 
     this.drawVirtualizedDivisions(startTime, totalTimeRange, totalRangeWidth);
-  }
-
-  private addClickEventListener(): void {
-    this.timelineContainer?.addEventListener("click", (event: MouseEvent) => {
-      const clickX = event.offsetX; // Координата клика по оси X
-      const containerWidth = this.container.offsetWidth;
-      const startTime = this.ranges[0]?.start_time || 0;
-      const endTime = this.ranges[this.ranges.length - 1]?.end_time || 0;
-      const totalTimeRange = endTime - startTime;
-
-      // Вычисляем время на основе позиции клика
-      let clickedTimestamp =
-        startTime + (clickX / containerWidth) * totalTimeRange;
-
-      // Ищем диапазон, на который пришелся клик
-      let clickedRange = this.findRangeByTimestamp(clickedTimestamp);
-
-      // Если диапазон типа break, устанавливаем timestamp на начало диапазона
-      if (clickedRange && clickedRange.type === "break") {
-        clickedRange = this.findNearestDataRange(clickedTimestamp);
-        clickedTimestamp = clickedRange?.start_time ?? startTime;
-      }
-
-      if (clickedRange === null) {
-        return;
-      }
-
-      // Вызов callback-функции с найденным timestamp и range
-      this.clickCallback?.(clickedTimestamp, clickedRange);
-    });
   }
 
   private findRangeByTimestamp(timestamp: number): RangeData | null {
@@ -231,11 +191,16 @@ export class TimelineOverflowDrawer {
   }
 
   clear(): void {
-    if (this.timelineContainer) {
-      this.container.removeChild(this.timelineContainer);
-      this.timelineContainer = null;
-      this.isReady = false; // Сбрасываем флаг готовности
+    if (!this.timelineContainer) {
+      return;
     }
+
+    this.clearListeners();
+
+    this.container.removeChild(this.timelineContainer);
+    this.timelineContainer = null;
+
+    this.isReady = false;
   }
 
   private formatTime(time: number): string {
@@ -269,38 +234,98 @@ export class TimelineOverflowDrawer {
     }
   }
 
-  private addWheelEventListener() {
-    this.timelineContainer?.addEventListener("wheel", (event: WheelEvent) => {
-      event.preventDefault();
+  private clickEventListener(event: MouseEvent): void {
+    const clickX = event.offsetX; // Координата клика по оси X
+    const containerWidth = this.container.offsetWidth;
+    const startTime = this.ranges[0]?.start_time || 0;
+    const endTime = this.ranges[this.ranges.length - 1]?.end_time || 0;
+    const totalTimeRange = endTime - startTime;
 
-      if (event.shiftKey) {
-        // Если зажата клавиша Shift — горизонтальная прокрутка
-        this.container.scrollLeft += event.deltaY;
-      } else {
-        // Иначе — изменение масштаба
+    // Вычисляем время на основе позиции клика
+    let clickedTimestamp =
+      startTime + (clickX / containerWidth) * totalTimeRange;
 
-        // Ограничим максимальные изменения при каждом событии скролла
-        const scaleChange = Math.sign(event.deltaY) * 0.000002; // Более мелкий шаг для плавности
+    // Ищем диапазон, на который пришелся клик
+    let clickedRange = this.findRangeByTimestamp(clickedTimestamp);
 
-        const totalTimeRange =
-          this.ranges[this.ranges.length - 1].end_time -
-          this.ranges[0].start_time;
-        const containerWidth = this.container.offsetWidth;
+    // Если диапазон типа break, устанавливаем timestamp на начало диапазона
+    if (clickedRange && clickedRange.type === "break") {
+      clickedRange = this.findNearestDataRange(clickedTimestamp);
+      clickedTimestamp = clickedRange?.start_time ?? startTime;
+    }
 
-        // Рассчитаем максимальный масштаб так, чтобы диапазоны не могли выходить за пределы контейнера
-        const maxScale = 1; // Масштабирование не должно превышать единичный масштаб
-        const minScale = containerWidth / totalTimeRange; // Минимальный масштаб, при котором диапазоны занимают контейнер
+    if (clickedRange === null) {
+      return;
+    }
 
-        // Ограничиваем масштаб значениями от minScale до maxScale
-        this.scale = Math.min(
-          maxScale,
-          Math.max(minScale, this.scale + scaleChange)
-        );
+    // Вызов callback-функции с найденным timestamp и range
+    this.clickCallback?.(clickedTimestamp, clickedRange);
+  }
 
-        if (this.isReady) {
-          this.draw(this.currentStartTime);
-        }
+  private scrollEventListener() {
+    this.updateVirtualizedDivisions();
+  }
+
+  private wheelEventListener(event: WheelEvent) {
+    event.preventDefault();
+
+    if (event.shiftKey) {
+      // Если зажата клавиша Shift — горизонтальная прокрутка
+      this.container.scrollLeft += event.deltaY;
+    } else {
+      // Иначе — изменение масштаба
+
+      // Ограничим максимальные изменения при каждом событии скролла
+      const scaleChange = Math.sign(event.deltaY) * 0.000002; // Более мелкий шаг для плавности
+
+      const totalTimeRange =
+        this.ranges[this.ranges.length - 1].end_time -
+        this.ranges[0].start_time;
+      const containerWidth = this.container.offsetWidth;
+
+      // Рассчитаем максимальный масштаб так, чтобы диапазоны не могли выходить за пределы контейнера
+      const maxScale = 1; // Масштабирование не должно превышать единичный масштаб
+      const minScale = containerWidth / totalTimeRange; // Минимальный масштаб, при котором диапазоны занимают контейнер
+
+      // Ограничиваем масштаб значениями от minScale до maxScale
+      this.scale = Math.min(
+        maxScale,
+        Math.max(minScale, this.scale + scaleChange)
+      );
+
+      if (this.isReady) {
+        this.draw(this.currentStartTime);
       }
-    });
+    }
+  }
+
+  private registerListeners() {
+    this.timelineContainer?.addEventListener(
+      "scroll",
+      this.scrollEventListener.bind(this)
+    );
+    this.timelineContainer?.addEventListener(
+      "wheel",
+      this.wheelEventListener.bind(this)
+    );
+    this.timelineContainer?.addEventListener(
+      "click",
+      this.clickEventListener.bind(this)
+    );
+  }
+
+  private clearListeners() {
+    this.timelineContainer?.removeEventListener(
+      "scroll",
+      this.scrollEventListener
+    );
+    this.timelineContainer?.removeEventListener(
+      "wheel",
+      this.wheelEventListener
+    );
+    this.timelineContainer?.removeEventListener(
+      "click",
+      this.clickEventListener
+    );
   }
 }
