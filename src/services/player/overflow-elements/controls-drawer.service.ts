@@ -1,92 +1,95 @@
-import { ButtonCallbacks, ButtonType } from "../../../types/button-callback";
+import {
+  ButtonControlOptions,
+  ControlName,
+  ControlsOptions,
+  SelectControlOptions,
+} from "../../../types/controls";
 import { Nullable } from "../../../types/global";
 
-type CommonButtonType = Exclude<
-  ButtonType,
-  ButtonType.MODE | ButtonType.PLAY | ButtonType.VOLUME
->;
-type BinaryButtonType = Exclude<ButtonType, CommonButtonType>;
+type ButtonControl = Exclude<ControlName, ControlName.SPEED>;
 
-const binaryIcons: Record<BinaryButtonType, { on: string; off: string }> = {
-  [ButtonType.PLAY]: {
+type CommonButtonControl = Exclude<
+  ButtonControl,
+  ControlName.MODE | ControlName.PLAY | ControlName.VOLUME
+>;
+type BinaryButtonControl = Exclude<ButtonControl, CommonButtonControl>;
+
+const BINARY_BUTTON_ICONS: Record<
+  BinaryButtonControl,
+  { on: string; off: string }
+> = {
+  [ControlName.PLAY]: {
     on: "/play.svg",
     off: "/pause.svg",
   },
-  [ButtonType.VOLUME]: {
+  [ControlName.VOLUME]: {
     on: "/volume-on.svg",
     off: "/volume-mute.svg",
   },
-  [ButtonType.MODE]: {
+  [ControlName.MODE]: {
     on: "/live-mode.svg",
     off: "/archive-mode.svg",
   },
 };
 
-const icons: Record<CommonButtonType, string> = {
-  // [ButtonType.MUTE]: "/stop.svg",
-  [ButtonType.EXPORT]: "/export.svg",
-  [ButtonType.SNAPSHOT]: "/snapshot.svg",
-  // [ButtonType.NEXT_FRAME]: "/stop.svg",
-  // [ButtonType.PREV_FRAME]: "/stop.svg",
-  [ButtonType.NEXT_FRAGMENT]: "/step-forward.svg",
-  [ButtonType.PREV_FRAGMENT]: "/step-backward.svg",
-  // [ButtonType.INFO]: "/stop.svg",
+const COMMON_BUTTON_ICONS: Record<CommonButtonControl, string> = {
+  [ControlName.EXPORT]: "/export.svg",
+  [ControlName.SNAPSHOT]: "/snapshot.svg",
+  // [ControlName.NEXT_FRAME]: "/stop.svg",
+  // [ControlName.PREV_FRAME]: "/stop.svg",
+  [ControlName.NEXT_FRAGMENT]: "/step-forward.svg",
+  [ControlName.PREV_FRAGMENT]: "/step-backward.svg",
+  // [ControlName.INFO]: "/stop.svg",
 };
 
 export class ControlsOverflowDrawerService {
   private readonly container!: HTMLDivElement;
 
-  private callbacks: Nullable<ButtonCallbacks> = null;
-  private hiddenButtons: Partial<Record<ButtonType, boolean>> = {};
-  private disabledButtons: Partial<Record<ButtonType, boolean>> = {};
-  private binaryButtonsState: Partial<Record<BinaryButtonType, boolean>> = {};
+  private hiddenButtons: Partial<Record<ControlName, boolean>> = {};
+  private disabledButtons: Partial<Record<ControlName, boolean>> = {};
+  private binaryButtonsState: Partial<Record<BinaryButtonControl, boolean>> =
+    {};
+
+  private options!: ControlsOptions;
 
   private controlsContainer: Nullable<HTMLDivElement> = null;
 
-  constructor(container: HTMLDivElement, callbacks: ButtonCallbacks) {
+  constructor(container: HTMLDivElement, options: ControlsOptions) {
     this.container = container;
-    this.callbacks = callbacks;
+    this.options = options;
   }
 
   draw(): void {
     const controlsContainer = document.createElement("div");
     controlsContainer.className = "video-player__controls__container";
 
-    if (!this.hiddenButtons[ButtonType.MODE]) {
+    if (!this.hiddenButtons[ControlName.MODE]) {
+      controlsContainer.appendChild(this.makeControl(ControlName.MODE));
+    }
+    if (!this.hiddenButtons[ControlName.PREV_FRAGMENT]) {
       controlsContainer.appendChild(
-        this.makeBinaryButton(
-          ButtonType.MODE,
-          Boolean(this.binaryButtonsState?.[ButtonType.MODE])
-        )
+        this.makeControl(ControlName.PREV_FRAGMENT)
       );
     }
-    if (!this.hiddenButtons[ButtonType.PREV_FRAGMENT]) {
-      controlsContainer.appendChild(this.makeButton(ButtonType.PREV_FRAGMENT));
+    if (!this.hiddenButtons[ControlName.PLAY]) {
+      controlsContainer.appendChild(this.makeControl(ControlName.PLAY));
     }
-    if (!this.hiddenButtons[ButtonType.PLAY]) {
+    if (!this.hiddenButtons[ControlName.VOLUME]) {
+      controlsContainer.appendChild(this.makeControl(ControlName.VOLUME));
+    }
+    if (!this.hiddenButtons[ControlName.NEXT_FRAGMENT]) {
       controlsContainer.appendChild(
-        this.makeBinaryButton(
-          ButtonType.PLAY,
-          Boolean(this.binaryButtonsState?.[ButtonType.PLAY])
-        )
+        this.makeControl(ControlName.NEXT_FRAGMENT)
       );
     }
-    if (!this.hiddenButtons[ButtonType.VOLUME]) {
-      controlsContainer.appendChild(
-        this.makeBinaryButton(
-          ButtonType.VOLUME,
-          Boolean(this.binaryButtonsState?.[ButtonType.VOLUME])
-        )
-      );
+    if (!this.hiddenButtons[ControlName.SNAPSHOT]) {
+      controlsContainer.appendChild(this.makeControl(ControlName.SNAPSHOT));
     }
-    if (!this.hiddenButtons[ButtonType.NEXT_FRAGMENT]) {
-      controlsContainer.appendChild(this.makeButton(ButtonType.NEXT_FRAGMENT));
+    if (!this.hiddenButtons[ControlName.EXPORT]) {
+      controlsContainer.appendChild(this.makeControl(ControlName.EXPORT));
     }
-    if (!this.hiddenButtons[ButtonType.SNAPSHOT]) {
-      controlsContainer.appendChild(this.makeButton(ButtonType.SNAPSHOT));
-    }
-    if (!this.hiddenButtons[ButtonType.EXPORT]) {
-      controlsContainer.appendChild(this.makeButton(ButtonType.EXPORT));
+    if (!this.hiddenButtons[ControlName.SPEED]) {
+      controlsContainer.appendChild(this.makeControl(ControlName.SPEED));
     }
 
     this.clear();
@@ -94,22 +97,22 @@ export class ControlsOverflowDrawerService {
     this.container.appendChild(controlsContainer);
   }
 
-  setHidden(hiddenButtons: Partial<Record<ButtonType, boolean>>) {
+  setHidden(hiddenButtons: Partial<Record<ControlName, boolean>>) {
     this.hiddenButtons = hiddenButtons;
   }
 
-  setDisabled(disabledButtons: Partial<Record<ButtonType, boolean>>) {
+  setDisabled(disabledButtons: Partial<Record<ControlName, boolean>>) {
     this.disabledButtons = disabledButtons;
   }
 
   setBinaryButtonsState(
-    binaryButtonsState: Partial<Record<BinaryButtonType, boolean>>
+    binaryButtonsState: Partial<Record<BinaryButtonControl, boolean>>
   ) {
     this.binaryButtonsState = binaryButtonsState;
   }
 
   updateBinaryButtonsState(
-    binaryButtonsState: Partial<Record<BinaryButtonType, boolean>>
+    binaryButtonsState: Partial<Record<BinaryButtonControl, boolean>>
   ) {
     this.binaryButtonsState = {
       ...this.binaryButtonsState,
@@ -117,29 +120,96 @@ export class ControlsOverflowDrawerService {
     };
   }
 
-  private makeButton(type: CommonButtonType) {
-    return this.makeBaseButton(type, icons[type]);
+  private makeControl(name: ControlName): HTMLElement {
+    const config = this.options[name];
+
+    switch (config.type) {
+      case "button":
+        return this.makeButton(name as ButtonControl, config);
+
+      case "select":
+        return this.makeSelect(config);
+    }
   }
 
-  private makeBinaryButton(type: BinaryButtonType, enabled: boolean) {
+  private makeButton(
+    controlName: ButtonControl,
+    config: ButtonControlOptions
+  ): HTMLButtonElement {
+    if (config.binary) {
+      const name = controlName as BinaryButtonControl;
+      const enabled = Boolean(this.binaryButtonsState?.[name]);
+
+      return this.makeBaseButton(
+        controlName,
+        enabled ? BINARY_BUTTON_ICONS[name].on : BINARY_BUTTON_ICONS[name].off,
+        config.listeners
+      );
+    }
+
     return this.makeBaseButton(
-      type,
-      enabled ? binaryIcons[type].on : binaryIcons[type].off
+      controlName,
+      COMMON_BUTTON_ICONS[controlName as CommonButtonControl],
+      config.listeners
     );
   }
 
-  private makeBaseButton(type: ButtonType, icon: string) {
+  private makeSelect(config: SelectControlOptions): HTMLSelectElement {
+    const select = document.createElement("select");
+
+    const options: HTMLOptionElement[] = [];
+
+    for (const optionConfig of config.options) {
+      const option = document.createElement("option");
+
+      option.innerText = optionConfig.label;
+      option.value = optionConfig.value;
+      option.selected = option.value === config.defaultValue;
+
+      options.push(option);
+    }
+
+    select.append(...options);
+
+    for (const event in config.listeners) {
+      const eventName = event as keyof SelectControlOptions["listeners"];
+
+      const listener = config.listeners[eventName];
+      if (!listener) {
+        continue;
+      }
+
+      select.addEventListener(eventName, listener);
+    }
+
+    return select;
+  }
+
+  private makeBaseButton(
+    name: ButtonControl,
+    icon: string,
+    listeners: ButtonControlOptions["listeners"]
+  ) {
     const buttonContainer = document.createElement("button");
     const image = document.createElement("img");
 
     buttonContainer.className = "video-player__controls__button";
-    buttonContainer.disabled = Boolean(this.disabledButtons[type]);
+    buttonContainer.disabled = Boolean(this.disabledButtons[name]);
 
     image.src = icon;
 
     buttonContainer.appendChild(image);
 
-    buttonContainer.onclick = this.callbacks![type];
+    for (const event in listeners) {
+      const eventName = event as keyof ButtonControlOptions["listeners"];
+
+      const listener = listeners[eventName];
+      if (!listener) {
+        continue;
+      }
+
+      buttonContainer.addEventListener(eventName, listener);
+    }
 
     return buttonContainer;
   }
