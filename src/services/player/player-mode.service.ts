@@ -1,6 +1,6 @@
 import { Mode } from "../../constants/mode";
 import { ModeService } from "../../interfaces/mode";
-import { ButtonType } from "../../types/button-callback";
+import { ControlName } from "../../types/button-callback";
 import { ConnectionOptions } from "../../types/connection-options";
 import { Nullable } from "../../types/global";
 import { VideoStats } from "../../types/video";
@@ -38,17 +38,59 @@ export class PlayerModeService {
     this.controlsDrawer = new ControlsOverflowDrawerService(
       this.player.container,
       {
-        [ButtonType.MODE]: this.switch.bind(this),
-        [ButtonType.PLAY]: this.switchPlayState.bind(this),
-        [ButtonType.VOLUME]: this.switchVolumeState.bind(this),
-        [ButtonType.NEXT_FRAGMENT]: this.toNextFragment.bind(this),
-        [ButtonType.PREV_FRAGMENT]: this.toPrevFragment.bind(this),
-        [ButtonType.EXPORT]: () => {},
-        [ButtonType.SNAPSHOT]: this.snap.bind(this),
+        [ControlName.MODE]: {
+          type: "button",
+          listeners: {
+            click: this.switch.bind(this),
+          },
+          binary: true,
+        },
+        [ControlName.PLAY]: {
+          type: "button",
+          listeners: {
+            click: this.switchPlayState.bind(this),
+          },
+          binary: true,
+        },
+        [ControlName.VOLUME]: {
+          type: "button",
+          listeners: {
+            click: this.switchVolumeState.bind(this),
+          },
+          binary: true,
+        },
+        [ControlName.NEXT_FRAGMENT]: {
+          type: "button",
+          listeners: {
+            click: this.toNextFragment.bind(this),
+          },
+        },
+        [ControlName.PREV_FRAGMENT]: {
+          type: "button",
+          listeners: {
+            click: this.toPrevFragment.bind(this),
+          },
+        },
+        [ControlName.EXPORT]: {
+          type: "button",
+          listeners: {
+            click: () => {},
+          },
+        },
+        [ControlName.SNAPSHOT]: {
+          type: "button",
+          listeners: {
+            click: this.snap.bind(this),
+          },
+        },
+        [ControlName.SPEED]: {
+          type: "select",
+          listeners: {},
+        },
       }
     );
     this.controlsDrawer.setDisabled({
-      [ButtonType.SNAPSHOT]: true,
+      [ControlName.SNAPSHOT]: true,
     });
 
     this.enable(Mode.ARCHIVE);
@@ -74,9 +116,9 @@ export class PlayerModeService {
       case Mode.LIVE:
         this.modeConnection = new LiveVideoService(this.options, this.player);
         this.controlsDrawer.setHidden({
-          [ButtonType.EXPORT]: true,
-          [ButtonType.NEXT_FRAGMENT]: true,
-          [ButtonType.PREV_FRAGMENT]: true,
+          [ControlName.EXPORT]: true,
+          [ControlName.NEXT_FRAGMENT]: true,
+          [ControlName.PREV_FRAGMENT]: true,
         });
 
         break;
@@ -94,9 +136,9 @@ export class PlayerModeService {
     this.currentMode = newMode;
 
     this.controlsDrawer.setBinaryButtonsState({
-      [ButtonType.MODE]: newMode === Mode.LIVE,
-      [ButtonType.PLAY]: this.player.isPlaying,
-      [ButtonType.VOLUME]: this.player.isVolumeOn,
+      [ControlName.MODE]: newMode === Mode.LIVE,
+      [ControlName.PLAY]: this.player.isPlaying,
+      [ControlName.VOLUME]: this.player.isVolumeOn,
     });
     this.controlsDrawer.draw();
 
@@ -115,7 +157,7 @@ export class PlayerModeService {
     }
 
     this.controlsDrawer.updateBinaryButtonsState({
-      [ButtonType.PLAY]: this.player.isPlaying,
+      [ControlName.PLAY]: this.player.isPlaying,
     });
     this.controlsDrawer.draw();
   }
@@ -128,7 +170,7 @@ export class PlayerModeService {
     }
 
     this.controlsDrawer.updateBinaryButtonsState({
-      [ButtonType.VOLUME]: this.player.isVolumeOn,
+      [ControlName.VOLUME]: this.player.isVolumeOn,
     });
     this.controlsDrawer.draw();
   }
@@ -151,7 +193,7 @@ export class PlayerModeService {
 
   private onUpdateStats(stats: Nullable<VideoStats>) {
     this.controlsDrawer.setDisabled({
-      [ButtonType.SNAPSHOT]: stats === null,
+      [ControlName.SNAPSHOT]: stats === null,
     });
 
     this.controlsDrawer.draw();
