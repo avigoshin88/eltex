@@ -1,6 +1,6 @@
 import { Mode } from "../../constants/mode";
 import { ModeService } from "../../interfaces/mode";
-import { ControlName } from "../../types/button-callback";
+import { ControlName } from "../../types/controls";
 import { ConnectionOptions } from "../../types/connection-options";
 import { Nullable } from "../../types/global";
 import { VideoStats } from "../../types/video";
@@ -85,7 +85,32 @@ export class PlayerModeService {
         },
         [ControlName.SPEED]: {
           type: "select",
-          listeners: {},
+          listeners: {
+            change: (e) => {},
+          },
+          defaultValue: "1",
+          options: [
+            {
+              label: "0.3",
+              value: "0.3",
+            },
+            {
+              label: "0.5",
+              value: "0.5",
+            },
+            {
+              label: "0.7",
+              value: "0.7",
+            },
+            {
+              label: "0.8",
+              value: "0.8",
+            },
+            {
+              label: "1",
+              value: "1",
+            },
+          ],
         },
       }
     );

@@ -1,22 +1,3 @@
-// export enum ButtonType {
-//   MODE = "mode",
-//   PLAY = "play",
-//   VOLUME = "volume",
-//   EXPORT = "export",
-//   SNAPSHOT = "snapshot",
-//   // NEXT_FRAME = "next_frame",
-//   // PREV_FRAME = "prev_frame",
-//   NEXT_FRAGMENT = "next_fragment",
-//   PREV_FRAGMENT = "prev_fragment",
-//   // INFO = "info",
-// }
-
-// export type ButtonCallback = () => void;
-
-// export type ButtonCallbacks = Record<ButtonType, ButtonCallback>;
-
-// ============== NEW ==============
-
 export enum ControlName {
   MODE = "mode",
   PLAY = "play",
@@ -34,15 +15,21 @@ export type ControlType = "button" | "select";
 
 export enum CallbackType {
   CLICK = "click",
+  CHANGE = "change",
   MOUSE_ENTER = "mouseenter",
   MOUSE_LEAVE = "mouseleave",
   MOUSE_MOVE = "mousemove",
 }
 
+export type SelectValue = string;
+
 export type ButtonListener = EventListenerOrEventListenerObject;
 export type SelectListener = EventListener;
 
-// export type DefaultListener = (event: Event) => void;
+export type SelectOption = {
+  label: string;
+  value: SelectValue;
+};
 
 export type ControlListeners<T> = Partial<Record<CallbackType, T>>;
 
@@ -64,6 +51,9 @@ export type BinaryButtonControlOptions = ButtonControlOptions & {
 export type SelectControlOptions = Control & {
   type: "select";
   listeners: ControlListeners<SelectListener>;
+
+  defaultValue: SelectValue;
+  options: SelectOption[];
 };
 
 export type ControlsOptions = {

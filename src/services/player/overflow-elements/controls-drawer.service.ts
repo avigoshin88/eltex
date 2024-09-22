@@ -3,7 +3,7 @@ import {
   ControlName,
   ControlsOptions,
   SelectControlOptions,
-} from "../../../types/button-callback";
+} from "../../../types/controls";
 import { Nullable } from "../../../types/global";
 
 type ButtonControl = Exclude<ControlName, ControlName.SPEED>;
@@ -88,6 +88,9 @@ export class ControlsOverflowDrawerService {
     if (!this.hiddenButtons[ControlName.EXPORT]) {
       controlsContainer.appendChild(this.makeControl(ControlName.EXPORT));
     }
+    if (!this.hiddenButtons[ControlName.SPEED]) {
+      controlsContainer.appendChild(this.makeControl(ControlName.SPEED));
+    }
 
     this.clear();
     this.controlsContainer = controlsContainer;
@@ -153,6 +156,31 @@ export class ControlsOverflowDrawerService {
 
   private makeSelect(config: SelectControlOptions): HTMLSelectElement {
     const select = document.createElement("select");
+
+    const options: HTMLOptionElement[] = [];
+
+    for (const optionConfig of config.options) {
+      const option = document.createElement("option");
+
+      option.innerText = optionConfig.label;
+      option.value = optionConfig.value;
+      option.selected = option.value === config.defaultValue;
+
+      options.push(option);
+    }
+
+    select.append(...options);
+
+    for (const event in config.listeners) {
+      const eventName = event as keyof SelectControlOptions["listeners"];
+
+      const listener = config.listeners[eventName];
+      if (!listener) {
+        continue;
+      }
+
+      select.addEventListener(eventName, listener);
+    }
 
     return select;
   }
