@@ -83,13 +83,8 @@ export class ArchiveControlService {
   init() {
     this.preloadRangeFragment(true);
 
-    this.connectionSupporterId = setInterval(() => {
-      this.supportConnect();
-    }, connectionSupportInterval);
-
-    this.preloadRangeFragmentsId = setInterval(() => {
-      this.preloadRangeFragment();
-    }, preloadInterval - preloadRangeFragmentTimeout);
+    this.initSupportConnectInterval();
+    this.initPreloadFragmentsInterval();
   }
 
   clear() {
@@ -97,15 +92,8 @@ export class ArchiveControlService {
 
     this.ranges = [];
 
-    if (this.connectionSupporterId !== null) {
-      clearInterval(this.connectionSupporterId);
-      this.connectionSupporterId = null;
-    }
-
-    if (this.preloadRangeFragmentsId !== null) {
-      clearInterval(this.preloadRangeFragmentsId);
-      this.preloadRangeFragmentsId = null;
-    }
+    this.clearSupportConnectInterval();
+    this.clearPreloadFragmentsInterval();
   }
 
   toNextFragment() {
@@ -116,9 +104,10 @@ export class ArchiveControlService {
       return;
     }
 
-    this.emit(this.nextFragment);
     this.fragmentIndex = this.fragmentIndex + 1;
-    this.initGenerator();
+
+    this.clearPreloadFragmentsInterval();
+    this.initPreloadFragmentsInterval();
   }
 
   toPrevFragment() {
@@ -129,9 +118,10 @@ export class ArchiveControlService {
       return;
     }
 
-    this.emit(this.prevFragment);
     this.fragmentIndex = this.fragmentIndex - 1;
-    this.initGenerator();
+
+    this.clearPreloadFragmentsInterval();
+    this.initPreloadFragmentsInterval();
   }
 
   private initGenerator() {
@@ -179,5 +169,40 @@ export class ArchiveControlService {
     const rangeFragment = rangeFragmentResult.value;
 
     this.emit(rangeFragment, !isFirst);
+    if (rangeFragment.isLastFragment) {
+      this.toNextFragment();
+    }
+  }
+
+  private initPreloadFragmentsInterval() {
+    this.initGenerator();
+
+    this.preloadRangeFragmentsId = setInterval(() => {
+      this.preloadRangeFragment();
+    }, preloadInterval - preloadRangeFragmentTimeout);
+  }
+
+  private clearPreloadFragmentsInterval() {
+    if (this.preloadRangeFragmentsId === null) {
+      return;
+    }
+
+    clearInterval(this.preloadRangeFragmentsId);
+    this.preloadRangeFragmentsId = null;
+  }
+
+  private initSupportConnectInterval() {
+    this.connectionSupporterId = setInterval(() => {
+      this.supportConnect();
+    }, connectionSupportInterval);
+  }
+
+  private clearSupportConnectInterval() {
+    if (this.connectionSupporterId === null) {
+      return;
+    }
+
+    clearInterval(this.connectionSupporterId);
+    this.connectionSupporterId = null;
   }
 }
