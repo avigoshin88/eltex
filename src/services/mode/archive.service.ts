@@ -27,6 +27,7 @@ export class ArchiveVideoService implements ModeService {
   private readonly archiveControl!: ArchiveControlService;
 
   private nextProcessedRange: Nullable<RangeDto> = null;
+  private isPreRequestRange = false;
 
   private isLoaded = false;
 
@@ -130,7 +131,20 @@ export class ArchiveVideoService implements ModeService {
     this.datachannelClient.send(DatachannelMessageType.ARCHIVE_CONNECT_SUPPORT);
   }
 
-  private emitStartNewFragment(fragment: RangeDto) {
+  private emitStartNewFragment(fragment: RangeDto, isPreRequestRange = false) {
+    this.isPreRequestRange = isPreRequestRange;
+
+    if (this.isPreRequestRange) {
+      this.datachannelClient.send(DatachannelMessageType.GET_ARCHIVE_FRAGMENT, {
+        start_time: fragment.start_time,
+        duration: fragment.duration,
+      });
+
+      this.datachannelClient.send(DatachannelMessageType.PLAY_STREAM);
+
+      return;
+    }
+
     this.nextProcessedRange = fragment;
 
     this.datachannelClient.send(DatachannelMessageType.DROP_BUFFER);
@@ -160,6 +174,11 @@ export class ArchiveVideoService implements ModeService {
   }
 
   private onSaveArchiveFragment() {
+    if (this.isPreRequestRange) {
+      this.isPreRequestRange = false;
+      return;
+    }
+
     this.datachannelClient.send(DatachannelMessageType.PLAY_STREAM);
   }
 

@@ -86,7 +86,7 @@ export class PlayerModeService {
         [ControlName.SPEED]: {
           type: "select",
           listeners: {
-            change: (e) => {},
+            change: () => {},
           },
           defaultValue: "1",
           options: [
