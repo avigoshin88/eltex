@@ -2,6 +2,8 @@ import { Nullable } from "../../../types/global";
 import { RangeData } from "../../../types/range";
 import { TimelineClickCallback } from "../../../types/timeline";
 
+import { format } from "date-fns";
+
 const divisionSteps = [
   { scale: 0.004, step: 5 * 1000 }, // 5 секунд
   { scale: 0.002, step: 10 * 1000 }, // 10 секунд
@@ -238,9 +240,18 @@ export class TimelineOverflowDrawer {
 
   private formatTime(time: number): string {
     const date = new Date(time);
-    return `${date.getHours()}:${date.getMinutes()}:${date.getSeconds()}`;
-  }
 
+    if (this.scale >= 0.00001) {
+      // Малый масштаб: полное время (часы, минуты, секунды)
+      return format(date, "HH:mm:ss");
+    } else if (this.scale >= 0.0000001) {
+      // Средний масштаб: дата и время
+      return format(date, "dd.MM.yyyy HH:mm");
+    } else {
+      // Большой масштаб: только дата
+      return format(date, "dd.MM.yyyy");
+    }
+  }
   private getDivisionStep(): number {
     const scaleFactor = this.scale;
 

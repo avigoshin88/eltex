@@ -8,7 +8,9 @@
     "build": "tsc && vite build",
     "preview": "vite preview"
   },
-  "dependencies": {},
+  "dependencies": {
+    "date-fns": "^4.1.0"
+  },
   "devDependencies": {
     "typescript": "^5.5.3",
     "vite": "^5.4.0",
