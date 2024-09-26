@@ -63,9 +63,9 @@ export type ControlsOptions = {
 
   [ControlName.NEXT_FRAGMENT]: ButtonControlOptions;
   [ControlName.PREV_FRAGMENT]: ButtonControlOptions;
-
+  
   [ControlName.SNAPSHOT]: ButtonControlOptions;
-  [ControlName.EXPORT]: ButtonControlOptions;
+  [ControlName.EXPORT]: BinaryButtonControlOptions;
 
   [ControlName.SPEED]: SelectControlOptions;
 };

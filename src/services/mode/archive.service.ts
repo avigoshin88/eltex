@@ -12,6 +12,8 @@ import { ArchiveControlService } from "../archive-control.service";
 import { MetaOverflowDrawerService } from "../player/overflow-elements/meta-drawer.service";
 import { TimelineClickCallback } from "../../types/timeline";
 import { Nullable } from "../../types/global";
+import { ExportURLDto } from "../../dto/export";
+import { FileDownloader } from "../file-downloader.service";
 
 export class ArchiveVideoService implements ModeService {
   private logger = new Logger(ArchiveVideoService.name);
@@ -25,6 +27,8 @@ export class ArchiveVideoService implements ModeService {
 
   private readonly rangeMapper = new RangeMapperService();
   private readonly archiveControl!: ArchiveControlService;
+
+  private readonly fileDownloader = new FileDownloader();
 
   private nextProcessedRange: Nullable<RangeDto> = null;
   private isPreRequestRange = false;
@@ -76,6 +80,9 @@ export class ArchiveVideoService implements ModeService {
         [DatachannelMessageType.PLAY]: this.onStreamStarted.bind(this),
         // ругается на unknown
         // @ts-ignore
+        [DatachannelMessageType.URL]: this.onExportFragment.bind(this),
+        // ругается на unknown
+        // @ts-ignore
         [DatachannelMessageType.META]: this.metaDrawer.draw,
       },
     });
@@ -98,8 +105,30 @@ export class ArchiveVideoService implements ModeService {
     this.metaDrawer.destroy();
   }
 
+  export(): void {
+    this.timelineDrawer.enableExportMode(this.exportFragment.bind(this));
+  }
+
+  cancelExport(): void {
+    this.timelineDrawer.disableExportMode();
+  }
+
   private async onOpenDatachannel() {
     this.datachannelClient.send(DatachannelMessageType.GET_RANGES);
+  }
+
+  private exportFragment(range: RangeDto) {
+    this.datachannelClient.send(
+      DatachannelMessageType.GET_EXPORT_FRAGMENT_URL,
+      {
+        start_time: range.start_time,
+        duration: range.duration,
+      }
+    );
+  }
+
+  private onExportFragment(data: ExportURLDto) {
+    this.fileDownloader.download(data.url);
   }
 
   private onRanges(data: unknown) {
