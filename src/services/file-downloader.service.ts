@@ -6,5 +6,7 @@ export class FileDownloader {
     a.download = filename || new Date().toLocaleString();
 
     a.click();
+
+    a.remove();
   }
 }
