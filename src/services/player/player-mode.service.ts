@@ -113,8 +113,8 @@ export class PlayerModeService {
               value: "0.8",
             },
             {
-              label: "1",
-              value: "1",
+              label: "1.0",
+              value: "1.0",
             },
           ],
         },
@@ -189,6 +189,11 @@ export class PlayerModeService {
 
   async reset() {
     await this.modeConnection.reset();
+
+    this.isExport = false;
+
+    this.soundLevel = "100";
+    this.speed = "1.0";
   }
 
   private switchPlayState() {
@@ -267,6 +272,8 @@ export class PlayerModeService {
       [ControlName.SPEED]: this.speed,
     });
     this.controlsDrawer.draw();
+
+    this.modeConnection.setSpeed?.(Number(this.speed));
   }
 
   private onChangeSoundLevel(event: Event) {

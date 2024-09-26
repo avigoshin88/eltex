@@ -191,7 +191,7 @@ export class ControlsOverflowDrawerService {
       option.innerText = optionConfig.label;
       option.value = optionConfig.value;
       option.selected =
-        option.value === this.controlValues[name] ?? config.value;
+        option.value === (this.controlValues[name] ?? config.value);
 
       options.push(option);
     }
