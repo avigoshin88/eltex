@@ -58,6 +58,19 @@ export enum DatachannelMessageType {
   DROP = "drop",
 
   /**
+   * Request: GET_EXPORT_FRAGMENT_URL
+   *
+   * Запросить фрагмент для скачивания
+   */
+  GET_EXPORT_FRAGMENT_URL = "get_url",
+  /**
+   * Response: GET_EXPORT_FRAGMENT_URL
+   *
+   * Фрагмент для скачивания
+   */
+  URL = "url",
+
+  /**
    * Request: ARCHIVE_CONNECT_SUPPORT
    *
    * Фиктивный запрос на поддержание подключения

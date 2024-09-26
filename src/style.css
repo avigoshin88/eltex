@@ -5,6 +5,8 @@
   --timeline_range_period_text: #2b2d42;
   --timeline_range_track: #ff4646;
   --timeline_range_border: #3d405b;
+  --timeline_export_marker_start: yellowgreen;
+  --timeline_export_marker_end: blue;
 }
 
 .video-player {
@@ -97,4 +99,23 @@
   z-index: 1;
 
   background: var(--timeline_range_track);
+}
+
+.video-player__timeline__export-marker {
+  position: absolute;
+
+  height: 100%;
+  width: 10px;
+
+  transform: translateX(-50%);
+
+  z-index: 10;
+}
+
+.video-player__timeline__export-marker_start {
+  background-color: var(--timeline_export_marker_start);
+}
+
+.video-player__timeline__export-marker_end {
+  background-color: var(--timeline_export_marker_end);
 }

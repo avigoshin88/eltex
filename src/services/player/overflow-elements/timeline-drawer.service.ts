@@ -1,3 +1,4 @@
+import { RangeDto } from "../../../dto/ranges";
 import { Nullable } from "../../../types/global";
 import { RangeData } from "../../../types/range";
 import { TimelineClickCallback } from "../../../types/timeline";
@@ -32,6 +33,8 @@ const divisionSteps = [
   { scale: 0.00000000005, step: 10 * 365 * 24 * 60 * 60 * 1000 }, // 10 лет (добавлено соответствующее значение scale)
 ];
 
+type ExportRangeCallback = (range: RangeDto) => void;
+
 export class TimelineOverflowDrawer {
   private ranges: RangeData[] = [];
   private readonly container: HTMLDivElement;
@@ -40,6 +43,11 @@ export class TimelineOverflowDrawer {
   private currentStartTime: number = 0; // Текущее начало времени
   private isReady: boolean = false; // Флаг, указывающий готовность к отрисовке
   private clickCallback: TimelineClickCallback; // Callback для кликов
+
+  private exportMode: boolean = false; // Режим экспорта
+  private exportStartTime: Nullable<number> = null; // Время начала выбранного диапазона
+  private exportEndTime: Nullable<number> = null; // Время конца выбранного диапазона
+  private exportCallback: Nullable<ExportRangeCallback> = null; // Callback для экспорта
 
   constructor(
     container: HTMLDivElement,
@@ -105,15 +113,101 @@ export class TimelineOverflowDrawer {
 
     const currentTimestamp = startTime + currentTime;
 
-    // Отрисовка трека текущего времени
-    const trackPosition =
-      ((currentTimestamp - startTime) / totalTimeRange) * totalRangeWidth;
+    // Проверяем, находится ли текущий временной штамп внутри диапазона 'data'
+    const currentRange = this.findRangeByTimestamp(currentTimestamp);
 
-    const track = document.createElement("div");
-    track.classList.add("video-player__timeline__track");
-    track.style.left = `${trackPosition}px`;
+    if (currentRange && currentRange.type === "data") {
+      // Если текущий временной штамп внутри диапазона типа 'data', рисуем трек
+      const trackPosition =
+        ((currentTimestamp - startTime) / totalTimeRange) * totalRangeWidth;
 
-    this.timelineContainer.appendChild(track);
+      const track = document.createElement("div");
+      track.classList.add("video-player__timeline__track");
+      track.style.left = `${trackPosition}px`;
+
+      this.timelineContainer.appendChild(track);
+    } else {
+      // Ищем ближайший диапазон типа 'data'
+      const nearestDataRange = this.findNearestDataRange(currentTimestamp);
+
+      if (nearestDataRange) {
+        // Перемещаем трек на начало ближайшего диапазона типа 'data'
+        const trackPosition =
+          ((nearestDataRange.start_time - startTime) / totalTimeRange) *
+          totalRangeWidth;
+
+        const track = document.createElement("div");
+        track.classList.add("video-player__timeline__track");
+        track.style.left = `${trackPosition}px`;
+
+        this.timelineContainer.appendChild(track);
+      }
+    }
+  }
+
+  // Включение режима экспорта
+  enableExportMode(callback: (range: RangeDto) => void): void {
+    this.exportMode = true;
+    this.exportCallback = callback;
+    this.exportStartTime = null;
+    this.exportEndTime = null;
+
+    // Очищаем предыдущие черты
+    this.clearExportMarkers();
+  }
+
+  // Отключение режима экспорта
+  disableExportMode(): void {
+    this.exportMode = false;
+    this.exportCallback = null;
+
+    // Удаляем черты
+    this.clearExportMarkers();
+  }
+
+  private clearExportMarkers(): void {
+    const markers = this.timelineContainer!.querySelectorAll(
+      ".video-player__timeline__export-marker"
+    );
+    markers.forEach((marker) => marker.remove());
+  }
+
+  private addExportMarker(position: number, type: "start" | "end"): void {
+    const marker = document.createElement("div");
+
+    marker.classList.add("video-player__timeline__export-marker");
+
+    marker.classList.add(
+      type === "start"
+        ? "video-player__timeline__export-marker_start"
+        : "video-player__timeline__export-marker_end"
+    );
+
+    marker.style.left = `${position}px`;
+
+    this.timelineContainer!.appendChild(marker);
+  }
+
+  private updateExportMarkers(
+    startTime: number,
+    totalTimeRange: number,
+    totalRangeWidth: number
+  ): void {
+    this.clearExportMarkers();
+
+    if (this.exportStartTime !== null) {
+      const startMarkerPosition =
+        ((this.exportStartTime - startTime) / totalTimeRange) * totalRangeWidth;
+
+      this.addExportMarker(startMarkerPosition, "start");
+    }
+
+    if (this.exportEndTime !== null) {
+      const endMarkerPosition =
+        ((this.exportEndTime - startTime) / totalTimeRange) * totalRangeWidth;
+
+      this.addExportMarker(endMarkerPosition, "end");
+    }
   }
 
   private drawVirtualizedDivisions(
@@ -143,7 +237,9 @@ export class TimelineOverflowDrawer {
     );
 
     // Удаляем только старые деления
-    const oldDivisions = this.timelineContainer!.querySelectorAll(".division");
+    const oldDivisions = this.timelineContainer!.querySelectorAll(
+      ".video-player__timeline__period"
+    );
     oldDivisions.forEach((division) => division.remove());
 
     // Отрисовываем только видимые деления
@@ -261,31 +357,62 @@ export class TimelineOverflowDrawer {
   }
 
   private clickEventListener(event: MouseEvent): void {
+    event.preventDefault();
+
     const clickX = event.offsetX; // Координата клика по оси X
     const containerWidth = this.container.offsetWidth;
     const startTime = this.ranges[0]?.start_time || 0;
     const endTime = this.ranges[this.ranges.length - 1]?.end_time || 0;
     const totalTimeRange = endTime - startTime;
+    const totalRangeWidth = totalTimeRange * this.scale;
 
     // Вычисляем время на основе позиции клика
     let clickedTimestamp =
       startTime + (clickX / containerWidth) * totalTimeRange;
 
-    // Ищем диапазон, на который пришелся клик
-    let clickedRange = this.findRangeByTimestamp(clickedTimestamp);
+    if (this.exportMode) {
+      // Если включён режим экспорта
+      if (this.exportStartTime === null) {
+        this.exportStartTime = clickedTimestamp;
+      } else if (this.exportEndTime === null) {
+        this.exportEndTime = clickedTimestamp;
 
-    // Если диапазон типа break, устанавливаем timestamp на начало диапазона
-    if (clickedRange && clickedRange.type === "break") {
-      clickedRange = this.findNearestDataRange(clickedTimestamp);
-      clickedTimestamp = clickedRange?.start_time ?? startTime;
+        // Проверяем, что время конца больше времени начала
+        if (this.exportStartTime > this.exportEndTime) {
+          [this.exportStartTime, this.exportEndTime] = [
+            this.exportEndTime,
+            this.exportStartTime,
+          ];
+        }
+
+        this.exportCallback?.({
+          start_time: this.exportStartTime,
+          end_time: this.exportEndTime,
+          duration: this.exportEndTime - this.exportStartTime,
+        });
+      } else {
+        // Если оба времени уже установлены, сбрасываем выбор
+        this.exportStartTime = clickedTimestamp;
+        this.exportEndTime = null;
+      }
+
+      this.updateExportMarkers(startTime, totalTimeRange, totalRangeWidth);
+    } else {
+      let clickedRange = this.findRangeByTimestamp(clickedTimestamp);
+
+      // Если диапазон типа break, устанавливаем timestamp на начало диапазона
+      if (clickedRange && clickedRange.type === "break") {
+        clickedRange = this.findNearestDataRange(clickedTimestamp);
+        clickedTimestamp = clickedRange?.start_time ?? startTime;
+      }
+
+      if (clickedRange === null) {
+        return;
+      }
+
+      // Вызов callback-функции с найденным timestamp и range
+      this.clickCallback?.(clickedTimestamp, clickedRange);
     }
-
-    if (clickedRange === null) {
-      return;
-    }
-
-    // Вызов callback-функции с найденным timestamp и range
-    this.clickCallback?.(clickedTimestamp, clickedRange);
   }
 
   private scrollEventListener() {
@@ -321,6 +448,13 @@ export class TimelineOverflowDrawer {
 
       if (this.isReady) {
         this.draw(this.currentStartTime);
+
+        // Обновляем маркеры экспорта при изменении масштаба
+        this.updateExportMarkers(
+          this.ranges[0]?.start_time || 0,
+          totalTimeRange,
+          totalTimeRange * this.scale
+        );
       }
     }
   }

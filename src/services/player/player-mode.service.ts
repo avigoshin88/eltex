@@ -24,6 +24,8 @@ export class PlayerModeService {
   private readonly snapshotManager = new SnapshotService();
   private readonly playerStats!: PlayerStatsService;
 
+  private isExport = false;
+
   private readonly controlsDrawer!: ControlsOverflowDrawerService;
 
   constructor(options: ConnectionOptions, player: VideoPlayerService) {
@@ -74,8 +76,9 @@ export class PlayerModeService {
         [ControlName.EXPORT]: {
           type: "button",
           listeners: {
-            click: () => {},
+            click: this.switchExportMode.bind(this),
           },
+          binary: true,
         },
         [ControlName.SNAPSHOT]: {
           type: "button",
@@ -164,6 +167,7 @@ export class PlayerModeService {
       [ControlName.MODE]: newMode === Mode.LIVE,
       [ControlName.PLAY]: this.player.isPlaying,
       [ControlName.VOLUME]: this.player.isVolumeOn,
+      [ControlName.EXPORT]: this.isExport,
     });
     this.controlsDrawer.draw();
 
@@ -214,6 +218,23 @@ export class PlayerModeService {
       this.playerStats.stats?.width,
       this.playerStats.stats?.height
     );
+  }
+
+  private switchExportMode() {
+    if (this.isExport === false) {
+      this.modeConnection.export?.();
+
+      this.isExport = true;
+    } else {
+      this.modeConnection.cancelExport?.();
+
+      this.isExport = false;
+    }
+
+    this.controlsDrawer.updateBinaryButtonsState({
+      [ControlName.EXPORT]: this.isExport,
+    });
+    this.controlsDrawer.draw();
   }
 
   private onUpdateStats(stats: Nullable<VideoStats>) {

@@ -10,7 +10,7 @@ type ButtonControl = Exclude<ControlName, ControlName.SPEED>;
 
 type CommonButtonControl = Exclude<
   ButtonControl,
-  ControlName.MODE | ControlName.PLAY | ControlName.VOLUME
+  ControlName.MODE | ControlName.PLAY | ControlName.VOLUME | ControlName.EXPORT
 >;
 type BinaryButtonControl = Exclude<ButtonControl, CommonButtonControl>;
 
@@ -30,10 +30,13 @@ const BINARY_BUTTON_ICONS: Record<
     on: "/live-mode.svg",
     off: "/archive-mode.svg",
   },
+  [ControlName.EXPORT]: {
+    on: "./cancel.svg",
+    off: "./export.svg",
+  },
 };
 
 const COMMON_BUTTON_ICONS: Record<CommonButtonControl, string> = {
-  [ControlName.EXPORT]: "/export.svg",
   [ControlName.SNAPSHOT]: "/snapshot.svg",
   // [ControlName.NEXT_FRAME]: "/stop.svg",
   // [ControlName.PREV_FRAME]: "/stop.svg",
