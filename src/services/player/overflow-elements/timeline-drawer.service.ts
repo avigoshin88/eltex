@@ -172,11 +172,7 @@ export class TimelineOverflowDrawer {
     markers.forEach((marker) => marker.remove());
   }
 
-  private addExportMarker(
-    time: number,
-    position: number,
-    type: "start" | "end"
-  ): void {
+  private addExportMarker(position: number, type: "start" | "end"): void {
     const marker = document.createElement("div");
 
     marker.classList.add("video-player__timeline__export-marker");
@@ -203,14 +199,14 @@ export class TimelineOverflowDrawer {
       const startMarkerPosition =
         ((this.exportStartTime - startTime) / totalTimeRange) * totalRangeWidth;
 
-      this.addExportMarker(this.exportStartTime, startMarkerPosition, "start");
+      this.addExportMarker(startMarkerPosition, "start");
     }
 
     if (this.exportEndTime !== null) {
       const endMarkerPosition =
         ((this.exportEndTime - startTime) / totalTimeRange) * totalRangeWidth;
 
-      this.addExportMarker(this.exportEndTime, endMarkerPosition, "end");
+      this.addExportMarker(endMarkerPosition, "end");
     }
   }
 
