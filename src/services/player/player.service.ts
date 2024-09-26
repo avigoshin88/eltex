@@ -96,4 +96,8 @@ export class VideoPlayerService {
 
     this.isVolumeOn = false;
   }
+
+  destroy() {
+    document.removeChild(this.container);
+  }
 }

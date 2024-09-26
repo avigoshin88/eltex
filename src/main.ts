@@ -20,21 +20,14 @@ class VideoPlayerElement extends HTMLElement {
 
   modeService!: PlayerModeService;
 
-  connectedCallback() {
-    this.parseAttributes();
-    this.initElement();
-    // браузер вызывает этот метод при добавлении элемента в документ
-    // (может вызываться много раз, если элемент многократно добавляется/удаляется)
-  }
+  connectedCallback() {}
 
   disconnectedCallback() {
-    // браузер вызывает этот метод при удалении элемента из документа
-    // (может вызываться много раз, если элемент многократно добавляется/удаляется)
+    this.clear();
   }
 
   static get observedAttributes() {
     return [
-      /* массив имён атрибутов для отслеживания их изменений */
       ATTRIBUTE.API_URL,
       ATTRIBUTE.APP,
       ATTRIBUTE.STREAM,
@@ -47,49 +40,51 @@ class VideoPlayerElement extends HTMLElement {
     oldValue: string | null,
     newValue: string | undefined
   ) {
-    if (oldValue === null || oldValue === newValue) {
+    if (newValue === undefined || oldValue === newValue) {
       return;
     }
 
     if (
       !(
-        [ATTRIBUTE.API_URL, ATTRIBUTE.APP, ATTRIBUTE.STREAM] as string[]
+        [
+          ATTRIBUTE.API_URL,
+          ATTRIBUTE.APP,
+          ATTRIBUTE.STREAM,
+          ATTRIBUTE.ICE_SERVERS,
+        ] as string[]
       ).includes(name)
     ) {
       return;
     }
 
-    Env.set(name, newValue ?? oldValue ?? "");
+    Env.set(name, newValue ?? oldValue);
 
-    await this.modeService.reset();
+    if (oldValue !== null) {
+      this.clear();
+    }
     this.initElement();
   }
 
-  private parseAttributes() {
-    API.init(this.parseAttribute(ATTRIBUTE.API_URL) as string);
-
-    Env.set(CONFIG_KEY.STREAM, this.parseAttribute(ATTRIBUTE.STREAM) as string);
-    Env.set(CONFIG_KEY.APP, this.parseAttribute(ATTRIBUTE.APP) as string);
-    Env.set(
-      CONFIG_KEY.API_URL,
-      this.parseAttribute(ATTRIBUTE.API_URL) as string
-    );
-    Env.set(
-      CONFIG_KEY.ICE_SERVERS,
-      this.parseAttribute(ATTRIBUTE.ICE_SERVERS) as string
-    );
-  }
-
   private initElement() {
-    const app = this.parseAttribute(ATTRIBUTE.APP);
-    const stream = this.parseAttribute(ATTRIBUTE.STREAM);
-    const iceServers = this.parseAttribute(ATTRIBUTE.ICE_SERVERS)
-      ?.split(";")
-      .map((urls) => ({
-        urls,
-      }));
+    const apiUrl = Env.get(CONFIG_KEY.API_URL);
+    const app = Env.get(CONFIG_KEY.APP);
+    const stream = Env.get(CONFIG_KEY.STREAM);
+    const iceServersRaw = Env.get(CONFIG_KEY.ICE_SERVERS);
 
-    if (!app || !stream) throw Error("Атрибуты App и Stream обязательны");
+    if (
+      apiUrl == null ||
+      app == null ||
+      stream == null ||
+      iceServersRaw == null
+    ) {
+      return;
+    }
+
+    API.init(apiUrl);
+
+    const iceServers = iceServersRaw.split(";").map((urls) => ({
+      urls,
+    }));
 
     if (this.container) {
       this.removeChild(this.container);
@@ -116,14 +111,9 @@ class VideoPlayerElement extends HTMLElement {
     );
   }
 
-  private parseAttribute(attribute: string, nullable?: boolean) {
-    const value = this.getAttribute(attribute);
-
-    if (!nullable && !value) {
-      throw new Error(`Cannot find ${attribute} attribute value`);
-    }
-
-    return value;
+  private clear() {
+    this.modeService.reset();
+    this.player.destroy();
   }
 }
 
