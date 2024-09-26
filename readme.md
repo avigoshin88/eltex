@@ -29,10 +29,10 @@
   <body>
     ...
     <video-player
-      apiUrl="https://evi-webrtc.eltex-co.ru:18083"
+      api_url="https://evi-webrtc.eltex-co.ru:18083"
       app="live"
       stream="test"
-      iceServers="stun:evi-webrtc.eltex-co.ru:3478;stun:10.23.18.4:3478;stun:192.168.0.105:3478"
+      ice_servers="stun:evi-webrtc.eltex-co.ru:3478;stun:10.23.18.4:3478;stun:192.168.0.105:3478"
     ></video-player>
   </body>
 </html>
@@ -69,17 +69,17 @@
 Пример с множеством плееров:
 ```
 <video-player
-  apiUrl="https://evi-webrtc.eltex-co.ru:18083"
+  api_url="https://evi-webrtc.eltex-co.ru:18083"
   app="live"
   stream="test"
-  iceServers="stun:evi-webrtc.eltex-co.ru:3478;stun:10.23.18.4:3478;stun:192.168.0.105:3478"
+  ice_servers="stun:evi-webrtc.eltex-co.ru:3478;stun:10.23.18.4:3478;stun:192.168.0.105:3478"
 ></video-player>
 
 <video-player
-  apiUrl="https://evi-webrtc.eltex-co.ru:18083"
+  api_url="https://evi-webrtc.eltex-co.ru:18083"
   app="live"
   stream="test"
-  iceServers="stun:evi-webrtc.eltex-co.ru:3478;stun:10.23.18.4:3478;stun:192.168.0.105:3478"
+  ice_servers="stun:evi-webrtc.eltex-co.ru:3478;stun:10.23.18.4:3478;stun:192.168.0.105:3478"
 ></video-player>
 ```
 
@@ -88,7 +88,21 @@
 
 Основная стилизация элементов доступна через css классы:
 
-* ```.video-player-timeline```
-* ```.video-player-timeline-range```
+
+* ```.video-player```
+* ```.video-player__container```
+* ```.video-player__controls__container```
+* ```.video-player__controls__button```
+* ```.video-player__timeline```
+* ```.video-player__timeline__range```
+* ```.video-player__timeline__range[data-type="data"]```
+* ```.video-player__timeline__range[data-type="break"]```
+* ```.video-player__timeline__period```
+* ```.video-player__timeline__period_with_text```
+* ```.video-player__timeline__period__text```
+* ```.video-player__timeline__track```
+* ```.video-player__timeline__export-marker```
+* ```.video-player__timeline__export-marker_start```
+* ```.video-player__timeline__export-marker_end```
 
 Изменение статик файлов (пока только иконки) доступно через замену соответствующих файлов в папке ```./public```
