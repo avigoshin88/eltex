@@ -14,7 +14,11 @@ type ButtonControl = Exclude<
 
 type CommonButtonControl = Exclude<
   ButtonControl,
-  ControlName.MODE | ControlName.PLAY | ControlName.VOLUME | ControlName.EXPORT
+  | ControlName.MODE
+  | ControlName.PLAY
+  | ControlName.VOLUME
+  | ControlName.EXPORT
+  | ControlName.MICROPHONE
 >;
 type BinaryButtonControl = Exclude<ButtonControl, CommonButtonControl>;
 
@@ -37,6 +41,10 @@ const BINARY_BUTTON_ICONS: Record<
   [ControlName.EXPORT]: {
     on: "./cancel.svg",
     off: "./export.svg",
+  },
+  [ControlName.MICROPHONE]: {
+    on: "/mic-on.svg",
+    off: "/mic-off.svg",
   },
 };
 
@@ -85,6 +93,9 @@ export class ControlsOverflowDrawerService {
     }
     if (!this.hiddenButtons[ControlName.VOLUME]) {
       controlsContainer.appendChild(this.makeControl(ControlName.VOLUME));
+    }
+    if (!this.hiddenButtons[ControlName.MICROPHONE]) {
+      controlsContainer.appendChild(this.makeControl(ControlName.MICROPHONE));
     }
     if (!this.hiddenButtons[ControlName.NEXT_FRAGMENT]) {
       controlsContainer.appendChild(
@@ -275,7 +286,7 @@ export class ControlsOverflowDrawerService {
     return buttonContainer;
   }
 
-  private clear() {
+  public clear() {
     if (!this.controlsContainer) {
       return;
     }

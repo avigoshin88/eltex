@@ -25,8 +25,7 @@ export class PlayerModeService {
   private readonly playerStats!: PlayerStatsService;
 
   private isExport = false;
-
-  private readonly controlsDrawer!: ControlsOverflowDrawerService;
+  private controlsDrawer!: ControlsOverflowDrawerService;
 
   private soundLevel = "100";
   private speed = "1.0";
@@ -39,6 +38,21 @@ export class PlayerModeService {
       this.player.video,
       this.onUpdateStats.bind(this)
     );
+
+    this.enable(Mode.LIVE);
+  }
+
+  async switch() {
+    await this.reset();
+    if (this.currentMode === Mode.LIVE) {
+      this.enable(Mode.ARCHIVE);
+    } else {
+      this.enable(Mode.LIVE);
+    }
+  }
+
+  setupControlsDrawer() {
+    this.controlsDrawer?.clear();
 
     this.controlsDrawer = new ControlsOverflowDrawerService(
       this.player.container,
@@ -61,6 +75,15 @@ export class PlayerModeService {
           type: "button",
           listeners: {
             click: this.switchVolumeState.bind(this),
+          },
+          binary: true,
+        },
+        [ControlName.MICROPHONE]: {
+          type: "button",
+          listeners: {
+            mousedown: this.onMicMouseDown.bind(this),
+            mouseup: this.onMicMouseUp.bind(this),
+            mouseleave: this.onMicMouseLeave.bind(this),
           },
           binary: true,
         },
@@ -129,20 +152,6 @@ export class PlayerModeService {
         },
       }
     );
-    this.controlsDrawer.setDisabled({
-      [ControlName.SNAPSHOT]: true,
-    });
-
-    this.enable(Mode.ARCHIVE);
-  }
-
-  async switch() {
-    await this.reset();
-    if (this.currentMode === Mode.LIVE) {
-      this.enable(Mode.ARCHIVE);
-    } else {
-      this.enable(Mode.LIVE);
-    }
   }
 
   async enable(newMode: Mode) {
@@ -155,7 +164,9 @@ export class PlayerModeService {
     switch (newMode) {
       case Mode.LIVE:
         this.modeConnection = new LiveVideoService(this.options, this.player);
+        this.setupControlsDrawer();
         this.controlsDrawer.setHidden({
+          [ControlName.PLAY]: true,
           [ControlName.EXPORT]: true,
           [ControlName.NEXT_FRAGMENT]: true,
           [ControlName.PREV_FRAGMENT]: true,
@@ -169,7 +180,10 @@ export class PlayerModeService {
           this.player,
           (archiveControl) => (this.archiveControl = archiveControl)
         );
-        this.controlsDrawer.setHidden({});
+        this.setupControlsDrawer();
+        this.controlsDrawer.setHidden({
+          [ControlName.MICROPHONE]: true,
+        });
 
         break;
     }
@@ -181,6 +195,8 @@ export class PlayerModeService {
       [ControlName.PLAY]: this.player.isPlaying,
       [ControlName.VOLUME]: this.player.isVolumeOn,
       [ControlName.EXPORT]: this.isExport,
+      [ControlName.MICROPHONE]: (this.modeConnection as LiveVideoService)?.mic
+        .isMicEnabled,
     });
     this.controlsDrawer.draw();
 
@@ -281,11 +297,47 @@ export class PlayerModeService {
 
     this.soundLevel = target.value;
 
-    this.player.setVolumeLevel(Number(this.soundLevel) / 100);
+    this.player.setVolume(Number(this.soundLevel) / 100);
 
     this.controlsDrawer.updateControlValues({
       [ControlName.SOUND]: this.soundLevel,
     });
     this.controlsDrawer.draw();
+  }
+
+  private onMicMouseDown() {
+    const liveConnection = this.modeConnection as LiveVideoService;
+    if (liveConnection) {
+      liveConnection.mic.micCallbacks?.mousedown();
+
+      this.controlsDrawer.updateBinaryButtonsState({
+        [ControlName.MICROPHONE]: liveConnection.mic.isMicEnabled,
+      });
+      this.controlsDrawer.draw();
+    }
+  }
+
+  private onMicMouseUp() {
+    const liveConnection = this.modeConnection as LiveVideoService;
+    if (liveConnection) {
+      liveConnection.mic.micCallbacks?.mouseup();
+
+      this.controlsDrawer.updateBinaryButtonsState({
+        [ControlName.MICROPHONE]: liveConnection.mic.isMicEnabled,
+      });
+      this.controlsDrawer.draw();
+    }
+  }
+
+  private onMicMouseLeave() {
+    const liveConnection = this.modeConnection as LiveVideoService;
+    if (liveConnection) {
+      liveConnection.mic.micCallbacks?.mouseleave();
+
+      this.controlsDrawer.updateBinaryButtonsState({
+        [ControlName.MICROPHONE]: liveConnection.mic.isMicEnabled,
+      });
+      this.controlsDrawer.draw();
+    }
   }
 }
