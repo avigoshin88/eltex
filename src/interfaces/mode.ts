@@ -8,4 +8,5 @@ export interface ModeService {
 
   export?(): void;
   cancelExport?(): void;
+  setSpeed?(speed: number): void;
 }

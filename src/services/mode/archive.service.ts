@@ -100,6 +100,7 @@ export class ArchiveVideoService implements ModeService {
   async reset(): Promise<void> {
     this.archiveControl.clear();
     this.webRTCClient.reset();
+    this.timelineDrawer.disableExportMode();
     this.timelineDrawer.clear();
 
     this.metaDrawer.destroy();
@@ -144,6 +145,10 @@ export class ArchiveVideoService implements ModeService {
 
   private onLoadedChange() {
     this.isLoaded = true;
+  }
+
+  setSpeed(speed: number) {
+    this.datachannelClient.send(DatachannelMessageType.SET_SPEED, { speed });
   }
 
   private onTimeUpdate = (event: Event) => {

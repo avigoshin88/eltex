@@ -27,6 +27,9 @@ export class PlayerModeService {
   private isExport = false;
   private controlsDrawer!: ControlsOverflowDrawerService;
 
+  private soundLevel = "100";
+  private speed = "1.0";
+
   constructor(options: ConnectionOptions, player: VideoPlayerService) {
     this.options = { ...options };
     this.player = player;
@@ -112,9 +115,9 @@ export class PlayerModeService {
         [ControlName.SPEED]: {
           type: "select",
           listeners: {
-            change: () => {},
+            change: this.onChangeSpeed.bind(this),
           },
-          defaultValue: "1",
+          value: this.speed,
           options: [
             {
               label: "0.3",
@@ -133,10 +136,19 @@ export class PlayerModeService {
               value: "0.8",
             },
             {
-              label: "1",
-              value: "1",
+              label: "1.0",
+              value: "1.0",
             },
           ],
+        },
+
+        [ControlName.SOUND]: {
+          type: "range",
+          listeners: {
+            change: this.onChangeSoundLevel.bind(this),
+          },
+          value: this.soundLevel,
+          getLabel: () => `${this.soundLevel}%`,
         },
       }
     );
@@ -158,6 +170,7 @@ export class PlayerModeService {
           [ControlName.EXPORT]: true,
           [ControlName.NEXT_FRAGMENT]: true,
           [ControlName.PREV_FRAGMENT]: true,
+          [ControlName.SPEED]: true,
         });
 
         break;
@@ -192,6 +205,11 @@ export class PlayerModeService {
 
   async reset() {
     await this.modeConnection.reset();
+
+    this.isExport = false;
+
+    this.soundLevel = "100";
+    this.speed = "1.0";
   }
 
   private switchPlayState() {
@@ -258,6 +276,32 @@ export class PlayerModeService {
       [ControlName.SNAPSHOT]: stats === null,
     });
 
+    this.controlsDrawer.draw();
+  }
+
+  private onChangeSpeed(event: Event) {
+    const target = event.target as HTMLInputElement;
+
+    this.speed = target.value;
+
+    this.controlsDrawer.updateControlValues({
+      [ControlName.SPEED]: this.speed,
+    });
+    this.controlsDrawer.draw();
+
+    this.modeConnection.setSpeed?.(Number(this.speed));
+  }
+
+  private onChangeSoundLevel(event: Event) {
+    const target = event.target as HTMLInputElement;
+
+    this.soundLevel = target.value;
+
+    this.player.setVolume(Number(this.soundLevel) / 100);
+
+    this.controlsDrawer.updateControlValues({
+      [ControlName.SOUND]: this.soundLevel,
+    });
     this.controlsDrawer.draw();
   }
 
