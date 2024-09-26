@@ -97,6 +97,14 @@ export class VideoPlayerService {
     this.isVolumeOn = false;
   }
 
+  /**
+   *
+   * @param volume Number from 0 to 1
+   */
+  setVolumeLevel(volume: number) {
+    this.video.volume = volume;
+  }
+
   destroy() {
     document.removeChild(this.container);
   }

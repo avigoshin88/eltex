@@ -9,9 +9,11 @@ export enum ControlName {
   // PREV_FRAME = "prev_frame",
   NEXT_FRAGMENT = "next_fragment",
   PREV_FRAGMENT = "prev_fragment",
+
+  SOUND = "sound",
 }
 
-export type ControlType = "button" | "select";
+export type ControlType = "button" | "select" | "range";
 
 export enum CallbackType {
   CLICK = "click",
@@ -22,9 +24,13 @@ export enum CallbackType {
 }
 
 export type SelectValue = string;
+export type RangeValue = string;
 
 export type ButtonListener = EventListenerOrEventListenerObject;
 export type SelectListener = EventListener;
+export type RangeListener = EventListener;
+
+export type RangeLabelBuilder = () => string;
 
 export type SelectOption = {
   label: string;
@@ -52,8 +58,17 @@ export type SelectControlOptions = Control & {
   type: "select";
   listeners: ControlListeners<SelectListener>;
 
-  defaultValue: SelectValue;
+  value: SelectValue;
   options: SelectOption[];
+};
+
+export type RangeControlOptions = Control & {
+  type: "range";
+  listeners: ControlListeners<RangeListener>;
+
+  value: RangeValue;
+
+  getLabel: RangeLabelBuilder;
 };
 
 export type ControlsOptions = {
@@ -63,9 +78,11 @@ export type ControlsOptions = {
 
   [ControlName.NEXT_FRAGMENT]: ButtonControlOptions;
   [ControlName.PREV_FRAGMENT]: ButtonControlOptions;
-  
+
   [ControlName.SNAPSHOT]: ButtonControlOptions;
   [ControlName.EXPORT]: BinaryButtonControlOptions;
 
   [ControlName.SPEED]: SelectControlOptions;
+
+  [ControlName.SOUND]: RangeControlOptions;
 };

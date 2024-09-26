@@ -2,11 +2,15 @@ import {
   ButtonControlOptions,
   ControlName,
   ControlsOptions,
+  RangeControlOptions,
   SelectControlOptions,
 } from "../../../types/controls";
 import { Nullable } from "../../../types/global";
 
-type ButtonControl = Exclude<ControlName, ControlName.SPEED>;
+type ButtonControl = Exclude<
+  ControlName,
+  ControlName.SPEED | ControlName.SOUND
+>;
 
 type CommonButtonControl = Exclude<
   ButtonControl,
@@ -53,6 +57,8 @@ export class ControlsOverflowDrawerService {
   private binaryButtonsState: Partial<Record<BinaryButtonControl, boolean>> =
     {};
 
+  private controlValues: Partial<Record<ControlName, string>> = {};
+
   private options!: ControlsOptions;
 
   private controlsContainer: Nullable<HTMLDivElement> = null;
@@ -95,6 +101,10 @@ export class ControlsOverflowDrawerService {
       controlsContainer.appendChild(this.makeControl(ControlName.SPEED));
     }
 
+    if (!this.hiddenButtons[ControlName.SOUND]) {
+      controlsContainer.appendChild(this.makeControl(ControlName.SOUND));
+    }
+
     this.clear();
     this.controlsContainer = controlsContainer;
     this.container.appendChild(controlsContainer);
@@ -106,6 +116,13 @@ export class ControlsOverflowDrawerService {
 
   setDisabled(disabledButtons: Partial<Record<ControlName, boolean>>) {
     this.disabledButtons = disabledButtons;
+  }
+
+  updateControlValues(values: Record<string, string>) {
+    this.controlValues = {
+      ...this.controlValues,
+      ...values,
+    };
   }
 
   setBinaryButtonsState(
@@ -131,7 +148,10 @@ export class ControlsOverflowDrawerService {
         return this.makeButton(name as ButtonControl, config);
 
       case "select":
-        return this.makeSelect(config);
+        return this.makeSelect(name as ControlName, config);
+
+      case "range":
+        return this.makeRange(name as ControlName, config);
     }
   }
 
@@ -157,7 +177,10 @@ export class ControlsOverflowDrawerService {
     );
   }
 
-  private makeSelect(config: SelectControlOptions): HTMLSelectElement {
+  private makeSelect(
+    name: ControlName,
+    config: SelectControlOptions
+  ): HTMLSelectElement {
     const select = document.createElement("select");
 
     const options: HTMLOptionElement[] = [];
@@ -167,7 +190,8 @@ export class ControlsOverflowDrawerService {
 
       option.innerText = optionConfig.label;
       option.value = optionConfig.value;
-      option.selected = option.value === config.defaultValue;
+      option.selected =
+        option.value === this.controlValues[name] ?? config.value;
 
       options.push(option);
     }
@@ -186,6 +210,40 @@ export class ControlsOverflowDrawerService {
     }
 
     return select;
+  }
+
+  private makeRange(
+    name: ControlName,
+    config: RangeControlOptions
+  ): HTMLDivElement {
+    const rangeContainer = document.createElement("div");
+
+    const input = document.createElement("input");
+
+    input.type = "range";
+
+    input.value = this.controlValues[name] ?? config.value;
+
+    for (const event in config.listeners) {
+      const eventName = event as keyof ButtonControlOptions["listeners"];
+
+      const listener = config.listeners[eventName];
+      if (!listener) {
+        continue;
+      }
+
+      input.addEventListener(eventName, listener);
+    }
+
+    rangeContainer.appendChild(input);
+
+    const label = document.createElement("label");
+
+    label.innerText = config.getLabel();
+
+    rangeContainer.appendChild(label);
+
+    return rangeContainer;
   }
 
   private makeBaseButton(

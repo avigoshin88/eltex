@@ -28,6 +28,9 @@ export class PlayerModeService {
 
   private readonly controlsDrawer!: ControlsOverflowDrawerService;
 
+  private soundLevel = "100";
+  private speed = "1.0";
+
   constructor(options: ConnectionOptions, player: VideoPlayerService) {
     this.options = { ...options };
     this.player = player;
@@ -89,9 +92,9 @@ export class PlayerModeService {
         [ControlName.SPEED]: {
           type: "select",
           listeners: {
-            change: () => {},
+            change: this.onChangeSpeed.bind(this),
           },
-          defaultValue: "1",
+          value: this.speed,
           options: [
             {
               label: "0.3",
@@ -114,6 +117,15 @@ export class PlayerModeService {
               value: "1",
             },
           ],
+        },
+
+        [ControlName.SOUND]: {
+          type: "range",
+          listeners: {
+            change: this.onChangeSoundLevel.bind(this),
+          },
+          value: this.soundLevel,
+          getLabel: () => `${this.soundLevel}%`,
         },
       }
     );
@@ -147,6 +159,7 @@ export class PlayerModeService {
           [ControlName.EXPORT]: true,
           [ControlName.NEXT_FRAGMENT]: true,
           [ControlName.PREV_FRAGMENT]: true,
+          [ControlName.SPEED]: true,
         });
 
         break;
@@ -242,6 +255,30 @@ export class PlayerModeService {
       [ControlName.SNAPSHOT]: stats === null,
     });
 
+    this.controlsDrawer.draw();
+  }
+
+  private onChangeSpeed(event: Event) {
+    const target = event.target as HTMLInputElement;
+
+    this.speed = target.value;
+
+    this.controlsDrawer.updateControlValues({
+      [ControlName.SPEED]: this.speed,
+    });
+    this.controlsDrawer.draw();
+  }
+
+  private onChangeSoundLevel(event: Event) {
+    const target = event.target as HTMLInputElement;
+
+    this.soundLevel = target.value;
+
+    this.player.setVolumeLevel(Number(this.soundLevel) / 100);
+
+    this.controlsDrawer.updateControlValues({
+      [ControlName.SOUND]: this.soundLevel,
+    });
     this.controlsDrawer.draw();
   }
 }
