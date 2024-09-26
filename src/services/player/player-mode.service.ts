@@ -158,7 +158,6 @@ export class PlayerModeService {
           [ControlName.EXPORT]: true,
           [ControlName.NEXT_FRAGMENT]: true,
           [ControlName.PREV_FRAGMENT]: true,
-          [ControlName.SNAPSHOT]: true,
         });
 
         break;
@@ -171,7 +170,6 @@ export class PlayerModeService {
         this.setupControlsDrawer();
         this.controlsDrawer.setHidden({
           [ControlName.MICROPHONE]: true,
-          [ControlName.SNAPSHOT]: true,
         });
 
         break;
