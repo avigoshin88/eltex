@@ -9,7 +9,7 @@ export class VideoPlayerService {
   video!: HTMLVideoElement;
 
   isPlaying = true;
-  isVolumeOn = true;
+  isVolumeOn = false;
 
   init(
     container: HTMLDivElement,
@@ -26,75 +26,33 @@ export class VideoPlayerService {
   }
 
   play() {
-    const stream = this.video.srcObject as Nullable<MediaStream>;
-
-    if (!stream) {
-      this.logger.warn("Нельзя запустить поток: потока не существует");
-
-      return;
-    }
-
-    const tracks = stream.getTracks();
-    tracks.forEach((track) => {
-      track.enabled = true;
-    });
-
     this.video.play();
 
     this.isPlaying = true;
   }
 
   pause() {
-    const stream = this.video.srcObject as Nullable<MediaStream>;
-
-    if (!stream) {
-      this.logger.warn("Нельзя остановить поток: потока не существует");
-
-      return;
-    }
-
-    const tracks = stream.getTracks();
-    tracks.forEach((track) => {
-      track.enabled = false;
-    });
-
     this.video.pause();
 
     this.isPlaying = false;
   }
 
   volumeOn() {
-    const stream = this.video.srcObject as Nullable<MediaStream>;
-
-    if (!stream) {
-      this.logger.warn("Нельзя включить звук потока: потока не существует");
-
-      return;
-    }
-
-    const tracks = stream.getAudioTracks();
-    tracks.forEach((track) => {
-      track.enabled = true;
-    });
+    this.video.muted = false;
 
     this.isVolumeOn = true;
   }
 
   volumeMute() {
-    const stream = this.video.srcObject as Nullable<MediaStream>;
-
-    if (!stream) {
-      this.logger.warn("Нельзя выключить звук потока: потока не существует");
-
-      return;
-    }
-
-    const tracks = stream.getAudioTracks();
-    tracks.forEach((track) => {
-      track.enabled = true;
-    });
+    this.video.muted = true;
 
     this.isVolumeOn = false;
+  }
+
+  setVolume(volume: number) {
+    if (volume > 1) this.video.volume = 1;
+    else if (volume < 0) this.video.volume = 0;
+    else this.video.volume = volume;
   }
 
   destroy() {

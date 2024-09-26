@@ -57,13 +57,20 @@ export class LiveVideoService implements ModeService {
       this.webRTCClient.reset();
       this.webRTCClient.setupPeerConnection(datachannelListeners);
 
-      this.webRTCClient.startTURN("play_analytic").catch((turnError: Error) => {
+      this.webRTCClient.startTURN("play").catch((turnError: Error) => {
+        this.webRTCClient.reset();
         this.logger.error(
           "Не удается установить соединение через TURN, причина:",
           turnError.message
         );
       });
     });
+  }
+
+  public get mic() {
+    const { hasAccessToMicrophone, isMicEnabled, micCallbacks } =
+      this.webRTCClient;
+    return { hasAccessToMicrophone, isMicEnabled, micCallbacks };
   }
 
   async reset(): Promise<void> {

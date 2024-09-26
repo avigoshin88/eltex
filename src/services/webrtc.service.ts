@@ -17,11 +17,13 @@ import {
 } from "./api/live";
 import { DatachannelClientService } from "./datachannel/data-channel.service";
 import { Logger } from "./logger/logger.service";
+import { MicrophoneService } from "./microphone.service";
 
 export class WebRTCService {
   private logger = new Logger(WebRTCService.name);
 
   private peerConnection: Nullable<RTCPeerConnection> = null;
+  private microphoneService: Nullable<MicrophoneService> = null;
   private options!: ConnectionOptions;
   private currentType: null | ConnectionType = null;
   private datachannelClient: DatachannelClientService;
@@ -37,6 +39,7 @@ export class WebRTCService {
     this.options = { ...options };
 
     this.datachannelClient = datachannel;
+    this.microphoneService = new MicrophoneService();
     this.setSource = setSource;
   }
 
@@ -63,6 +66,30 @@ export class WebRTCService {
       this._onConnectionStateChange.bind(this);
   }
 
+  private async prepareTransceivers() {
+    const peerConnection = this.peerConnection;
+
+    if (!peerConnection) return;
+
+    this.logger.log("prepareTransceivers: Подготавливаем трансиверы");
+
+    this.logger.log("prepareTransceivers: Подготавливаем данные о трансиверах");
+
+    const VideoTransceiverInit: RTCRtpTransceiverInit = {
+      direction: "recvonly",
+      sendEncodings: [],
+    };
+
+    this.logger.log("prepareTransceivers: Добавляем трансиверы");
+
+    this.currentType === "archive"
+      ? await this.microphoneService?.receiveOnlyAudio(peerConnection)
+      : await this.microphoneService?.enableMicrophone(peerConnection);
+    peerConnection.addTransceiver("video", VideoTransceiverInit);
+
+    this.logger.log("prepareTransceivers: Трансиверы добавлены");
+  }
+
   public async startP2P() {
     this.logger.log("P2P: Начало соединения через P2P");
 
@@ -73,19 +100,7 @@ export class WebRTCService {
 
     const peerConnection = this.peerConnection;
 
-    // ??? Прием аудио/видео сигнала работает и без этого, но в примере это есть. Зачем? Но оно используется при TURN соединении, возможно здесь можно убрать
-    // ??? should 'recvonly' audio direction be changed to enable audio sending?
-    // const AudioTransceiverInit: RTCRtpTransceiverInit = {
-    //   direction: "recvonly",
-    //   sendEncodings: [],
-    // };
-    // const VideoTransceiverInit: RTCRtpTransceiverInit = {
-    //   direction: "recvonly",
-    //   sendEncodings: [],
-    // };
-
-    // this.peerConnection.addTransceiver("audio", AudioTransceiverInit);
-    // this.peerConnection.addTransceiver("video", VideoTransceiverInit);
+    this.prepareTransceivers();
 
     const { app, stream } = this.options;
 
@@ -146,21 +161,7 @@ export class WebRTCService {
 
     const peerConnection = this.peerConnection;
 
-    this.logger.log("TURN: Подготавливаем данные о трансиверах");
-    // ??? should 'recvonly' audio direction be changed to enable audio sending?
-    const AudioTransceiverInit: RTCRtpTransceiverInit = {
-      direction: "recvonly",
-      sendEncodings: [],
-    };
-    const VideoTransceiverInit: RTCRtpTransceiverInit = {
-      direction: "recvonly",
-      sendEncodings: [],
-    };
-
-    this.logger.log("TURN: Добавляем трансиверы");
-    this.peerConnection.addTransceiver("audio", AudioTransceiverInit);
-    this.peerConnection.addTransceiver("video", VideoTransceiverInit);
-    this.logger.log("TURN: Трансиверы добавлены");
+    await this.prepareTransceivers();
 
     const { app, stream } = this.options;
 
@@ -203,6 +204,18 @@ export class WebRTCService {
     peerConnection.setRemoteDescription(answer);
   }
 
+  public get hasAccessToMicrophone() {
+    return this.microphoneService?.hasAccessToMicrophone;
+  }
+
+  public get isMicEnabled() {
+    return this.microphoneService?.isMicrophoneEnabled;
+  }
+
+  public get micCallbacks() {
+    return this.microphoneService?.prepareButtonCallbacks;
+  }
+
   public reset() {
     this.logger.log("Начало очистки сервиса");
 
@@ -210,6 +223,7 @@ export class WebRTCService {
       ?.getTransceivers()
       .forEach((transceiver) => transceiver.stop());
 
+    this.microphoneService?.close();
     this.peerConnection?.close();
     this._tracks = [];
     this.currentType = null;
@@ -250,7 +264,11 @@ export class WebRTCService {
   }
 
   private _onTrack(event: RTCTrackEvent) {
-    this.logger.log("Получен новый Track event", event);
+    this.logger.log(
+      "Получен новый Track event, kind:",
+      event.track.kind,
+      this.peerConnection?.getReceivers()
+    );
 
     if (!this.peerConnection) throw Error("Peer connection отсутствует");
 

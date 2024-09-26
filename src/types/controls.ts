@@ -2,6 +2,7 @@ export enum ControlName {
   MODE = "mode",
   PLAY = "play",
   VOLUME = "volume",
+  MICROPHONE = "microphone",
   EXPORT = "export",
   SNAPSHOT = "snapshot",
   SPEED = "speed",
@@ -16,6 +17,8 @@ export type ControlType = "button" | "select";
 export enum CallbackType {
   CLICK = "click",
   CHANGE = "change",
+  MOUSE_UP = "mouseup",
+  MOUSE_DOWN = "mousedown",
   MOUSE_ENTER = "mouseenter",
   MOUSE_LEAVE = "mouseleave",
   MOUSE_MOVE = "mousemove",
@@ -60,6 +63,7 @@ export type ControlsOptions = {
   [ControlName.MODE]: BinaryButtonControlOptions;
   [ControlName.PLAY]: BinaryButtonControlOptions;
   [ControlName.VOLUME]: BinaryButtonControlOptions;
+  [ControlName.MICROPHONE]: BinaryButtonControlOptions;
 
   [ControlName.NEXT_FRAGMENT]: ButtonControlOptions;
   [ControlName.PREV_FRAGMENT]: ButtonControlOptions;

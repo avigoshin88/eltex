@@ -31,6 +31,7 @@ export class MetaOverflowDrawerService {
     this.svg.style.left = "0";
     this.svg.style.width = "100%";
     this.svg.style.height = "100%";
+    this.svg.style.pointerEvents = "none";
     this.svg.innerHTML = textFilter;
 
     this.container.appendChild(this.svg);
