@@ -79,6 +79,7 @@ export class ArchiveVideoService implements ModeService {
           this.onKeyFragmentUpload.bind(this),
         [DatachannelMessageType.ARCHIVE_FRAGMENT]:
           this.onSaveArchiveFragment.bind(this),
+        [DatachannelMessageType.PLAY]: this.onStreamPlay.bind(this),
         // ругается на unknown
         // @ts-ignore
         [DatachannelMessageType.URL]: this.onExportFragment.bind(this),
@@ -219,12 +220,30 @@ export class ArchiveVideoService implements ModeService {
   private onSaveArchiveFragment() {
     if (this.isPreRequestRange) {
       this.isPreRequestRange = false;
+
+      this.logger.log("Фрагмент стрима начался: ", this.nextProcessedRange);
+      this.nextProcessedRange = null;
+
       return;
     }
 
-    this.logger.log("Фрагмент стрима начался: ", this.nextProcessedRange);
+    this.play();
+  }
+
+  private onStreamPlay() {
+    if (this.nextProcessedRange) {
+      this.logger.log("Фрагмент стрима начался: ", this.nextProcessedRange);
+    }
 
     this.nextProcessedRange = null;
+  }
+
+  play() {
+    this.datachannelClient.send(DatachannelMessageType.PLAY_STREAM);
+  }
+
+  stop() {
+    this.datachannelClient.send(DatachannelMessageType.STOP_STREAM);
   }
 
   setSource(stream: MediaStream) {
