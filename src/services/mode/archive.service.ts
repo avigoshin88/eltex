@@ -75,9 +75,11 @@ export class ArchiveVideoService implements ModeService {
       listeners: {
         [DatachannelMessageType.RANGES]: this.onRanges.bind(this),
         [DatachannelMessageType.DROP]: this.onDropComplete.bind(this),
+        [DatachannelMessageType.KEY_FRAGMENT]:
+          this.onKeyFragmentUpload.bind(this),
         [DatachannelMessageType.ARCHIVE_FRAGMENT]:
           this.onSaveArchiveFragment.bind(this),
-        [DatachannelMessageType.PLAY]: this.onStreamStarted.bind(this),
+        [DatachannelMessageType.PLAY]: this.onStreamPlay.bind(this),
         // ругается на unknown
         // @ts-ignore
         [DatachannelMessageType.URL]: this.onExportFragment.bind(this),
@@ -174,8 +176,6 @@ export class ArchiveVideoService implements ModeService {
         duration: fragment.duration,
       });
 
-      this.datachannelClient.send(DatachannelMessageType.PLAY_STREAM);
-
       return;
     }
 
@@ -201,6 +201,16 @@ export class ArchiveVideoService implements ModeService {
       return;
     }
 
+    this.datachannelClient.send(DatachannelMessageType.GET_KEY, {
+      start_time: this.nextProcessedRange.start_time,
+    });
+  }
+
+  private onKeyFragmentUpload() {
+    if (!this.nextProcessedRange) {
+      return;
+    }
+
     this.datachannelClient.send(DatachannelMessageType.GET_ARCHIVE_FRAGMENT, {
       start_time: this.nextProcessedRange.start_time,
       duration: this.nextProcessedRange.duration,
@@ -210,16 +220,30 @@ export class ArchiveVideoService implements ModeService {
   private onSaveArchiveFragment() {
     if (this.isPreRequestRange) {
       this.isPreRequestRange = false;
+
+      this.logger.log("Фрагмент стрима начался: ", this.nextProcessedRange);
+      this.nextProcessedRange = null;
+
       return;
     }
 
+    this.play();
+  }
+
+  private onStreamPlay() {
+    if (this.nextProcessedRange) {
+      this.logger.log("Фрагмент стрима начался: ", this.nextProcessedRange);
+    }
+
+    this.nextProcessedRange = null;
+  }
+
+  play() {
     this.datachannelClient.send(DatachannelMessageType.PLAY_STREAM);
   }
 
-  private onStreamStarted() {
-    this.logger.log("Фрагмент стрима начался: ", this.nextProcessedRange);
-
-    this.nextProcessedRange = null;
+  stop() {
+    this.datachannelClient.send(DatachannelMessageType.STOP_STREAM);
   }
 
   setSource(stream: MediaStream) {

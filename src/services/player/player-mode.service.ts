@@ -196,7 +196,7 @@ export class PlayerModeService {
       [ControlName.VOLUME]: this.player.isVolumeOn,
       [ControlName.EXPORT]: this.isExport,
       [ControlName.MICROPHONE]: (this.modeConnection as LiveVideoService)?.mic
-        .isMicEnabled,
+        ?.isMicEnabled,
     });
     this.controlsDrawer.draw();
 
@@ -214,8 +214,10 @@ export class PlayerModeService {
 
   private switchPlayState() {
     if (!this.player.isPlaying) {
+      this.modeConnection.play?.();
       this.player.play();
     } else {
+      this.modeConnection.stop?.();
       this.player.pause();
     }
 

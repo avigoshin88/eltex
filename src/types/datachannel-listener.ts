@@ -28,6 +28,19 @@ export enum DatachannelMessageType {
    */
   ARCHIVE_FRAGMENT = "archive_fragment",
 
+  /**
+   * Request: GET_KEY
+   *
+   * Предзагрузка фрагмента
+   */
+  GET_KEY = "get_key",
+  /**
+   * Response: GET_KEY
+   *
+   * Ответ на предзагрузку фрагмента
+   */
+  KEY_FRAGMENT = "key_fragment",
+
   SET_SPEED = "set_speed",
   STOP_STREAM = "stop_stream",
 
