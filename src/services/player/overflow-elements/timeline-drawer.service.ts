@@ -44,6 +44,13 @@ export class TimelineOverflowDrawer {
   private isReady: boolean = false; // Флаг, указывающий готовность к отрисовке
   private clickCallback: TimelineClickCallback; // Callback для кликов
 
+  private isUserScrolling: boolean = false;
+  private isProgrammaticScroll: boolean = false;
+  private userScrollTimeout: Nullable<number> = null;
+  private programmaticScrollTimeout: Nullable<number> = null;
+  private scrollEndTimeout: Nullable<number> = null;
+  private trackObserver: Nullable<IntersectionObserver> = null;
+
   private customTrackTimestamp: Nullable<number> = null; // Пользовательское время для трека
 
   private exportMode: boolean = false; // Режим экспорта
@@ -75,12 +82,24 @@ export class TimelineOverflowDrawer {
 
     this.container.appendChild(this.scrollContainer);
 
+    this.trackObserver = new IntersectionObserver(
+      this.onTrackObserve.bind(this),
+      {
+        root: this.scrollContainer,
+      }
+    );
+
     this.registerListeners();
   }
 
   draw(currentTime: number): void {
     if (!this.isReady || !this.timelineContainer || this.ranges.length === 0)
       return;
+
+    const oldTrack = document.getElementById("track");
+    if (oldTrack) {
+      this.trackObserver?.unobserve(oldTrack);
+    }
 
     this.timelineContainer.innerHTML = ""; // Очистка контейнера перед отрисовкой
 
@@ -149,10 +168,13 @@ export class TimelineOverflowDrawer {
       ((timestamp - startTime) / totalTimeRange) * totalRangeWidth;
 
     const track = document.createElement("div");
+    track.id = "track";
     track.classList.add("video-player__timeline__track");
     track.style.left = `${trackPosition}px`;
 
     this.timelineContainer!.appendChild(track);
+
+    this.trackObserver?.observe(track);
 
     // Обновляем экспортные маркеры, если включен режим экспорта
     if (this.exportMode) {
@@ -233,6 +255,75 @@ export class TimelineOverflowDrawer {
 
       this.addExportMarker(endMarkerPosition, "end");
     }
+  }
+
+  private onTrackObserve(entries: IntersectionObserverEntry[]) {
+    const trackEntry = entries[0];
+    if (!trackEntry) {
+      return;
+    }
+
+    if (trackEntry.isIntersecting) {
+      this.isUserScrolling = false;
+      return;
+    }
+
+    if (this.isUserScrolling) {
+      return;
+    }
+
+    this.scrollToTrackRightEdge();
+  }
+
+  public scrollToTrackRightEdge(): void {
+    if (!this.scrollContainer || !this.timelineContainer) return;
+
+    // Находим элемент трека
+    const track = this.timelineContainer.querySelector(
+      ".video-player__timeline__track"
+    ) as HTMLElement;
+
+    if (!track) return; // Трек не найден
+
+    // Получаем позицию трека относительно timelineContainer
+    const trackLeft = track.offsetLeft;
+    const trackWidth = track.offsetWidth;
+
+    // Рассчитываем необходимый scrollLeft
+    const scrollContainerWidth = this.scrollContainer.offsetWidth;
+
+    // Устанавливаем scrollLeft так, чтобы трек был на правом краю
+    let newScrollLeft = trackLeft + trackWidth - scrollContainerWidth;
+
+    // Ограничиваем scrollLeft допустимыми значениями
+    const maxScrollLeft =
+      this.scrollContainer.scrollWidth - scrollContainerWidth;
+    newScrollLeft = Math.max(0, Math.min(newScrollLeft, maxScrollLeft));
+
+    // Устанавливаем флаг программной прокрутки
+    this.isProgrammaticScroll = true;
+
+    // Используем плавную прокрутку
+    this.scrollContainer.scrollTo({
+      left: newScrollLeft,
+      behavior: "smooth",
+    });
+
+    // Начинаем отслеживать завершение прокрутки
+    this.monitorProgrammaticScrollEnd();
+  }
+
+  private monitorProgrammaticScrollEnd(): void {
+    // Очищаем предыдущий таймер, если он был установлен
+    if (this.programmaticScrollTimeout) {
+      clearTimeout(this.programmaticScrollTimeout);
+    }
+
+    // Устанавливаем таймер для определения окончания прокрутки
+    this.programmaticScrollTimeout = setTimeout(() => {
+      // Прокрутка завершена
+      this.isProgrammaticScroll = false;
+    }, 500); // Настройте время в соответствии с длительностью плавной прокрутки
   }
 
   private drawVirtualizedDivisions(
@@ -370,6 +461,8 @@ export class TimelineOverflowDrawer {
 
     this.clearListeners();
 
+    this.trackObserver?.disconnect();
+
     this.container.removeChild(this.timelineContainer);
     this.timelineContainer = null;
 
@@ -462,13 +555,46 @@ export class TimelineOverflowDrawer {
       this.updateExportMarkers(startTime, totalTimeRange, totalRangeWidth);
     } else {
       // Визуально перемещаем трек
-      this.draw(this.customTrackTimestamp);
+      // this.draw(this.customTrackTimestamp);
       // Вызываем коллбэк с новым значением времени (если нужно)
       this.clickCallback?.(clickedTimestamp, clickedRange);
     }
   }
 
   private scrollEventListener() {
+    // Очищаем предыдущий таймер завершения прокрутки
+    if (this.scrollEndTimeout) {
+      clearTimeout(this.scrollEndTimeout);
+    }
+
+    // Устанавливаем таймер для определения окончания прокрутки
+    this.scrollEndTimeout = setTimeout(() => {
+      if (this.isProgrammaticScroll) {
+        this.isProgrammaticScroll = false;
+      }
+    }, 100); // Настройте задержку по необходимости
+
+    if (this.isProgrammaticScroll) {
+      // Если прокрутка программная, ничего не делаем
+      return;
+    }
+
+    // Пользовательская прокрутка
+    this.isUserScrolling = true;
+
+    // Очищаем предыдущий таймер пользовательской прокрутки
+    if (this.userScrollTimeout) {
+      clearTimeout(this.userScrollTimeout);
+    }
+
+    const rangesDuration =
+      this.ranges[this.ranges.length - 1].end_time - this.ranges[0].start_time;
+
+    // Устанавливаем таймер для сброса флага пользовательской прокрутки
+    this.userScrollTimeout = setTimeout(() => {
+      this.isUserScrolling = false;
+    }, rangesDuration);
+
     this.updateVirtualizedDivisions();
   }
 
@@ -480,6 +606,20 @@ export class TimelineOverflowDrawer {
       this.container.scrollLeft += event.deltaY;
     } else {
       // Иначе — изменение масштаба
+
+      // Устанавливаем флаг пользовательского взаимодействия
+      this.isUserScrolling = true;
+
+      // Очищаем предыдущий таймер, если он был установлен
+      if (this.userScrollTimeout) {
+        clearTimeout(this.userScrollTimeout);
+      }
+
+      // Устанавливаем таймер для сброса флага пользовательского взаимодействия
+      // Например, через 2 секунды после последнего масштабирования
+      this.userScrollTimeout = setTimeout(() => {
+        this.isUserScrolling = false;
+      }, 2000);
 
       // Ограничим максимальные изменения при каждом событии скролла
       const scaleChange = Math.sign(event.deltaY) * 0.000002; // Более мелкий шаг для плавности
