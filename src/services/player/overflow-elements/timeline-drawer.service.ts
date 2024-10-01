@@ -414,7 +414,8 @@ export class TimelineOverflowDrawer {
     event.preventDefault();
 
     const containerRect = this.container.getBoundingClientRect();
-    const clickX = event.clientX - containerRect.left;
+    const scrollLeft = this.scrollContainer?.scrollLeft || 0;
+    const clickX = event.clientX - containerRect.left + scrollLeft;
 
     const startTime = this.ranges[0]?.start_time || 0;
     const endTime = this.ranges[this.ranges.length - 1]?.end_time || 0;
