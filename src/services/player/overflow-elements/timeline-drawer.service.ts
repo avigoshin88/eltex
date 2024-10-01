@@ -455,7 +455,7 @@ export class TimelineOverflowDrawer {
   }
 
   clear(): void {
-    if (!this.timelineContainer) {
+    if (!this.scrollContainer) {
       return;
     }
 
@@ -463,7 +463,8 @@ export class TimelineOverflowDrawer {
 
     this.trackObserver?.disconnect();
 
-    this.container.removeChild(this.timelineContainer);
+    this.container.removeChild(this.scrollContainer!);
+    this.scrollContainer = null;
     this.timelineContainer = null;
 
     this.isReady = false;
