@@ -37,6 +37,7 @@ const divisionSteps = [
 export class TimelineOverflowDrawer {
   private ranges: RangeData[] = [];
   private readonly container: HTMLDivElement;
+  private scrollContainer: Nullable<HTMLDivElement> = null;
   private timelineContainer: Nullable<HTMLDivElement> = null;
   private scale: number = 1; // Начальный масштаб
   private currentStartTime: number = 0; // Текущее начало времени
@@ -55,7 +56,7 @@ export class TimelineOverflowDrawer {
     clickCallback?: TimelineClickCallback
   ) {
     this.container = container;
-    const tempContainer = document.createElement("div");
+    this.scrollContainer = document.createElement("div");
 
     this.timelineContainer = document.createElement("div");
     this.clickCallback = clickCallback || (() => {}); // Используем переданную функцию или пустой callback
@@ -66,14 +67,15 @@ export class TimelineOverflowDrawer {
     // Изначально скролл отключен
     this.timelineContainer.style.overflowX = "hidden";
     this.timelineContainer.style.whiteSpace = "nowrap";
+
+    this.scrollContainer.appendChild(this.timelineContainer);
+
+    this.scrollContainer.style.width = "100%";
+    this.scrollContainer.style.overflowX = "auto";
+
+    this.container.appendChild(this.scrollContainer);
+
     this.registerListeners();
-
-    tempContainer.appendChild(this.timelineContainer);
-
-    tempContainer.style.width = "100%";
-    tempContainer.style.overflowX = "scroll";
-
-    this.container.appendChild(tempContainer);
   }
 
   draw(currentTime: number): void {
@@ -248,8 +250,8 @@ export class TimelineOverflowDrawer {
     const divisionStep = this.getDivisionStep(); // Шаг делений
 
     // Границы видимой области
-    const scrollLeft = this.container.scrollLeft;
-    const containerWidth = this.container.offsetWidth;
+    const scrollLeft = this.scrollContainer!.scrollLeft;
+    const containerWidth = this.scrollContainer!.offsetWidth;
 
     const visibleStartTime =
       startTime + (scrollLeft / totalRangeWidth) * totalTimeRange;
@@ -466,6 +468,7 @@ export class TimelineOverflowDrawer {
       this.clickCallback?.(clickedTimestamp, clickedRange);
     }
   }
+
   private scrollEventListener() {
     this.updateVirtualizedDivisions();
   }
@@ -511,7 +514,7 @@ export class TimelineOverflowDrawer {
   }
 
   private registerListeners() {
-    this.timelineContainer?.addEventListener(
+    this.scrollContainer?.addEventListener(
       "scroll",
       this.scrollEventListener.bind(this)
     );
@@ -526,7 +529,7 @@ export class TimelineOverflowDrawer {
   }
 
   private clearListeners() {
-    this.timelineContainer?.removeEventListener(
+    this.scrollContainer?.removeEventListener(
       "scroll",
       this.scrollEventListener
     );
