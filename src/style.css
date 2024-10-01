@@ -119,3 +119,10 @@
 .video-player__timeline__export-marker_end {
   background-color: var(--timeline_export_marker_end);
 }
+
+.video-player__timeline__track,
+.video-player__timeline__range,
+.video-player__timeline__period,
+.video-player__timeline__export-marker {
+  pointer-events: none;
+}
