@@ -1,8 +1,9 @@
-import { RangeDto } from "../../../dto/ranges";
 import { Nullable } from "../../../types/global";
 import { RangeData } from "../../../types/range";
-import { TimelineClickCallback } from "../../../types/timeline";
-
+import {
+  ExportRangeCallback,
+  TimelineClickCallback,
+} from "../../../types/timeline";
 import { format } from "date-fns";
 
 const divisionSteps = [
@@ -33,8 +34,6 @@ const divisionSteps = [
   { scale: 0.00000000005, step: 10 * 365 * 24 * 60 * 60 * 1000 }, // 10 лет (добавлено соответствующее значение scale)
 ];
 
-type ExportRangeCallback = (range: RangeDto) => void;
-
 export class TimelineOverflowDrawer {
   private ranges: RangeData[] = [];
   private readonly container: HTMLDivElement;
@@ -56,6 +55,8 @@ export class TimelineOverflowDrawer {
     clickCallback?: TimelineClickCallback
   ) {
     this.container = container;
+    const tempContainer = document.createElement("div");
+
     this.timelineContainer = document.createElement("div");
     this.clickCallback = clickCallback || (() => {}); // Используем переданную функцию или пустой callback
 
@@ -67,7 +68,12 @@ export class TimelineOverflowDrawer {
     this.timelineContainer.style.whiteSpace = "nowrap";
     this.registerListeners();
 
-    this.container.appendChild(this.timelineContainer);
+    tempContainer.appendChild(this.timelineContainer);
+
+    tempContainer.style.width = "100%";
+    tempContainer.style.overflowX = "scroll";
+
+    this.container.appendChild(tempContainer);
   }
 
   draw(currentTime: number): void {
@@ -87,10 +93,10 @@ export class TimelineOverflowDrawer {
 
     // Если ширина всех диапазонов больше ширины контейнера, включаем скролл
     if (totalRangeWidth > containerWidth) {
-      this.container.style.overflowX = "auto"; // Включаем скролл
+      // this.container.style.overflowX = "auto"; // Включаем скролл
       this.timelineContainer.style.width = `${totalRangeWidth}px`; // Задаем большую ширину таймлайна
     } else {
-      this.container.style.overflowX = "hidden"; // Отключаем скролл
+      // this.container.style.overflowX = "hidden"; // Отключаем скролл
       this.timelineContainer.style.width = `${containerWidth}px`; // Устанавливаем стандартную ширину
     }
 
@@ -170,7 +176,7 @@ export class TimelineOverflowDrawer {
   }
 
   // Включение режима экспорта
-  enableExportMode(callback: (range: RangeDto) => void): void {
+  enableExportMode(callback: ExportRangeCallback): void {
     this.exportMode = true;
     this.exportCallback = callback;
     this.exportStartTime = null;
@@ -239,20 +245,18 @@ export class TimelineOverflowDrawer {
     totalTimeRange: number,
     totalRangeWidth: number
   ): void {
-    const divisionStep = this.getDivisionStep(); // Получаем шаг делений в зависимости от масштаба
+    const divisionStep = this.getDivisionStep(); // Шаг делений
 
-    // Получаем текущие границы прокрутки (начало и конец видимой области)
+    // Границы видимой области
     const scrollLeft = this.container.scrollLeft;
     const containerWidth = this.container.offsetWidth;
 
-    // Рассчитываем границы видимой области по времени
     const visibleStartTime =
       startTime + (scrollLeft / totalRangeWidth) * totalTimeRange;
     const visibleEndTime =
       startTime +
       ((scrollLeft + containerWidth) / totalRangeWidth) * totalTimeRange;
 
-    // Рассчитываем индекс первого и последнего видимого деления
     const firstVisibleDivision = Math.floor(
       (visibleStartTime - startTime) / divisionStep
     );
@@ -260,13 +264,35 @@ export class TimelineOverflowDrawer {
       (visibleEndTime - startTime) / divisionStep
     );
 
-    // Удаляем только старые деления
+    // Удаляем старые деления
     const oldDivisions = this.timelineContainer!.querySelectorAll(
       ".video-player__timeline__period"
     );
     oldDivisions.forEach((division) => division.remove());
 
-    // Отрисовываем только видимые деления
+    // Расчет ширины одного деления в пикселях
+    const divisionWidth = divisionStep * this.scale;
+
+    // Динамическое измерение ширины метки
+    const sampleTime = startTime + firstVisibleDivision * divisionStep;
+    const sampleLabelText = this.formatTime(sampleTime);
+
+    const tempLabel = document.createElement("span");
+    tempLabel.classList.add("video-player__timeline__period__text");
+    tempLabel.style.visibility = "hidden"; // Скрываем элемент
+    tempLabel.style.position = "absolute"; // Убираем из потока
+    tempLabel.innerText = sampleLabelText;
+    document.body.appendChild(tempLabel);
+    const labelWidth = tempLabel.offsetWidth;
+    document.body.removeChild(tempLabel);
+
+    // Расчет интервала между метками
+    let labelInterval = 1;
+    if (divisionWidth < labelWidth + 5) {
+      labelInterval = Math.ceil((labelWidth + 5) / divisionWidth);
+    }
+
+    // Отрисовка видимых делений
     for (let i = firstVisibleDivision; i <= lastVisibleDivision; i++) {
       const divisionTime = startTime + i * divisionStep;
       const position =
@@ -276,19 +302,16 @@ export class TimelineOverflowDrawer {
       division.classList.add("video-player__timeline__period");
       division.style.left = `${position}px`;
 
-      // Отображаем время на каждом 5-м делении
-      if (i % 5 === 0) {
+      // Отображение меток в зависимости от интервала
+      if (i % labelInterval === 0) {
         const timeLabel = document.createElement("span");
-
         timeLabel.classList.add("video-player__timeline__period__text");
-
         timeLabel.innerText = this.formatTime(divisionTime);
-
         division.classList.add("video-player__timeline__period_with_text");
         division.appendChild(timeLabel);
       }
 
-      // Добавляем только видимые деления в контейнер
+      // Добавляем деление в контейнер
       this.timelineContainer!.appendChild(division);
     }
   }
@@ -362,16 +385,20 @@ export class TimelineOverflowDrawer {
     const date = new Date(time);
 
     if (this.scale >= 0.00001) {
-      // Малый масштаб: полное время (часы, минуты, секунды)
+      // Малый масштаб: часы, минуты, секунды
       return format(date, "HH:mm:ss");
-    } else if (this.scale >= 0.0000001) {
-      // Средний масштаб: дата и время
-      return format(date, "dd.MM.yyyy HH:mm");
+    } else if (this.scale >= 0.000001) {
+      // Средний масштаб: день, месяц, часы, минуты
+      return format(date, "dd.MM HH:mm");
+    } else if (this.scale >= 0.00000001) {
+      // Большой масштаб: день, месяц
+      return format(date, "dd.MM");
     } else {
-      // Большой масштаб: только дата
-      return format(date, "dd.MM.yyyy");
+      // Очень большой масштаб: год
+      return format(date, "yyyy");
     }
   }
+
   private getDivisionStep(): number {
     const scaleFactor = this.scale;
 
