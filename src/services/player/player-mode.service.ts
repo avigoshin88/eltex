@@ -282,7 +282,7 @@ export class PlayerModeService {
     }
 
     this.controlsDrawer.updateBinaryButtonsState({
-      [ControlName.VOLUME]: this.isShowStats,
+      [ControlName.STATS]: this.isShowStats,
     });
 
     this.controlsDrawer.draw();
