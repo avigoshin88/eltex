@@ -140,41 +140,34 @@ export class TimelineOverflowDrawer {
     const currentTimestamp =
       (this.customTrackTimestamp || startTime) + currentTime;
 
-    // Проверяем, находится ли текущее время внутри диапазона 'data'
-    const currentRange = this.findRangeByTimestamp(currentTimestamp);
+    const timestamp = this.getNearestTimestamp(currentTimestamp);
+    if (timestamp === undefined) {
+      return;
+    }
+
+    const trackPosition =
+      ((timestamp - startTime) / totalTimeRange) * totalRangeWidth;
+
+    const track = document.createElement("div");
+    track.classList.add("video-player__timeline__track");
+    track.style.left = `${trackPosition}px`;
+
+    this.timelineContainer!.appendChild(track);
+
+    // Обновляем экспортные маркеры, если включен режим экспорта
+    if (this.exportMode) {
+      this.updateExportMarkers(startTime, totalTimeRange, totalRangeWidth);
+    }
+  }
+
+  private getNearestTimestamp(timestamp: number) {
+    const currentRange = this.findRangeByTimestamp(timestamp);
 
     if (currentRange && currentRange.type === "data") {
-      // Если текущее время внутри диапазона типа 'data', рисуем трек
-      const trackPosition =
-        ((currentTimestamp - startTime) / totalTimeRange) * totalRangeWidth;
-
-      const track = document.createElement("div");
-      track.classList.add("video-player__timeline__track");
-      track.style.left = `${trackPosition}px`;
-
-      this.timelineContainer!.appendChild(track);
-    } else {
-      // Ищем ближайший диапазон типа 'data'
-      const nearestDataRange = this.findNearestDataRange(currentTimestamp);
-
-      if (nearestDataRange) {
-        // Перемещаем трек на начало ближайшего диапазона типа 'data'
-        const trackPosition =
-          ((nearestDataRange.start_time - startTime) / totalTimeRange) *
-          totalRangeWidth;
-
-        const track = document.createElement("div");
-        track.classList.add("video-player__timeline__track");
-        track.style.left = `${trackPosition}px`;
-
-        this.timelineContainer!.appendChild(track);
-      }
-
-      // Обновляем экспортные маркеры, если включен режим экспорта
-      if (this.exportMode) {
-        this.updateExportMarkers(startTime, totalTimeRange, totalRangeWidth);
-      }
+      return timestamp;
     }
+
+    return this.findNearestDataRange(timestamp)?.start_time;
   }
 
   // Включение режима экспорта
@@ -425,46 +418,51 @@ export class TimelineOverflowDrawer {
     const clickedTimestamp =
       startTime + (clickX / totalRangeWidth) * totalTimeRange;
 
-    const clickedRange = this.findRangeByTimestamp(clickedTimestamp);
+    const timestamp = this.getNearestTimestamp(clickedTimestamp);
+    if (timestamp === undefined) {
+      return;
+    }
 
-    if (clickedRange) {
-      // Пользовательское время для трека
-      this.customTrackTimestamp = clickedTimestamp;
+    const clickedRange = this.findRangeByTimestamp(timestamp);
+    if (!clickedRange) {
+      return;
+    }
 
-      // Если включен режим экспорта, обрабатываем клик как установку маркеров
-      if (this.exportMode) {
-        if (this.exportStartTime === null) {
-          this.exportStartTime = clickedTimestamp;
-        } else if (this.exportEndTime === null) {
-          this.exportEndTime = clickedTimestamp;
+    // Пользовательское время для трека
+    this.customTrackTimestamp = timestamp;
 
-          // Если начало и конец перепутаны, меняем их местами
-          if (this.exportStartTime > this.exportEndTime) {
-            [this.exportStartTime, this.exportEndTime] = [
-              this.exportEndTime,
-              this.exportStartTime,
-            ];
-          }
+    // Если включен режим экспорта, обрабатываем клик как установку маркеров
+    if (this.exportMode) {
+      if (this.exportStartTime === null) {
+        this.exportStartTime = clickedTimestamp;
+      } else if (this.exportEndTime === null) {
+        this.exportEndTime = clickedTimestamp;
 
-          // Вызываем callback для экспорта диапазона
-          this.exportCallback?.({
-            start_time: this.exportStartTime,
-            end_time: this.exportEndTime,
-            duration: this.exportEndTime - this.exportStartTime,
-          });
-        } else {
-          // Перезапуск диапазона
-          this.exportStartTime = clickedTimestamp;
-          this.exportEndTime = null;
+        // Если начало и конец перепутаны, меняем их местами
+        if (this.exportStartTime > this.exportEndTime) {
+          [this.exportStartTime, this.exportEndTime] = [
+            this.exportEndTime,
+            this.exportStartTime,
+          ];
         }
 
-        // Обновляем маркеры
-        this.updateExportMarkers(startTime, totalTimeRange, totalRangeWidth);
+        // Вызываем callback для экспорта диапазона
+        this.exportCallback?.({
+          start_time: this.exportStartTime,
+          end_time: this.exportEndTime,
+          duration: this.exportEndTime - this.exportStartTime,
+        });
       } else {
-        // Визуально перемещаем трек
-        this.draw(this.customTrackTimestamp);
+        // Перезапуск диапазона
+        this.exportStartTime = clickedTimestamp;
+        this.exportEndTime = null;
       }
 
+      // Обновляем маркеры
+      this.updateExportMarkers(startTime, totalTimeRange, totalRangeWidth);
+    } else {
+      // Визуально перемещаем трек
+      this.draw(this.customTrackTimestamp);
       // Вызываем коллбэк с новым значением времени (если нужно)
       this.clickCallback?.(clickedTimestamp, clickedRange);
     }
