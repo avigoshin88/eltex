@@ -1,4 +1,4 @@
-import { Nullable } from "../../types/global";
+import { EventBus } from "../event-bus.service";
 import { Logger } from "../logger/logger.service";
 
 export class VideoPlayerService {
@@ -18,6 +18,9 @@ export class VideoPlayerService {
   ) {
     this.container = container;
     this.videoContainer = videoContainer;
+
+    EventBus.emit("setup-video", video);
+
     this.video = video;
   }
 

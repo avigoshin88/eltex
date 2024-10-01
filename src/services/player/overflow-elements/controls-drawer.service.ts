@@ -19,6 +19,7 @@ type CommonButtonControl = Exclude<
   | ControlName.VOLUME
   | ControlName.EXPORT
   | ControlName.MICROPHONE
+  | ControlName.STATS
 >;
 type BinaryButtonControl = Exclude<ButtonControl, CommonButtonControl>;
 
@@ -45,6 +46,10 @@ const BINARY_BUTTON_ICONS: Record<
   [ControlName.MICROPHONE]: {
     on: "/mic-on.svg",
     off: "/mic-off.svg",
+  },
+  [ControlName.STATS]: {
+    on: "/stats-on.svg",
+    off: "/stats-off.svg",
   },
 };
 
@@ -107,6 +112,9 @@ export class ControlsOverflowDrawerService {
     }
     if (!this.hiddenButtons[ControlName.EXPORT]) {
       controlsContainer.appendChild(this.makeControl(ControlName.EXPORT));
+    }
+    if (!this.hiddenButtons[ControlName.STATS]) {
+      controlsContainer.appendChild(this.makeControl(ControlName.STATS));
     }
     if (!this.hiddenButtons[ControlName.SPEED]) {
       controlsContainer.appendChild(this.makeControl(ControlName.SPEED));

@@ -8,15 +8,15 @@ class LoggerService {
   }
 
   log(...messages: LogMessage[]) {
-    console.log(this.TAG, ...this.makeLogMessage(messages));
+    // console.log(this.TAG, ...this.makeLogMessage(messages));
   }
 
   warn(...messages: LogMessage[]) {
-    console.warn(this.TAG, ...this.makeLogMessage(messages));
+    // console.warn(this.TAG, ...this.makeLogMessage(messages));
   }
 
   error(...messages: LogMessage[]) {
-    console.error(this.TAG, ...this.makeLogMessage(messages));
+    // console.error(this.TAG, ...this.makeLogMessage(messages));
   }
 
   private makeLogMessage(messages: LogMessage[]) {

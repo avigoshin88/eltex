@@ -16,6 +16,7 @@ import {
   requestSDPOfferExchangeP2P,
 } from "./api/live";
 import { DatachannelClientService } from "./datachannel/data-channel.service";
+import { EventBus } from "./event-bus.service";
 import { Logger } from "./logger/logger.service";
 import { MicrophoneService } from "./microphone.service";
 
@@ -51,6 +52,7 @@ export class WebRTCService {
     listeners: DatachannelEventListeners;
   }) {
     this.peerConnection = new RTCPeerConnection(this.options.config);
+    EventBus.emit("setup-peerconnection", this.peerConnection);
 
     this.datachannelClient.register(
       this.peerConnection,
@@ -274,6 +276,48 @@ export class WebRTCService {
 
     this._tracks.push(event.track);
 
+    // let videoStats = {
+    //   bitrate: 0, // Скорость в кбит/с
+    //   // resolution: {
+    //   //   width: this. .videoWidth,
+    //   //   height: videoElement.videoHeight,
+    //   // },
+    //   codec: "",
+    //   frameRate: 0,
+    // };
+
+    // this.peerConnection.getStats().then((stats) => {
+    //   stats.forEach((report) => {
+    //     console.log("🚀 ~ WebRTCService ~ stats.forEach ~ report:", report);
+    //     if (report.type === "inbound-rtp" && report.kind === "video") {
+    //       // Рассчитываем скорость
+    //       const bytesReceived = report.bytesReceived;
+    //       const timestamp = report.timestamp;
+
+    //       // if (window.prevBytesReceived && window.prevTimestamp) {
+    //       //   const bitrate =
+    //       //     ((bytesReceived - window.prevBytesReceived) * 8) /
+    //       //     (timestamp - window.prevTimestamp);
+    //       //   videoStats.bitrate = Math.round(bitrate); // в кбит/с
+    //       // }
+
+    //       // // Сохраняем для следующего расчета
+    //       // window.prevBytesReceived = bytesReceived;
+    //       // window.prevTimestamp = timestamp;
+    //     }
+
+    //     // Получаем кодек
+    //     if (report.type === "codec" && report.mimeType.includes("video")) {
+    //       videoStats.codec = report.mimeType;
+    //     }
+
+    //     // Получаем количество кадров
+    //     if (report.type === "track" && report.kind === "video") {
+    //       videoStats.frameRate = report.framesPerSecond || 0;
+    //     }
+    //   });
+    // });
+
     if (event.streams?.length > 0) {
       this.setSource(event.streams[0]);
     } else if (
@@ -287,6 +331,57 @@ export class WebRTCService {
       this.logger.error("wait stream track finish");
     }
   }
+
+  // private async getStats() {
+  //   let prevBytesReceived = 0;
+  //   let prevTimestamp = 0;
+
+  //   return async () => {
+  //     const stats = await this.peerConnection!.getStats();
+
+  //     let videoStats = {
+  //       bitrate: 0, // Скорость в кбит/с
+  //       resolution: {
+  //         width: videoElement.videoWidth,
+  //         height: videoElement.videoHeight,
+  //       },
+  //       codec: "",
+  //       frameRate: 0,
+  //     };
+
+  //     stats.forEach((report) => {
+  //       if (report.type === "inbound-rtp" && report.kind === "video") {
+  //         const bytesReceived = report.bytesReceived;
+  //         const timestamp = report.timestamp;
+
+  //         if (prevBytesReceived && prevTimestamp) {
+  //           const bitrate =
+  //             ((bytesReceived - prevBytesReceived) * 8) /
+  //             (timestamp - prevTimestamp);
+  //           videoStats.bitrate = Math.round(bitrate); // в кбит/с
+  //         }
+
+  //         // Обновляем для следующего расчета
+  //         prevBytesReceived = bytesReceived;
+  //         prevTimestamp = timestamp;
+  //       }
+
+  //       // Получаем кодек
+  //       if (report.type === "codec" && report.mimeType.includes("video")) {
+  //         videoStats.codec = report.mimeType;
+  //       }
+
+  //       // Получаем количество кадров
+  //       if (report.type === "track" && report.kind === "video") {
+  //         videoStats.frameRate = report.framesPerSecond || 0;
+  //       }
+  //     });
+
+  //     console.log("WebRTC Stats:", videoStats);
+
+  //     return videoStats;
+  //   };
+  // }
 
   private _onIceCandidateError(event: RTCPeerConnectionIceErrorEvent) {
     this.logger.error("Ошибка ICE_CANDIDATE_ERROR: ", event);

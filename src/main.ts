@@ -7,6 +7,7 @@ import { VideoPlayerService } from "./services/player/player.service";
 
 import "./style.css";
 import { PlayerModeService } from "./services/player/player-mode.service";
+import { PlayerStatsService } from "./services/player/player-stats.service";
 
 class VideoPlayerElement extends HTMLElement {
   constructor() {
@@ -17,6 +18,7 @@ class VideoPlayerElement extends HTMLElement {
 
   player = new VideoPlayerService();
   builder = new VideoPlayerBuilderService();
+  playerStats = new PlayerStatsService();
 
   modeService!: PlayerModeService;
 

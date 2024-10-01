@@ -10,6 +10,7 @@ export enum ControlName {
   // PREV_FRAME = "prev_frame",
   NEXT_FRAGMENT = "next_fragment",
   PREV_FRAGMENT = "prev_fragment",
+  STATS = "stats",
 
   SOUND = "sound",
 }
@@ -89,4 +90,6 @@ export type ControlsOptions = {
   [ControlName.SPEED]: SelectControlOptions;
 
   [ControlName.SOUND]: RangeControlOptions;
+
+  [ControlName.STATS]: BinaryButtonControlOptions;
 };
