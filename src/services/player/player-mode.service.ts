@@ -241,11 +241,11 @@ export class PlayerModeService {
   }
 
   private toNextFragment() {
-    this.archiveControl?.toNextFragment();
+    this.archiveControl?.toNextFragment(true);
   }
 
   private toPrevFragment() {
-    this.archiveControl?.toPrevFragment();
+    this.archiveControl?.toPrevFragment(true);
   }
 
   private snap() {

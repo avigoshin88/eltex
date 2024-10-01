@@ -46,6 +46,8 @@ export class ArchiveControlService {
 
   private preloadRangeFragmentsId: Nullable<number> = null;
 
+  private nextFragmentTimeoutId: Nullable<number> = null;
+
   private emit!: Emitter;
   private supportConnect: () => void;
 
@@ -80,6 +82,11 @@ export class ArchiveControlService {
     this.rangeFragmentsGenerator = this.splitRangeIntoFragmentsLazy();
   }
 
+  setCurrentRangeIndex(timestamp: number) {
+    // this.fragmentIndex = index;
+    // this.initGenerator();
+  }
+
   init() {
     this.preloadRangeFragment(true);
 
@@ -96,7 +103,7 @@ export class ArchiveControlService {
     this.clearPreloadFragmentsInterval();
   }
 
-  toNextFragment() {
+  toNextFragment(isStart = false) {
     if (!this.nextFragment) {
       this.logger.warn(
         "Нельзя переключиться к следующему фрагменту: текущий фрагмент последний."
@@ -106,11 +113,18 @@ export class ArchiveControlService {
 
     this.fragmentIndex = this.fragmentIndex + 1;
 
+    if (isStart) {
+      this.initGenerator();
+    }
+
+    this.clearNextFragmentPreload();
+
+    this.preloadRangeFragment(isStart);
     this.clearPreloadFragmentsInterval();
     this.initPreloadFragmentsInterval();
   }
 
-  toPrevFragment() {
+  toPrevFragment(isStart = false) {
     if (!this.prevFragment) {
       this.logger.warn(
         "Нельзя переключиться к предыдущему фрагменту: текущий фрагмент первый."
@@ -120,6 +134,13 @@ export class ArchiveControlService {
 
     this.fragmentIndex = this.fragmentIndex - 1;
 
+    if (isStart) {
+      this.initGenerator();
+    }
+
+    this.clearNextFragmentPreload();
+
+    this.preloadRangeFragment(isStart);
     this.clearPreloadFragmentsInterval();
     this.initPreloadFragmentsInterval();
   }
@@ -170,7 +191,17 @@ export class ArchiveControlService {
 
     this.emit(rangeFragment, !isFirst);
     if (rangeFragment.isLastFragment) {
-      this.toNextFragment();
+      this.clearNextFragmentPreload();
+
+      const nextFragmentTimeout = Math.max(
+        0,
+        rangeFragment.duration - preloadRangeFragmentTimeout
+      );
+      this.clearPreloadFragmentsInterval();
+
+      this.nextFragmentTimeoutId = setTimeout(() => {
+        this.toNextFragment();
+      }, nextFragmentTimeout);
     }
   }
 
@@ -180,6 +211,15 @@ export class ArchiveControlService {
     this.preloadRangeFragmentsId = setInterval(() => {
       this.preloadRangeFragment();
     }, preloadInterval - preloadRangeFragmentTimeout);
+  }
+
+  private clearNextFragmentPreload() {
+    if (this.nextFragmentTimeoutId === null) {
+      return;
+    }
+
+    clearTimeout(this.nextFragmentTimeoutId);
+    this.nextFragmentTimeoutId = null;
   }
 
   private clearPreloadFragmentsInterval() {
