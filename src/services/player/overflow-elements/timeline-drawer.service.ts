@@ -359,25 +359,34 @@ export class TimelineOverflowDrawer {
   private clickEventListener(event: MouseEvent): void {
     event.preventDefault();
 
-    const clickX = event.offsetX; // Координата клика по оси X
-    const containerWidth = this.container.offsetWidth;
+    // Определяем позицию контейнера на странице
+    const containerRect = this.container.getBoundingClientRect();
+    const clickX = event.clientX - containerRect.left; // Вычисляем координату клика относительно контейнера
+
     const startTime = this.ranges[0]?.start_time || 0;
     const endTime = this.ranges[this.ranges.length - 1]?.end_time || 0;
     const totalTimeRange = endTime - startTime;
     const totalRangeWidth = totalTimeRange * this.scale;
 
-    // Вычисляем время на основе позиции клика
+    // Вычисляем timestamp на основе позиции клика
     let clickedTimestamp =
-      startTime + (clickX / containerWidth) * totalTimeRange;
+      startTime + (clickX / totalRangeWidth) * totalTimeRange;
+
+    // Отладочные логи для проверки значений
+    console.log({
+      clickX,
+      totalRangeWidth,
+      clickedTimestamp,
+      startTime,
+      totalTimeRange,
+    });
 
     if (this.exportMode) {
-      // Если включён режим экспорта
       if (this.exportStartTime === null) {
         this.exportStartTime = clickedTimestamp;
       } else if (this.exportEndTime === null) {
         this.exportEndTime = clickedTimestamp;
 
-        // Проверяем, что время конца больше времени начала
         if (this.exportStartTime > this.exportEndTime) {
           [this.exportStartTime, this.exportEndTime] = [
             this.exportEndTime,
@@ -391,7 +400,6 @@ export class TimelineOverflowDrawer {
           duration: this.exportEndTime - this.exportStartTime,
         });
       } else {
-        // Если оба времени уже установлены, сбрасываем выбор
         this.exportStartTime = clickedTimestamp;
         this.exportEndTime = null;
       }
@@ -400,15 +408,19 @@ export class TimelineOverflowDrawer {
     } else {
       let clickedRange = this.findRangeByTimestamp(clickedTimestamp);
 
-      // Если диапазон типа break, устанавливаем timestamp на начало диапазона
+      // Если диапазон типа break, переводим на начало ближайшего data диапазона
       if (clickedRange && clickedRange.type === "break") {
         clickedRange = this.findNearestDataRange(clickedTimestamp);
         clickedTimestamp = clickedRange?.start_time ?? startTime;
       }
 
       if (clickedRange === null) {
+        console.log("Не найден подходящий диапазон для клика");
         return;
       }
+
+      // Отладочные логи
+      console.log("Выбранный диапазон:", clickedRange);
 
       // Вызов callback-функции с найденным timestamp и range
       this.clickCallback?.(clickedTimestamp, clickedRange);
