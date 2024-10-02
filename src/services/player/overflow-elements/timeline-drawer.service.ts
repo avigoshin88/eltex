@@ -522,15 +522,12 @@ export class TimelineOverflowDrawer {
       return;
     }
 
-    // Пользовательское время для трека
-    this.customTrackTimestamp = timestamp;
-
     // Если включен режим экспорта, обрабатываем клик как установку маркеров
     if (this.exportMode) {
       if (this.exportStartTime === null) {
-        this.exportStartTime = clickedTimestamp;
+        this.exportStartTime = timestamp;
       } else if (this.exportEndTime === null) {
-        this.exportEndTime = clickedTimestamp;
+        this.exportEndTime = timestamp;
 
         // Если начало и конец перепутаны, меняем их местами
         if (this.exportStartTime > this.exportEndTime) {
@@ -548,13 +545,15 @@ export class TimelineOverflowDrawer {
         });
       } else {
         // Перезапуск диапазона
-        this.exportStartTime = clickedTimestamp;
+        this.exportStartTime = timestamp;
         this.exportEndTime = null;
       }
 
       // Обновляем маркеры
       this.updateExportMarkers(startTime, totalTimeRange, totalRangeWidth);
     } else {
+      // Пользовательское время для трека
+      this.customTrackTimestamp = timestamp;
       // Визуально перемещаем трек
       // this.draw(this.customTrackTimestamp);
       // Вызываем коллбэк с новым значением времени (если нужно)

@@ -128,6 +128,7 @@ export class ArchiveVideoService implements ModeService {
         duration: range.duration,
       }
     );
+    this.timelineDrawer.disableExportMode();
   }
 
   private onExportFragment(data: ExportURLDto) {
