@@ -1,5 +1,6 @@
 import { RangeDto } from "../dto/ranges";
 import { Nullable } from "../types/global";
+import { EventBus } from "./event-bus.service";
 import { Logger } from "./logger/logger.service";
 
 const connectionSupportInterval = Number(
@@ -82,9 +83,10 @@ export class ArchiveControlService {
     this.rangeFragmentsGenerator = this.splitRangeIntoFragmentsLazy();
   }
 
-  setCurrentRangeIndex(timestamp: number) {
-    // this.fragmentIndex = index;
-    // this.initGenerator();
+  setCurrentRange(range: RangeDto) {
+    this.fragmentIndex = this.findRangeIndex(range.start_time, range.end_time);
+    
+    this.initGenerator();
   }
 
   init() {
@@ -113,6 +115,8 @@ export class ArchiveControlService {
 
     this.fragmentIndex = this.fragmentIndex + 1;
 
+    EventBus.emit("new-archive-fragment-started", this.currentFragment);
+
     if (isStart) {
       this.initGenerator();
     }
@@ -133,6 +137,8 @@ export class ArchiveControlService {
     }
 
     this.fragmentIndex = this.fragmentIndex - 1;
+
+    EventBus.emit("new-archive-fragment-started", this.currentFragment);
 
     if (isStart) {
       this.initGenerator();
@@ -244,5 +250,24 @@ export class ArchiveControlService {
 
     clearInterval(this.connectionSupporterId);
     this.connectionSupporterId = null;
+  }
+
+  private findRangeIndex(
+    customStartTime: number,
+    customEndTime: number
+  ): number {
+    for (let i = 0; i < this.ranges.length; i++) {
+      const range = this.ranges[i];
+
+      // Проверяем пересечение кастомного диапазона с текущим
+      if (
+        customStartTime >= range.start_time &&
+        customEndTime <= range.end_time
+      ) {
+        return i; // Возвращаем индекс найденного диапазона
+      }
+    }
+
+    return -1; // Если не найдено пересечение
   }
 }

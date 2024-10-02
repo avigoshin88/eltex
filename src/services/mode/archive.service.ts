@@ -14,6 +14,7 @@ import { TimelineClickCallback } from "../../types/timeline";
 import { Nullable } from "../../types/global";
 import { ExportURLDto } from "../../dto/export";
 import { FileDownloader } from "../file-downloader.service";
+import { EventBus } from "../event-bus.service";
 
 export class ArchiveVideoService implements ModeService {
   private logger = new Logger(ArchiveVideoService.name);
@@ -63,6 +64,11 @@ export class ArchiveVideoService implements ModeService {
       this.onChangeCurrentTime.bind(this)
     );
     this.metaDrawer = new MetaOverflowDrawerService(this.player.videoContainer);
+
+    EventBus.on(
+      "new-archive-fragment-started",
+      this.onNewArchiveFragmentStarted.bind(this)
+    );
 
     setControl(this.archiveControl);
   }
@@ -114,6 +120,13 @@ export class ArchiveVideoService implements ModeService {
 
   cancelExport(): void {
     this.timelineDrawer.disableExportMode();
+  }
+
+  private onNewArchiveFragmentStarted(range: RangeDto) {
+    const startTime = range.start_time;
+
+    this.timelineDrawer.setCustomTrackTimestamp(startTime);
+    this.timelineDrawer.draw(startTime);
   }
 
   private async onOpenDatachannel() {
@@ -193,6 +206,8 @@ export class ArchiveVideoService implements ModeService {
       start_time: timestamp,
       duration: range.end_time - timestamp,
     };
+
+    this.archiveControl.setCurrentRange(customRange);
 
     this.emitStartNewFragment(customRange);
   }

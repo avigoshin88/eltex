@@ -470,6 +470,10 @@ export class TimelineOverflowDrawer {
     this.isReady = false;
   }
 
+  setCustomTrackTimestamp(timestamp: number) {
+    this.customTrackTimestamp = timestamp;
+  }
+
   private formatTime(time: number): string {
     const date = new Date(time);
 
