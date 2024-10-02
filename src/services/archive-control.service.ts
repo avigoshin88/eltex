@@ -31,6 +31,7 @@ type Emitter = (fragment: RangeDto, isPreRequestRange?: boolean) => void;
 
 type RangeFragment = RangeDto & {
   fragmentIndex: number;
+  subFragmentIndex: number;
   isLastFragment: boolean;
 };
 
@@ -85,8 +86,13 @@ export class ArchiveControlService {
 
   setCurrentRange(range: RangeDto) {
     this.fragmentIndex = this.findRangeIndex(range.start_time, range.end_time);
-    
+
     this.initGenerator();
+
+    this.preloadRangeFragment(true);
+
+    this.initPreloadFragmentsInterval();
+    this.clearPreloadFragmentsInterval();
   }
 
   init() {
@@ -177,6 +183,7 @@ export class ArchiveControlService {
           end_time: rangeFragmentEnd,
           duration: fragmentDuration,
           fragmentIndex: rangeIndex,
+          subFragmentIndex: i,
           isLastFragment: i === totalRangeFragments - 1,
         };
 
@@ -214,7 +221,9 @@ export class ArchiveControlService {
   private initPreloadFragmentsInterval() {
     this.initGenerator();
 
+    // console.time();
     this.preloadRangeFragmentsId = setInterval(() => {
+      // console.timeLog();
       this.preloadRangeFragment();
     }, preloadInterval - preloadRangeFragmentTimeout);
   }
@@ -234,6 +243,8 @@ export class ArchiveControlService {
     }
 
     clearInterval(this.preloadRangeFragmentsId);
+
+    // console.timeEnd();
     this.preloadRangeFragmentsId = null;
   }
 

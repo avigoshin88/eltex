@@ -17,7 +17,7 @@ import { FileDownloader } from "../file-downloader.service";
 import { EventBus } from "../event-bus.service";
 
 export class ArchiveVideoService implements ModeService {
-  private logger = new Logger(ArchiveVideoService.name);
+  private logger = new Logger("ArchiveVideoService");
 
   private readonly webRTCClient!: WebRTCService;
   private readonly datachannelClient: DatachannelClientService;
@@ -173,6 +173,7 @@ export class ArchiveVideoService implements ModeService {
     }
 
     const currentTime = event.timeStamp;
+    console.log("🚀 ~ ArchiveVideoService ~ currentTime:", currentTime);
 
     this.timelineDrawer.draw(currentTime);
   };
@@ -185,6 +186,8 @@ export class ArchiveVideoService implements ModeService {
     this.isPreRequestRange = isPreRequestRange;
 
     if (this.isPreRequestRange) {
+      this.logger.log(DatachannelMessageType.GET_ARCHIVE_FRAGMENT, fragment);
+
       this.datachannelClient.send(DatachannelMessageType.GET_ARCHIVE_FRAGMENT, {
         start_time: fragment.start_time,
         duration: fragment.duration,
@@ -196,6 +199,9 @@ export class ArchiveVideoService implements ModeService {
     this.nextProcessedRange = fragment;
 
     this.datachannelClient.send(DatachannelMessageType.DROP_BUFFER);
+
+    this.logger.log("============== NEW FRAGMENT STARTED ==============");
+    this.logger.log(DatachannelMessageType.DROP_BUFFER);
   }
 
   private onChangeCurrentTime(
@@ -208,14 +214,15 @@ export class ArchiveVideoService implements ModeService {
     };
 
     this.archiveControl.setCurrentRange(customRange);
-
-    this.emitStartNewFragment(customRange);
   }
 
   private onDropComplete() {
     if (!this.nextProcessedRange) {
+      this.logger.warn("onDropComplete: nextProcessedRange is empty");
       return;
     }
+
+    this.logger.log(DatachannelMessageType.GET_KEY);
 
     this.datachannelClient.send(DatachannelMessageType.GET_KEY, {
       start_time: this.nextProcessedRange.start_time,
@@ -224,8 +231,14 @@ export class ArchiveVideoService implements ModeService {
 
   private onKeyFragmentUpload() {
     if (!this.nextProcessedRange) {
+      this.logger.warn("onKeyFragmentUpload: nextProcessedRange is empty");
       return;
     }
+
+    this.logger.log(
+      DatachannelMessageType.GET_ARCHIVE_FRAGMENT,
+      this.nextProcessedRange
+    );
 
     this.datachannelClient.send(DatachannelMessageType.GET_ARCHIVE_FRAGMENT, {
       start_time: this.nextProcessedRange.start_time,
@@ -237,8 +250,11 @@ export class ArchiveVideoService implements ModeService {
     if (this.isPreRequestRange) {
       this.isPreRequestRange = false;
 
-      this.logger.log("Фрагмент стрима начался: ", this.nextProcessedRange);
-      this.nextProcessedRange = null;
+      if (this.nextProcessedRange) {
+        this.logger.log("Фрагмент стрима начался: ", this.nextProcessedRange);
+
+        this.nextProcessedRange = null;
+      }
 
       return;
     }
@@ -255,10 +271,12 @@ export class ArchiveVideoService implements ModeService {
   }
 
   play() {
+    this.logger.log(DatachannelMessageType.PLAY);
     this.datachannelClient.send(DatachannelMessageType.PLAY_STREAM);
   }
 
   stop() {
+    this.logger.log(DatachannelMessageType.STOP_STREAM);
     this.datachannelClient.send(DatachannelMessageType.STOP_STREAM);
   }
 
