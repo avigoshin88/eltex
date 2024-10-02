@@ -1,3 +1,5 @@
+import { ConnectionOptions } from "../types/connection-options";
+
 export interface ModeService {
   init(): Promise<void>;
   reset(): Promise<void>;
@@ -9,4 +11,6 @@ export interface ModeService {
   export?(): void;
   cancelExport?(): void;
   setSpeed?(speed: number): void;
+
+  reinitWithNewOptions?(options: ConnectionOptions): void;
 }

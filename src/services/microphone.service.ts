@@ -67,6 +67,8 @@ export class MicrophoneService {
         });
       }
 
+      this.hasAccessToMic = false;
+
       this.close();
     }
 
@@ -171,7 +173,9 @@ export class MicrophoneService {
     } else {
       this.audioTransceiver.direction = "recvonly";
     }
+
     this.isMicEnabled = false;
+    this.hasAccessToMic = false;
   }
 
   // Функция для переключения состояния микрофона (короткое нажатие)
@@ -251,11 +255,11 @@ export class MicrophoneService {
       this.localStream = null;
       this.isMicEnabled = false;
       this.hasAccessToMic = false;
+    }
 
-      if (this.audioTransceiver) {
-        this.audioTransceiver.stop();
-        this.audioTransceiver = null;
-      }
+    if (this.audioTransceiver) {
+      this.audioTransceiver.stop();
+      this.audioTransceiver = null;
     }
   }
 }

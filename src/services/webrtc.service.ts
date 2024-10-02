@@ -30,6 +30,7 @@ export class WebRTCService {
 
   private setSource: (stream: MediaStream) => void;
   private _tracks: MediaStreamTrack[] = [];
+  private generator: AsyncGenerator<undefined, void, unknown> | undefined;
 
   constructor(
     options: ConnectionOptions,
@@ -91,117 +92,220 @@ export class WebRTCService {
   }
 
   public async startP2P() {
-    this.logger.log("P2P: Начало соединения через P2P");
+    const outerThis = this;
 
-    this.currentType = "play_analytic";
-
-    if (!this.peerConnection)
+    if (!outerThis.peerConnection)
       throw Error("P2P: Live сервис не инициализирован");
 
-    const peerConnection = this.peerConnection;
+    const peerConnection = outerThis.peerConnection;
 
-    this.prepareTransceivers();
+    async function* startP2PGen() {
+      outerThis.logger.log("P2P: Начало соединения через P2P");
 
-    const { app, stream } = this.options;
+      outerThis.currentType = "play_analytic";
 
-    this.logger.log("P2P: Запрашиваем SDP offer");
+      await outerThis.prepareTransceivers();
 
-    const getSDPOfferResponse = await getSDPOffer(app, stream);
+      const { app, stream } = outerThis.options;
 
-    if (getSDPOfferResponse.code != 0) {
-      throw new Error(
-        `P2P: Не удается получить SDP offer, ответ: ${JSON.stringify(
-          getSDPOfferResponse
-        )}`
+      outerThis.logger.log("P2P: Запрашиваем SDP offer");
+
+      const getSDPOfferResponse = await getSDPOffer(app, stream);
+
+      if (getSDPOfferResponse.code != 0) {
+        throw new Error(
+          `P2P: Не удается получить SDP offer, ответ: ${JSON.stringify(
+            getSDPOfferResponse
+          )}`
+        );
+      }
+
+      outerThis.logger.log(
+        "P2P: Ответ на запрос SDP offer:",
+        getSDPOfferResponse
       );
+
+      const offer: RTCSessionDescriptionInit = {
+        sdp: getSDPOfferResponse.sdp,
+        type: "offer",
+      };
+
+      outerThis.logger.log("P2P: setRemoteDescription");
+      await peerConnection.setRemoteDescription(offer);
+
+      outerThis.logger.log("P2P: Подготавливаем ответ на SDP offer");
+      let answer = await peerConnection.createAnswer();
+
+      if (outerThis.options.constrains && answer.sdp) {
+        outerThis.logger.log(
+          "P2P: Устанавливаем ограничения битрейда равное ",
+          outerThis.options.constrains.maxBitrate
+        );
+        answer = {
+          ...answer,
+          sdp: outerThis.modifySDP(
+            answer.sdp,
+            outerThis.options.constrains.maxBitrate
+          ),
+        };
+      }
+
+      if (!answer.sdp) throw Error("P2P: Не удается подготовить SDP offer");
+
+      outerThis.logger.log("P2P: Ответ на SDP offer:", answer);
+
+      outerThis.logger.log("P2P: setLocalDescription");
+      await peerConnection.setLocalDescription(answer).catch((e) => {
+        throw Error(
+          `P2P: Не удалось установить Local Description, ошибка: ${JSON.stringify(
+            e
+          )}`
+        );
+      });
+
+      outerThis.logger.log("P2P: setLocalDescription установлено");
+
+      yield;
+
+      outerThis.logger.log("P2P: Отправляем ответный SDP offer");
+
+      await requestSDPOfferExchangeP2P(
+        app,
+        stream,
+        peerConnection.currentLocalDescription?.sdp!
+      );
+
+      outerThis.logger.log("P2P: Ответный SDP offer отправлен успешно");
+
+      outerThis.logger.log("P2P: очищаем генератор");
+
+      outerThis.generator = undefined;
     }
 
-    this.logger.log("P2P: Ответ на запрос SDP offer:", getSDPOfferResponse);
+    outerThis.logger.log("P2P: устанавливаем генератор");
 
-    const offer: RTCSessionDescriptionInit = {
-      sdp: getSDPOfferResponse.sdp,
-      type: "offer",
+    const onIceGatheringStateChange = async () => {
+      try {
+        if (peerConnection.iceGatheringState === "complete" && this.generator) {
+          await this.generator.next();
+          peerConnection.onicegatheringstatechange = null;
+        }
+      } catch (e) {
+        throw e;
+      }
     };
 
-    this.logger.log("P2P: setRemoteDescription");
-    await peerConnection.setRemoteDescription(offer);
+    // ошибка уходит в виндов, надо отловить здесь
+    peerConnection.onicegatheringstatechange = onIceGatheringStateChange;
 
-    this.logger.log("P2P: Подготавливаем ответ на SDP offer");
-    const answer = await peerConnection.createAnswer();
-
-    if (!answer.sdp) throw Error("P2P: Не удается подготовить SDP offer");
-
-    this.logger.log("P2P: Ответ на SDP offer:", answer);
-
-    this.logger.log("P2P: Отправляем ответный SDP offer");
-
-    await requestSDPOfferExchangeP2P(app, stream, answer.sdp);
-
-    this.logger.log("P2P: Ответный SDP offer отправлен успешно");
-
-    this.logger.log("P2P: setLocalDescription");
-    await peerConnection.setLocalDescription(answer).catch((e) => {
-      throw Error(
-        `P2P: Не удалось установить Local Description, ошибка: ${JSON.stringify(
-          e
-        )}`
-      );
-    });
-
-    this.logger.log("P2P: setLocalDescription установлено");
+    this.generator = startP2PGen();
+    await this.generator.next();
   }
 
   public async startTURN(connectionType: TURNConnectionType) {
-    this.logger.log("TURN: Начало соединения через TURN");
+    const outerThis = this;
 
-    this.currentType = connectionType;
-
-    if (!this.peerConnection)
+    if (!outerThis.peerConnection)
       throw Error("TURN: Live сервис не инициализирован");
 
-    const peerConnection = this.peerConnection;
+    const peerConnection = outerThis.peerConnection;
 
-    await this.prepareTransceivers();
+    async function* startTURNGen() {
+      outerThis.logger.log("TURN: Начало соединения через TURN");
 
-    const { app, stream } = this.options;
+      outerThis.currentType = connectionType;
 
-    this.logger.log("TURN: Подготавливаем SDP offer");
-    const offer = await peerConnection.createOffer();
-    this.logger.log("TURN: SDP offer подготовлен: ", offer);
+      await outerThis.prepareTransceivers();
 
-    this.logger.log("TURN: Устанавливаем свой SDP offer");
-    await peerConnection.setLocalDescription(offer);
+      const { app, stream } = outerThis.options;
 
-    this.logger.log("TURN: Запрашиваем обмен SDP offer");
-    const requestSDPOfferExchangeResponse = await requestSDPOfferExchangeTURN(
-      app,
-      stream,
-      this.currentType,
-      offer.sdp!
-    );
-
-    if (
-      requestSDPOfferExchangeResponse.code !== 0 ||
-      !requestSDPOfferExchangeResponse.sdp
-    ) {
-      throw Error(
-        `TURN: Не удается получить SDP offer, ответ: ${JSON.stringify(
-          requestSDPOfferExchangeResponse
-        )}`
+      outerThis.logger.log("TURN: Подготавливаем SDP offer");
+      let offer = await peerConnection.createOffer();
+      outerThis.logger.log(
+        "TURN: SDP offer подготовлен: ",
+        // offer,
+        !!outerThis.options.constrains,
+        !!offer.sdp
       );
-    }
-    this.logger.log(
-      "TURN: Ответ на обмен SDP offer:",
-      requestSDPOfferExchangeResponse
-    );
 
-    const answer: RTCSessionDescriptionInit = {
-      type: "answer",
-      sdp: requestSDPOfferExchangeResponse.sdp,
+      if (outerThis.options.constrains && offer.sdp) {
+        outerThis.logger.log(
+          "TURN: Устанавливаем ограничения битрейда равное ",
+          outerThis.options.constrains.maxBitrate
+        );
+
+        offer = {
+          ...offer,
+          sdp: outerThis.modifySDP(
+            offer.sdp,
+            outerThis.options.constrains.maxBitrate
+          ),
+        };
+      }
+
+      outerThis.logger.log("TURN: Устанавливаем свой SDP offer");
+      await peerConnection.setLocalDescription(offer);
+
+      yield;
+
+      outerThis.logger.log(
+        "TURN: Запрашиваем обмен SDP offer",
+        peerConnection.localDescription?.sdp!
+      );
+      const requestSDPOfferExchangeResponse = await requestSDPOfferExchangeTURN(
+        app,
+        stream,
+        outerThis.currentType,
+        peerConnection.localDescription?.sdp!
+      );
+
+      if (
+        requestSDPOfferExchangeResponse.code !== 0 ||
+        !requestSDPOfferExchangeResponse.sdp
+      ) {
+        throw Error(
+          `TURN: Не удается получить SDP offer, ответ: ${JSON.stringify(
+            requestSDPOfferExchangeResponse
+          )}`
+        );
+      }
+
+      outerThis.logger.log(
+        "TURN: Ответ на обмен SDP offer:",
+        requestSDPOfferExchangeResponse
+      );
+
+      const answer: RTCSessionDescriptionInit = {
+        type: "answer",
+        sdp: requestSDPOfferExchangeResponse.sdp,
+      };
+
+      outerThis.logger.log("TURN: setRemoteDescription");
+      peerConnection.setRemoteDescription(answer);
+
+      outerThis.logger.log("TURN: очищаем генератор");
+
+      outerThis.generator = undefined;
+    }
+
+    outerThis.logger.log("TURN: устанавливаем генератор");
+
+    const onIceGatheringStateChange = async () => {
+      try {
+        if (peerConnection.iceGatheringState === "complete" && this.generator) {
+          await this.generator.next();
+          peerConnection.onicegatheringstatechange = null;
+        }
+      } catch (e) {
+        throw e;
+      }
     };
 
-    this.logger.log("TURN: setRemoteDescription");
-    peerConnection.setRemoteDescription(answer);
+    // ошибка уходит в виндов, надо отловить здесь
+    peerConnection.onicegatheringstatechange = onIceGatheringStateChange;
+
+    this.generator = startTURNGen();
+    await this.generator.next();
   }
 
   public get hasAccessToMicrophone() {
@@ -214,6 +318,61 @@ export class WebRTCService {
 
   public get micCallbacks() {
     return this.microphoneService?.prepareButtonCallbacks;
+  }
+
+  private modifySDP(sdp: string, maxBitrate: number): string {
+    const lines = sdp.split("\n");
+
+    let videoPayloadTypes: string[] = [];
+    let isVideoSection = false;
+
+    const minBitrate = 300;
+    const startBitrate = maxBitrate < 800 ? maxBitrate - minBitrate : 800;
+
+    // Сначала определяем видео секцию SDP и собираем все payload types для видео
+    lines.forEach((line) => {
+      if (line.startsWith("m=video")) {
+        isVideoSection = true;
+      } else if (line.startsWith("m=")) {
+        isVideoSection = false; // Мы вышли из видео секции
+      }
+
+      // Если мы в видео секции и находим rtpmap, то это возможный видео кодек
+      if (isVideoSection && line.startsWith("a=rtpmap:")) {
+        const payloadTypeMatch = line.match(/^a=rtpmap:(\d+)\s(.+?)\/\d+/);
+
+        if (payloadTypeMatch) {
+          videoPayloadTypes.push(payloadTypeMatch[1]);
+        }
+      }
+    });
+
+    // Теперь модифицируем или добавляем fmtp для найденных видео кодеков
+    const modifiedSDP = lines
+      .map((line, index) => {
+        if (line.startsWith("a=fmtp:")) {
+          const payloadType = line.match(/^a=fmtp:(\d+)/)?.[1];
+
+          if (payloadType && videoPayloadTypes.includes(payloadType)) {
+            return `${line}; x-google-max-bitrate=${maxBitrate}; x-google-min-bitrate=${minBitrate}; x-google-start-bitrate=${startBitrate}`;
+          }
+        } else if (line.startsWith("a=rtpmap:")) {
+          const payloadType = line.match(/^a=rtpmap:(\d+)/)?.[1];
+
+          if (payloadType && videoPayloadTypes.includes(payloadType)) {
+            const nextLine = lines[index + 1];
+
+            // Если нет fmtp для этого кодека, добавляем новую строку
+            if (!nextLine.startsWith("a=fmtp:")) {
+              return `${line}\na=fmtp:${payloadType} x-google-max-bitrate=${maxBitrate}; x-google-min-bitrate=${minBitrate}; x-google-start-bitrate=${startBitrate}`;
+            }
+          }
+        }
+        return line;
+      })
+      .join("\n");
+
+    return modifiedSDP;
   }
 
   public reset() {
@@ -242,7 +401,7 @@ export class WebRTCService {
       this.logger.log(
         "Удаленный ICE candidate: \n " + event.candidate.candidate
       );
-      this.processIceCandidateEvent(event);
+      // this.processIceCandidateEvent(event);
     }
   }
 
@@ -289,7 +448,16 @@ export class WebRTCService {
   }
 
   private _onIceCandidateError(event: RTCPeerConnectionIceErrorEvent) {
-    this.logger.error("Ошибка ICE_CANDIDATE_ERROR: ", event);
+    this.logger.error(
+      "Ошибка ICE_CANDIDATE_ERROR:",
+      event.errorText,
+      ", код",
+      event.errorCode,
+      ", адрес",
+      event.url,
+      ", порт",
+      event.port
+    );
   }
 
   private _onConnectionStateChange(event: Event) {

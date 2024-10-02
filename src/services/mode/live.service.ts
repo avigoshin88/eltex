@@ -14,11 +14,11 @@ import { MetaOverflowDrawerService } from "../player/overflow-elements/meta-draw
 export class LiveVideoService implements ModeService {
   private logger = new Logger(LiveVideoService.name);
 
-  private readonly webRTCClient!: WebRTCService;
-  private readonly datachannelClient: DatachannelClientService;
+  private webRTCClient: WebRTCService;
+  private datachannelClient: DatachannelClientService;
   private readonly player: VideoPlayerService;
 
-  private readonly metaDrawer: MetaOverflowDrawerService;
+  private metaDrawer: MetaOverflowDrawerService;
 
   constructor(options: ConnectionOptions, player: VideoPlayerService) {
     this.player = player;
@@ -67,15 +67,76 @@ export class LiveVideoService implements ModeService {
     });
   }
 
+  public async reinitWithNewOptions(options: ConnectionOptions) {
+    this.logger.log(
+      "Перезапускаем live соединение с новыми параметрами:",
+      JSON.stringify(options)
+    );
+
+    const metaDrawer = new MetaOverflowDrawerService(
+      this.player.videoContainer
+    );
+    const datachannelClient = new DatachannelClientService();
+    const webRTCClient = new WebRTCService(
+      options,
+      datachannelClient,
+      this.setSource.bind(this)
+    );
+
+    metaDrawer.init();
+
+    const datachannelListeners: {
+      nativeListeners: DatachannelNativeEventListeners;
+      listeners: DatachannelEventListeners;
+    } = {
+      listeners: {
+        // ругается на unknown
+        // @ts-ignore
+        [DatachannelMessageType.META]: metaDrawer.draw,
+      },
+      nativeListeners: {
+        open: async () => {
+          await this.reset();
+
+          this.metaDrawer = metaDrawer;
+          this.datachannelClient = datachannelClient;
+          this.webRTCClient = webRTCClient;
+        },
+      },
+    };
+
+    webRTCClient.setupPeerConnection(datachannelListeners);
+
+    webRTCClient.startP2P().catch((p2pError: Error) => {
+      this.logger.error(
+        "Не удается установить соединение через P2P, причина:",
+        p2pError.message
+      );
+
+      this.logger.log("Пробуем соединиться через TURN");
+      webRTCClient.reset();
+      webRTCClient.setupPeerConnection(datachannelListeners);
+
+      webRTCClient.startTURN("play").catch((turnError: Error) => {
+        webRTCClient.reset();
+        this.logger.error(
+          "Не удается установить соединение через TURN, причина:",
+          turnError.message
+        );
+      });
+    });
+  }
+
   public get mic() {
     const { hasAccessToMicrophone, isMicEnabled, micCallbacks } =
       this.webRTCClient;
     return { hasAccessToMicrophone, isMicEnabled, micCallbacks };
   }
 
-  async reset(): Promise<void> {
-    this.webRTCClient.reset();
+  async reset() {
     this.metaDrawer.destroy();
+    this.datachannelClient.close();
+    this.webRTCClient.reset();
   }
 
   setSource(stream: MediaStream) {
