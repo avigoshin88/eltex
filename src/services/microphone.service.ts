@@ -29,28 +29,16 @@ export class MicrophoneService {
       this.currentDeviceId = deviceId || (await this.getDefaultDeviceId());
 
       const audioTrack = this.localStream.getAudioTracks()[0];
-      audioTrack.enabled = true;
+      audioTrack.enabled = false;
 
       if (this.audioTransceiver) {
         this.audioTransceiver.sender.replaceTrack(audioTrack);
         this.audioTransceiver.direction = "sendrecv"; // Включаем отправку и прием
       } else {
         // Если трансивер еще не существует, создаем его
-        this.audioTransceiver = peerConnection.addTransceiver("audio", {
+        this.audioTransceiver = peerConnection.addTransceiver(audioTrack, {
           direction: "sendrecv",
         });
-
-        const addTrack = () => {
-          if (peerConnection.signalingState === "stable") {
-            peerConnection.addTrack(audioTrack);
-            peerConnection.removeEventListener(
-              "connectionstatechange",
-              addTrack
-            );
-          }
-        };
-
-        peerConnection.addEventListener("connectionstatechange", addTrack);
       }
 
       this.hasAccessToMic = true;

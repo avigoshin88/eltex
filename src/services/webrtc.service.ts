@@ -264,27 +264,21 @@ export class WebRTCService {
   }
 
   private _onTrack(event: RTCTrackEvent) {
-    this.logger.log(
-      "Получен новый Track event, kind:",
-      event.track.kind,
-      this.peerConnection?.getReceivers()
-    );
+    this.logger.log("Получен новый Track event, kind:", event.track.kind);
 
     if (!this.peerConnection) throw Error("Peer connection отсутствует");
 
     this._tracks.push(event.track);
 
-    if (event.streams?.length > 0) {
-      this.setSource(event.streams[0]);
-    } else if (
-      this.peerConnection.getReceivers().length
-      // ??? в примере идет проверка равности количества ресиверов и количества треков, но у меня 4 ресивера и 2 трека, понять бы почему
-      // == this._tracks.length
-    ) {
+    // TODO: проверить в p2p
+    if (this.peerConnection.getReceivers().length === this._tracks.length) {
       this.setSource(new MediaStream(this._tracks));
+    } else if (event.streams?.length > 0) {
+      this.setSource(event.streams[0]);
     } else {
-      // ??? хотелось бы понять что это значит
-      this.logger.error("wait stream track finish");
+      this.logger.error(
+        "onTrack: Дожидаемся пока придут все треки и их количество будет совпадать с количеством получателей"
+      );
     }
   }
 
