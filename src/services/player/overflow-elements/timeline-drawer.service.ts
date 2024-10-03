@@ -690,6 +690,9 @@ export class TimelineOverflowDrawer {
       const maxScale = 1; // Масштабирование не должно превышать единичный масштаб
       const minScale = containerWidth / totalTimeRange; // Минимальный масштаб, при котором диапазоны занимают контейнер
 
+      // Текущее значение масштаба перед изменением
+      const previousScale = this.scale;
+
       // Ограничиваем масштаб значениями от minScale до maxScale
       this.scale = Math.min(
         maxScale,
@@ -697,7 +700,36 @@ export class TimelineOverflowDrawer {
       );
 
       if (this.isReady) {
-        this.draw(this.currentStartTime);
+        // Рассчитаем позицию трека относительно предыдущего масштаба
+        const track = document.getElementById("track");
+        if (track) {
+          const trackLeft = track.offsetLeft; // Позиция трека до масштабирования
+          const visibleWidth = this.scrollContainer!.offsetWidth; // Ширина видимой области
+
+          // Сохраним смещение относительно центра или границы
+          let trackOffsetFromLeft =
+            trackLeft - this.scrollContainer!.scrollLeft;
+
+          if (trackOffsetFromLeft > visibleWidth / 2) {
+            trackOffsetFromLeft = visibleWidth / 2; // Центрируем трек, если он далеко справа
+          } else if (trackLeft <= 0) {
+            trackOffsetFromLeft = 0; // Трек в самом начале
+          }
+
+          // Обновляем отрисовку
+          this.draw(this.currentStartTime);
+
+          // После перерисовки восстанавливаем позицию трека
+          const newTrackLeft = (trackLeft / previousScale) * this.scale;
+          const newScrollLeft = Math.max(0, newTrackLeft - trackOffsetFromLeft);
+          this.scrollContainer!.scrollTo({
+            left: newScrollLeft,
+            behavior: "auto",
+          });
+        } else {
+          // Если трека нет, просто обновляем таймлайн
+          this.draw(this.currentStartTime);
+        }
 
         // Обновляем маркеры экспорта при изменении масштаба
         this.updateExportMarkers(
