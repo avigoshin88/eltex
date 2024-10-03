@@ -165,26 +165,26 @@ export class TimelineOverflowDrawer {
         ? this.customTrackTimestamp + currentTimeMs
         : startTime + currentTimeMs;
 
-    // Получаем общую длительность break до текущего времени
+    // Рассчитываем общую длительность breaks до текущего времени (включая текущий range, если это break)
     const breakDuration = this.getBreakDurationUntil(currentTimestamp);
 
     // Рассчитываем длину break в пикселях
     const breakLengthPx = breakDuration / (totalTimeRange / totalRangeWidth);
 
-    // Найдем ближайший корректный timestamp на таймлайне (игнорируем breaks)
+    // Получаем ближайший корректный timestamp (игнорируя breaks)
     const validTimestamp = this.getNearestTimestamp(currentTimestamp);
 
     if (validTimestamp === undefined) {
       return;
     }
 
-    // Рассчитываем позицию трека относительно начала таймлайна
+    // Рассчитываем смещение трека с учетом breaks
     const trackPosition =
       ((validTimestamp - startTime) / totalTimeRange) * totalRangeWidth +
       breakLengthPx;
 
-    // Обновляем или создаем элемент трека
     let track = document.getElementById("track");
+    // Проверяем, существует ли трек, если да — обновляем его, если нет — создаем
     if (!track) {
       track = document.createElement("div");
       track.id = "track";
@@ -193,7 +193,7 @@ export class TimelineOverflowDrawer {
     }
 
     // Обновляем позицию трека
-    track.style.left = `${trackPosition}px`;
+    track!.style.left = `${trackPosition}px`;
 
     // Следим за треком (если используется IntersectionObserver)
     this.trackObserver?.observe(track);
@@ -204,10 +204,35 @@ export class TimelineOverflowDrawer {
     }
   }
 
+  private getNearestTimestamp(timestamp: number): number | undefined {
+    let currentRange = this.findRangeByTimestamp(timestamp);
+
+    // Если текущий диапазон — "data", просто возвращаем сам timestamp
+    if (currentRange && currentRange.type === "data") {
+      return timestamp;
+    }
+
+    // Если текущий диапазон — "break", находим следующий диапазон с типом "data"
+    const nextDataRange = this.findNextDataRange(timestamp);
+    if (nextDataRange) {
+      // Возвращаем начало следующего диапазона "data"
+      return nextDataRange.start_time;
+    }
+
+    return undefined; // Если нет доступных диапазонов с типом "data"
+  }
+
   private getBreakDurationUntil(timestamp: number): number {
     let totalBreakDuration = 0;
+    let startPoint =
+      this.customTrackTimestamp !== null ? this.customTrackTimestamp : 0;
 
     for (const range of this.ranges) {
+      // Если диапазон начинается после customTrackTimestamp, продолжаем
+      if (range.end_time < startPoint) {
+        continue;
+      }
+
       // Проверяем диапазоны с типом 'break'
       if (range.type === "break") {
         // Если конец диапазона меньше или равен timestamp, добавляем всю длину диапазона
@@ -228,24 +253,6 @@ export class TimelineOverflowDrawer {
     }
 
     return totalBreakDuration;
-  }
-
-  private getNearestTimestamp(timestamp: number): number | undefined {
-    let currentRange = this.findRangeByTimestamp(timestamp);
-
-    // Если текущий диапазон — "data", просто возвращаем сам timestamp
-    if (currentRange && currentRange.type === "data") {
-      return timestamp;
-    }
-
-    // Если текущий диапазон — "break", находим следующий диапазон с типом "data"
-    const nextDataRange = this.findNextDataRange(timestamp);
-    if (nextDataRange) {
-      // Возвращаем начало следующего диапазона "data"
-      return nextDataRange.start_time;
-    }
-
-    return undefined; // Если нет доступных диапазонов с типом "data"
   }
 
   private findNextDataRange(timestamp: number): RangeData | null {
