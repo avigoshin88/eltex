@@ -39,6 +39,7 @@ export class TimelineOverflowDrawer {
   private readonly container: HTMLDivElement;
   private scrollContainer: Nullable<HTMLDivElement> = null;
   private timelineContainer: Nullable<HTMLDivElement> = null;
+
   private scale: number = 1; // Начальный масштаб
   private currentStartTime: number = 0; // Текущее начало времени
   private isReady: boolean = false; // Флаг, указывающий готовность к отрисовке
@@ -149,47 +150,112 @@ export class TimelineOverflowDrawer {
     );
   }
 
-  // Основная логика для обновления трека и экспортных маркеров
   private updateTrackAndExportMarkers(
     currentTime: number,
     startTime: number,
     totalTimeRange: number,
     totalRangeWidth: number
   ): void {
-    const currentTimestamp =
-      (this.customTrackTimestamp || startTime) + currentTime;
+    // Конвертируем currentTime из секунд в миллисекунды
+    const currentTimeMs = currentTime * 1000;
 
-    const timestamp = this.getNearestTimestamp(currentTimestamp);
-    if (timestamp === undefined) {
+    // Используем customTrackTimestamp (если он установлен) + текущий прогресс видео (в миллисекундах)
+    const currentTimestamp =
+      this.customTrackTimestamp !== null
+        ? this.customTrackTimestamp + currentTimeMs
+        : startTime + currentTimeMs;
+
+    // Получаем общую длительность break до текущего времени
+    const breakDuration = this.getBreakDurationUntil(currentTimestamp);
+
+    // Рассчитываем длину break в пикселях
+    const breakLengthPx = breakDuration / (totalTimeRange / totalRangeWidth);
+
+    // Найдем ближайший корректный timestamp на таймлайне (игнорируем breaks)
+    const validTimestamp = this.getNearestTimestamp(currentTimestamp);
+
+    if (validTimestamp === undefined) {
       return;
     }
 
+    // Рассчитываем позицию трека относительно начала таймлайна
     const trackPosition =
-      ((timestamp - startTime) / totalTimeRange) * totalRangeWidth;
+      ((validTimestamp - startTime) / totalTimeRange) * totalRangeWidth +
+      breakLengthPx;
 
-    const track = document.createElement("div");
-    track.id = "track";
-    track.classList.add("video-player__timeline__track");
+    // Обновляем или создаем элемент трека
+    let track = document.getElementById("track");
+    if (!track) {
+      track = document.createElement("div");
+      track.id = "track";
+      track.classList.add("video-player__timeline__track");
+      this.timelineContainer!.appendChild(track);
+    }
+
+    // Обновляем позицию трека
     track.style.left = `${trackPosition}px`;
 
-    this.timelineContainer!.appendChild(track);
-
+    // Следим за треком (если используется IntersectionObserver)
     this.trackObserver?.observe(track);
 
-    // Обновляем экспортные маркеры, если включен режим экспорта
+    // Если включен режим экспорта, обновляем маркеры экспорта
     if (this.exportMode) {
       this.updateExportMarkers(startTime, totalTimeRange, totalRangeWidth);
     }
   }
 
-  private getNearestTimestamp(timestamp: number) {
-    const currentRange = this.findRangeByTimestamp(timestamp);
+  private getBreakDurationUntil(timestamp: number): number {
+    let totalBreakDuration = 0;
 
+    for (const range of this.ranges) {
+      // Проверяем диапазоны с типом 'break'
+      if (range.type === "break") {
+        // Если конец диапазона меньше или равен timestamp, добавляем всю длину диапазона
+        if (range.end_time <= timestamp) {
+          totalBreakDuration += range.end_time - range.start_time;
+        }
+        // Если timestamp находится внутри диапазона, добавляем только до timestamp
+        else if (range.start_time <= timestamp) {
+          totalBreakDuration += timestamp - range.start_time;
+          break; // Останавливаемся, так как текущий range перекрывает timestamp
+        }
+      }
+
+      // Прерываем цикл, если диапазон начинается после переданного timestamp
+      if (range.start_time > timestamp) {
+        break;
+      }
+    }
+
+    return totalBreakDuration;
+  }
+
+  private getNearestTimestamp(timestamp: number): number | undefined {
+    let currentRange = this.findRangeByTimestamp(timestamp);
+
+    // Если текущий диапазон — "data", просто возвращаем сам timestamp
     if (currentRange && currentRange.type === "data") {
       return timestamp;
     }
 
-    return this.findNearestDataRange(timestamp)?.start_time;
+    // Если текущий диапазон — "break", находим следующий диапазон с типом "data"
+    const nextDataRange = this.findNextDataRange(timestamp);
+    if (nextDataRange) {
+      // Возвращаем начало следующего диапазона "data"
+      return nextDataRange.start_time;
+    }
+
+    return undefined; // Если нет доступных диапазонов с типом "data"
+  }
+
+  private findNextDataRange(timestamp: number): RangeData | null {
+    // Ищем следующий диапазон с типом "data" после указанного времени
+    for (const range of this.ranges) {
+      if (range.start_time > timestamp && range.type === "data") {
+        return range;
+      }
+    }
+    return null; // Если не найден диапазон
   }
 
   // Включение режима экспорта
@@ -421,28 +487,10 @@ export class TimelineOverflowDrawer {
     return null; // Если не найден диапазон
   }
 
-  private findNearestDataRange(timestamp: number): RangeData | null {
-    // Находим ближайший диапазон с типом "data"
-    let nearestRange: RangeData | null = null;
-    let minDistance = Infinity;
-
-    for (const range of this.ranges) {
-      if (range.type === "data") {
-        const distance = Math.abs(timestamp - range.start_time);
-        if (distance < minDistance) {
-          minDistance = distance;
-          nearestRange = range;
-        }
-      }
-    }
-
-    return nearestRange;
-  }
-
   setOptions(ranges: RangeData[]): void {
     this.ranges = ranges;
     this.currentStartTime = this.ranges[0]?.start_time || 0;
-    this.isReady = true; // Устанавливаем флаг готовности к отрисовке
+    this.isReady = true;
 
     const totalTimeRange =
       ranges[ranges.length - 1].end_time - ranges[0].start_time;
@@ -500,22 +548,30 @@ export class TimelineOverflowDrawer {
     return stepInfo?.step ?? divisionSteps[divisionSteps.length - 1].step;
   }
 
-  // Клик по таймлайну для обновления трека и установки экспортных маркеров
   private clickEventListener(event: MouseEvent): void {
     event.preventDefault();
 
+    // Получаем размеры контейнера
     const containerRect = this.container.getBoundingClientRect();
-    const scrollLeft = this.scrollContainer?.scrollLeft || 0;
-    const clickX = event.clientX - containerRect.left + scrollLeft;
 
+    // Позиция клика относительно контейнера
+    const clickX = event.clientX - containerRect.left;
+
+    // Получаем текущую ширину видимого контейнера и всю ширину таймлайна
+    const scrollLeft = this.scrollContainer?.scrollLeft || 0;
+    const totalTimelineWidth = this.timelineContainer?.offsetWidth || 0;
+
+    // Рассчитываем позицию клика с учётом прокрутки и масштаба
+    const totalClickPosition = (clickX + scrollLeft) / totalTimelineWidth;
+
+    // Время на таймлайне, соответствующее позиции клика
     const startTime = this.ranges[0]?.start_time || 0;
     const endTime = this.ranges[this.ranges.length - 1]?.end_time || 0;
     const totalTimeRange = endTime - startTime;
-    const totalRangeWidth = totalTimeRange * this.scale;
 
-    const clickedTimestamp =
-      startTime + (clickX / totalRangeWidth) * totalTimeRange;
+    const clickedTimestamp = startTime + totalClickPosition * totalTimeRange;
 
+    // Находим ближайшую временную метку
     const timestamp = this.getNearestTimestamp(clickedTimestamp);
     if (timestamp === undefined) {
       return;
@@ -526,14 +582,13 @@ export class TimelineOverflowDrawer {
       return;
     }
 
-    // Если включен режим экспорта, обрабатываем клик как установку маркеров
+    // Обработка режима экспорта
     if (this.exportMode) {
       if (this.exportStartTime === null) {
         this.exportStartTime = timestamp;
       } else if (this.exportEndTime === null) {
         this.exportEndTime = timestamp;
 
-        // Если начало и конец перепутаны, меняем их местами
         if (this.exportStartTime > this.exportEndTime) {
           [this.exportStartTime, this.exportEndTime] = [
             this.exportEndTime,
@@ -541,26 +596,24 @@ export class TimelineOverflowDrawer {
           ];
         }
 
-        // Вызываем callback для экспорта диапазона
         this.exportCallback?.({
           start_time: this.exportStartTime,
           end_time: this.exportEndTime,
           duration: this.exportEndTime - this.exportStartTime,
         });
       } else {
-        // Перезапуск диапазона
         this.exportStartTime = timestamp;
         this.exportEndTime = null;
       }
 
-      // Обновляем маркеры
-      this.updateExportMarkers(startTime, totalTimeRange, totalRangeWidth);
+      this.updateExportMarkers(
+        startTime,
+        totalTimeRange,
+        this.timelineContainer!.offsetWidth
+      );
     } else {
       // Пользовательское время для трека
       this.customTrackTimestamp = timestamp;
-      // Визуально перемещаем трек
-      // this.draw(this.customTrackTimestamp);
-      // Вызываем коллбэк с новым значением времени (если нужно)
       this.clickCallback?.(clickedTimestamp, clickedRange);
     }
   }
