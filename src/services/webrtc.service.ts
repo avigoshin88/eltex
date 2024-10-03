@@ -100,7 +100,7 @@ export class WebRTCService {
 
     const peerConnection = this.peerConnection;
 
-    this.prepareTransceivers();
+    await this.prepareTransceivers();
 
     const { app, stream } = this.options;
 
@@ -270,8 +270,7 @@ export class WebRTCService {
 
     this._tracks.push(event.track);
 
-    // TODO: проверить в p2p
-    if (this.peerConnection.getReceivers().length === this._tracks.length) {
+    if (this.peerConnection.getReceivers().length && this._tracks.length) {
       this.setSource(new MediaStream(this._tracks));
     } else if (event.streams?.length > 0) {
       this.setSource(event.streams[0]);

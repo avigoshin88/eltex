@@ -38,6 +38,7 @@ export class MicrophoneService {
         // Если трансивер еще не существует, создаем его
         this.audioTransceiver = peerConnection.addTransceiver(audioTrack, {
           direction: "sendrecv",
+          sendEncodings: [],
         });
       }
 
@@ -52,6 +53,7 @@ export class MicrophoneService {
         // Если трансивер еще не создан, создаем его для приема
         this.audioTransceiver = peerConnection.addTransceiver("audio", {
           direction: "recvonly",
+          sendEncodings: [],
         });
       }
 
@@ -155,6 +157,7 @@ export class MicrophoneService {
     if (!this.audioTransceiver) {
       this.audioTransceiver = peerConnection.addTransceiver("audio", {
         direction: "recvonly",
+        sendEncodings: [],
       });
     } else {
       this.audioTransceiver.direction = "recvonly";
