@@ -2,7 +2,6 @@ import { ATTRIBUTE } from "./constants/attributes";
 import { CONFIG_KEY } from "./constants/configKeys";
 import { API } from "./services/api.service";
 import { Env } from "./services/env.service";
-import { VideoPlayerBuilderService } from "./services/player/player-builder.service";
 import { VideoPlayerService } from "./services/player/player.service";
 
 import "./style.css";
@@ -16,7 +15,6 @@ class VideoPlayerElement extends HTMLElement {
   container!: HTMLDivElement;
 
   player = new VideoPlayerService();
-  builder = new VideoPlayerBuilderService();
 
   modeService!: PlayerModeService;
 
@@ -90,11 +88,9 @@ class VideoPlayerElement extends HTMLElement {
       this.removeChild(this.container);
     }
 
-    const { container, videoContainer, video } = this.builder.createPlayer();
+    const { container } = this.player.init();
 
     this.container = container;
-
-    this.player.init(this.container, videoContainer, video);
 
     this.appendChild(this.container);
 

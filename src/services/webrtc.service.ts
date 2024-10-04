@@ -221,16 +221,11 @@ export class WebRTCService {
 
       outerThis.logger.log("TURN: Подготавливаем SDP offer");
       let offer = await peerConnection.createOffer();
-      outerThis.logger.log(
-        "TURN: SDP offer подготовлен: ",
-        // offer,
-        !!outerThis.options.constrains,
-        !!offer.sdp
-      );
+      outerThis.logger.log("TURN: SDP offer подготовлен: ", offer);
 
       if (outerThis.options.constrains && offer.sdp) {
         outerThis.logger.log(
-          "TURN: Устанавливаем ограничения битрейда равное ",
+          "TURN: Устанавливаем ограничения битрейта равное ",
           outerThis.options.constrains.maxBitrate
         );
 
@@ -321,6 +316,8 @@ export class WebRTCService {
   }
 
   private modifySDP(sdp: string, maxBitrate: number): string {
+    if (maxBitrate === 0) return sdp;
+
     const lines = sdp.split("\n");
 
     let videoPayloadTypes: string[] = [];

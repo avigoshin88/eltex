@@ -158,7 +158,7 @@ export class PlayerModeService {
           options: (Object.keys(quality) as Array<keyof typeof quality>).map(
             (item) => ({
               label: quality[item].name,
-              value: quality[item].bitrate.toString(),
+              value: item,
             })
           ),
         },
