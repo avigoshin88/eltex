@@ -172,11 +172,13 @@ export class TimelineOverflowDrawer {
     const breakLengthPx = breakDuration / (totalTimeRange / totalRangeWidth);
 
     // Получаем ближайший корректный timestamp (игнорируя breaks)
-    const validTimestamp = this.getNearestTimestamp(currentTimestamp);
+    const nearestTimestamp = this.getNearestTimestamp(currentTimestamp);
 
-    if (validTimestamp === undefined) {
+    if (nearestTimestamp === undefined) {
       return;
     }
+
+    const [validTimestamp] = nearestTimestamp;
 
     // Рассчитываем смещение трека с учетом breaks
     const trackPosition =
@@ -204,19 +206,21 @@ export class TimelineOverflowDrawer {
     }
   }
 
-  private getNearestTimestamp(timestamp: number): number | undefined {
+  private getNearestTimestamp(
+    timestamp: number
+  ): [nearestTimestamp: number, range: RangeData] | undefined {
     let currentRange = this.findRangeByTimestamp(timestamp);
 
     // Если текущий диапазон — "data", просто возвращаем сам timestamp
     if (currentRange && currentRange.type === "data") {
-      return timestamp;
+      return [timestamp, currentRange];
     }
 
     // Если текущий диапазон — "break", находим следующий диапазон с типом "data"
     const nextDataRange = this.findNextDataRange(timestamp);
     if (nextDataRange) {
       // Возвращаем начало следующего диапазона "data"
-      return nextDataRange.start_time;
+      return [nextDataRange.start_time, nextDataRange];
     }
 
     return undefined; // Если нет доступных диапазонов с типом "data"
@@ -579,15 +583,12 @@ export class TimelineOverflowDrawer {
     const clickedTimestamp = startTime + totalClickPosition * totalTimeRange;
 
     // Находим ближайшую временную метку
-    const timestamp = this.getNearestTimestamp(clickedTimestamp);
-    if (timestamp === undefined) {
+    const nearestTimestamp = this.getNearestTimestamp(clickedTimestamp);
+    if (nearestTimestamp === undefined) {
       return;
     }
 
-    const clickedRange = this.findRangeByTimestamp(timestamp);
-    if (!clickedRange) {
-      return;
-    }
+    const [timestamp, clickedRange] = nearestTimestamp;
 
     // Обработка режима экспорта
     if (this.exportMode) {
@@ -621,7 +622,7 @@ export class TimelineOverflowDrawer {
     } else {
       // Пользовательское время для трека
       this.customTrackTimestamp = timestamp;
-      this.clickCallback?.(clickedTimestamp, clickedRange);
+      this.clickCallback?.(timestamp, clickedRange);
     }
   }
 

@@ -14,12 +14,13 @@ export class RangeMapperService {
       const currRange = ranges[i];
 
       // Вычисляем длительность интервала
-      const intervalDuration = currRange.start_time - (prevRange.end_time || 0);
+      const intervalDuration =
+        currRange.start_time - (prevRange.end_time || 0) + 1;
 
       // Если интервал не нулевой, добавляем break
       if (intervalDuration > 0) {
         result.push({
-          start_time: prevRange.end_time || 0,
+          start_time: prevRange.end_time ? prevRange.end_time + 1 : 0,
           end_time: (prevRange.end_time || 0) + intervalDuration,
           duration: intervalDuration,
           type: "break",
