@@ -5,8 +5,8 @@ export interface ModeService {
   reset(): Promise<void>;
   setSource(stream: MediaStream): void;
 
-  play?(): Promise<void>;
-  stop?(): Promise<void>;
+  play?(): void;
+  stop?(): void;
 
   export?(): void;
   cancelExport?(): void;

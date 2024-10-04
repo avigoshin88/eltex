@@ -37,7 +37,7 @@ export const requestSDPOfferExchangeP2P = async (
   offer: string
 ): Promise<never> => {
   return await API.post(
-    `index/api/webrtc?app=${app}&stream=${stream}&type=play_analytic`,
+    `index/api/webrtc?app=${app}&stream=${stream}&type=p2p_play`,
     offer
   );
 };
