@@ -7,13 +7,15 @@ const connectionSupportInterval = Number(
   import.meta.env.VITE_ARCHIVE_CONNECT_SUPPORT_INTERVAL
 );
 
-const preloadRangeFragmentTimeout = 2000;
+const preloadRangeFragmentTimeout = Number(
+  import.meta.env.VITE_PRELOAD_RANGE_FRAGMENT_TIMEOUT
+);
 
 const preloadInterval = Number(import.meta.env.VITE_ARCHIVE_PRELOAD_INTERVAL);
 
 if (isNaN(connectionSupportInterval)) {
   throw new Error(
-    `VITE_ARCHIVE_CONNECT_SUPPORT_INTERVAL must be a number. Currently is ${
+    `VITE_ARCHIVE_CONNECT_SUPPORT_INTERVAL должно быть числом. Текущее значение: ${
       import.meta.env.VITE_ARCHIVE_CONNECT_SUPPORT_INTERVAL
     } `
   );
@@ -21,13 +23,21 @@ if (isNaN(connectionSupportInterval)) {
 
 if (isNaN(preloadInterval)) {
   throw new Error(
-    `VITE_ARCHIVE_PRELOAD_INTERVAL must be a number. Currently is ${
+    `VITE_ARCHIVE_PRELOAD_INTERVAL должно быть числом. Текущее значение: ${
       import.meta.env.VITE_ARCHIVE_PRELOAD_INTERVAL
     } `
   );
 }
 
-type Emitter = (fragment: RangeDto, isPreRequestRange?: boolean) => void;
+if (isNaN(preloadRangeFragmentTimeout)) {
+  throw new Error(
+    `VITE_PRELOAD_RANGE_FRAGMENT_TIMEOUT должно быть числом. Текущее значение: ${
+      import.meta.env.VITE_PRELOAD_RANGE_FRAGMENT_TIMEOUT
+    } `
+  );
+}
+
+type Emitter = (fragment: RangeDto, isPreload: boolean) => void;
 
 type RangeFragment = RangeDto & {
   fragmentIndex: number;
@@ -39,23 +49,20 @@ export class ArchiveControlService {
   private readonly logger = new Logger(ArchiveControlService.name);
 
   private ranges: RangeDto[] = [];
-
   private fragmentIndex = 0;
-
   private rangeFragmentsGenerator!: Generator<RangeFragment>;
-
   private connectionSupporterId: Nullable<number> = null;
-
-  private preloadRangeFragmentsId: Nullable<number> = null;
-
-  private nextFragmentTimeoutId: Nullable<number> = null;
-
+  private preloadTimeoutId: Nullable<number> = null;
   private emit!: Emitter;
   private supportConnect: () => void;
+  private currentTimestamp: number = 0;
+
+  private isFirstPreloadDone = false; // Флаг для отслеживания первой дозагрузки
 
   constructor(emit: Emitter, supportConnect: () => void) {
     this.emit = emit;
     this.supportConnect = supportConnect;
+    this.logger.log("Сервис ArchiveControlService инициализирован.");
   }
 
   get currentFragment() {
@@ -66,7 +73,6 @@ export class ArchiveControlService {
     if (this.fragmentIndex >= this.ranges.length - 1) {
       return null;
     }
-
     return this.ranges[this.fragmentIndex + 1];
   }
 
@@ -74,44 +80,32 @@ export class ArchiveControlService {
     if (this.fragmentIndex === 0) {
       return null;
     }
-
     return this.ranges[this.fragmentIndex - 1];
   }
 
   setRanges(ranges: RangeDto[]) {
     this.ranges = ranges;
-
-    this.rangeFragmentsGenerator = this.splitRangeIntoFragmentsLazy();
-  }
-
-  setCurrentRange(range: RangeDto) {
-    this.fragmentIndex = this.findRangeIndex(range.start_time, range.end_time);
-
-    this.initGenerator();
-
-    this.preloadRangeFragment(true);
-
-    this.initPreloadFragmentsInterval();
-    this.clearPreloadFragmentsInterval();
+    this.logger.log("Установлены ranges:", ranges);
   }
 
   init() {
-    this.preloadRangeFragment(true);
-
+    this.initGenerator(this.currentFragment.start_time);
+    this.logger.log("Инициализация воспроизведения с начального фрагмента.");
+    this.preloadRangeFragment(); // Отправляем первый фрагмент
     this.initSupportConnectInterval();
-    this.initPreloadFragmentsInterval();
+    this.scheduleNextPreload(); // Начинаем дозагрузку
   }
 
   clear() {
+    this.logger.log("Очистка состояния ArchiveControlService.");
     this.fragmentIndex = 0;
-
     this.ranges = [];
-
+    this.isFirstPreloadDone = false; // Сбрасываем флаг при очистке
     this.clearSupportConnectInterval();
-    this.clearPreloadFragmentsInterval();
+    this.clearPreloadTimeout();
   }
 
-  toNextFragment(isStart = false) {
+  toNextFragment() {
     if (!this.nextFragment) {
       this.logger.warn(
         "Нельзя переключиться к следующему фрагменту: текущий фрагмент последний."
@@ -119,22 +113,20 @@ export class ArchiveControlService {
       return;
     }
 
-    this.fragmentIndex = this.fragmentIndex + 1;
+    this.fragmentIndex += 1;
+    this.currentTimestamp = this.currentFragment.start_time;
+    this.logger.log(
+      "Переключение на следующий фрагмент с индексом",
+      this.fragmentIndex
+    );
 
     EventBus.emit("new-archive-fragment-started", this.currentFragment);
-
-    if (isStart) {
-      this.initGenerator();
-    }
-
-    this.clearNextFragmentPreload();
-
-    this.preloadRangeFragment(isStart);
-    this.clearPreloadFragmentsInterval();
-    this.initPreloadFragmentsInterval();
+    this.clearPreloadTimeout();
+    this.preloadRangeFragment(); // Переход на новый range
+    this.scheduleNextPreload(); // Начинаем дозагрузку
   }
 
-  toPrevFragment(isStart = false) {
+  toPrevFragment() {
     if (!this.prevFragment) {
       this.logger.warn(
         "Нельзя переключиться к предыдущему фрагменту: текущий фрагмент первый."
@@ -142,125 +134,152 @@ export class ArchiveControlService {
       return;
     }
 
-    this.fragmentIndex = this.fragmentIndex - 1;
+    this.fragmentIndex -= 1;
+    this.currentTimestamp = this.currentFragment.start_time;
+    this.logger.log(
+      "Переключение на предыдущий фрагмент с индексом",
+      this.fragmentIndex
+    );
 
     EventBus.emit("new-archive-fragment-started", this.currentFragment);
+    this.clearPreloadTimeout();
+    this.preloadRangeFragment(); // Переход на новый range
+    this.scheduleNextPreload(); // Начинаем дозагрузку
+  }
 
-    if (isStart) {
-      this.initGenerator();
+  setCurrentRange(timestamp: number, range: RangeDto) {
+    const rangeIndex = this.findRangeIndex(range.start_time, range.end_time);
+    if (rangeIndex === -1) {
+      this.logger.error("Указанный range не найден в списке ranges.");
+      return;
     }
 
-    this.clearNextFragmentPreload();
+    this.fragmentIndex = rangeIndex;
+    this.currentTimestamp = timestamp;
+    this.logger.log(
+      "Установлен текущий range с индексом",
+      this.fragmentIndex,
+      "и временем",
+      this.currentTimestamp
+    );
 
-    this.preloadRangeFragment(isStart);
-    this.clearPreloadFragmentsInterval();
-    this.initPreloadFragmentsInterval();
+    // EventBus.emit("new-archive-fragment-started", this.currentFragment);
+    this.clearPreloadTimeout();
+    this.preloadRangeFragment(); // Переход на новый range
+    this.scheduleNextPreload(); // Начинаем дозагрузку
   }
 
-  private initGenerator() {
-    this.rangeFragmentsGenerator = this.splitRangeIntoFragmentsLazy();
+  private initGenerator(startTimestamp: number) {
+    this.rangeFragmentsGenerator =
+      this.splitRangeIntoFragmentsLazy(startTimestamp);
   }
 
-  private *splitRangeIntoFragmentsLazy(): Generator<RangeFragment> {
+  private *splitRangeIntoFragmentsLazy(
+    startTimestamp: number
+  ): Generator<RangeFragment> {
     for (
       let rangeIndex = this.fragmentIndex;
       rangeIndex < this.ranges.length;
       rangeIndex++
     ) {
       const range = this.ranges[rangeIndex];
-      const totalRangeFragments = Math.ceil(range.duration / preloadInterval);
       let rangeFragmentStart = range.start_time;
+      if (
+        rangeIndex === this.fragmentIndex &&
+        startTimestamp > range.start_time
+      ) {
+        rangeFragmentStart = startTimestamp;
+      }
 
-      for (let i = 0; i < totalRangeFragments; i++) {
+      while (rangeFragmentStart < range.end_time) {
         const rangeFragmentEnd = Math.min(
           rangeFragmentStart + preloadInterval,
           range.end_time
         );
         const fragmentDuration = rangeFragmentEnd - rangeFragmentStart;
 
+        const subFragmentIndex = Math.floor(
+          (rangeFragmentStart - range.start_time) / preloadInterval
+        );
+
         yield {
           start_time: rangeFragmentStart,
           end_time: rangeFragmentEnd,
           duration: fragmentDuration,
           fragmentIndex: rangeIndex,
-          subFragmentIndex: i,
-          isLastFragment: i === totalRangeFragments - 1,
+          subFragmentIndex: subFragmentIndex,
+          isLastFragment: rangeFragmentEnd >= range.end_time,
         };
 
-        rangeFragmentStart += preloadInterval;
+        rangeFragmentStart = rangeFragmentEnd;
       }
     }
   }
 
-  private preloadRangeFragment(isFirst: boolean = false) {
+  private preloadRangeFragment() {
+    // Первый фрагмент отправляется без продвижения генератора
     const rangeFragmentResult = this.rangeFragmentsGenerator.next();
-
     if (rangeFragmentResult.done) {
-      // конец, переключаем в live
+      this.logger.log("Все фрагменты загружены.");
       return;
     }
 
     const rangeFragment = rangeFragmentResult.value;
+    this.emit(rangeFragment, false); // Первый фрагмент
+    this.isFirstPreloadDone = true; // Флаг того, что первый фрагмент отправлен
+  }
 
-    this.emit(rangeFragment, !isFirst);
-    if (rangeFragment.isLastFragment) {
-      this.clearNextFragmentPreload();
+  private scheduleNextPreload() {
+    // Если первый фрагмент уже отправлен, начинаем с дозагрузки второго
+    if (this.isFirstPreloadDone) {
+      const rangeFragmentResult = this.rangeFragmentsGenerator.next();
+      if (rangeFragmentResult.done) {
+        this.logger.log("Все фрагменты загружены.");
+        return;
+      }
 
-      const nextFragmentTimeout = Math.max(
+      const rangeFragment = rangeFragmentResult.value;
+      const fragmentDuration = rangeFragment.duration;
+      const nextPreloadDelay = Math.max(
         0,
-        rangeFragment.duration - preloadRangeFragmentTimeout
+        fragmentDuration - preloadRangeFragmentTimeout
       );
-      this.clearPreloadFragmentsInterval();
 
-      this.nextFragmentTimeoutId = setTimeout(() => {
-        this.toNextFragment();
-      }, nextFragmentTimeout);
+      this.logger.log(
+        "Планируем дозагрузку фрагмента через",
+        nextPreloadDelay,
+        "мс."
+      );
+
+      this.preloadTimeoutId = setTimeout(() => {
+        this.logger.log("Выполняем дозагрузку фрагмента.");
+        this.emit(rangeFragment, true); // Дозагрузка фрагмента
+        this.scheduleNextPreload();
+      }, nextPreloadDelay);
     }
   }
 
-  private initPreloadFragmentsInterval() {
-    this.initGenerator();
-
-    // console.time();
-    this.preloadRangeFragmentsId = setInterval(() => {
-      // console.timeLog();
-      this.preloadRangeFragment();
-    }, preloadInterval - preloadRangeFragmentTimeout);
-  }
-
-  private clearNextFragmentPreload() {
-    if (this.nextFragmentTimeoutId === null) {
-      return;
+  private clearPreloadTimeout() {
+    if (this.preloadTimeoutId !== null) {
+      clearTimeout(this.preloadTimeoutId);
+      this.logger.log("Очищен таймаут дозагрузки.");
+      this.preloadTimeoutId = null;
     }
-
-    clearTimeout(this.nextFragmentTimeoutId);
-    this.nextFragmentTimeoutId = null;
-  }
-
-  private clearPreloadFragmentsInterval() {
-    if (this.preloadRangeFragmentsId === null) {
-      return;
-    }
-
-    clearInterval(this.preloadRangeFragmentsId);
-
-    // console.timeEnd();
-    this.preloadRangeFragmentsId = null;
   }
 
   private initSupportConnectInterval() {
+    this.logger.log("Запуск интервала поддержки подключения.");
     this.connectionSupporterId = setInterval(() => {
       this.supportConnect();
     }, connectionSupportInterval);
   }
 
   private clearSupportConnectInterval() {
-    if (this.connectionSupporterId === null) {
-      return;
+    if (this.connectionSupporterId !== null) {
+      clearInterval(this.connectionSupporterId);
+      this.logger.log("Очищен интервал поддержки подключения.");
+      this.connectionSupporterId = null;
     }
-
-    clearInterval(this.connectionSupporterId);
-    this.connectionSupporterId = null;
   }
 
   private findRangeIndex(
@@ -269,16 +288,16 @@ export class ArchiveControlService {
   ): number {
     for (let i = 0; i < this.ranges.length; i++) {
       const range = this.ranges[i];
-
-      // Проверяем пересечение кастомного диапазона с текущим
       if (
         customStartTime >= range.start_time &&
         customEndTime <= range.end_time
       ) {
-        return i; // Возвращаем индекс найденного диапазона
+        this.logger.log("Найден range с индексом", i, "для заданного времени.");
+        return i;
       }
     }
 
-    return -1; // Если не найдено пересечение
+    this.logger.warn("Range для заданного времени не найден.");
+    return -1;
   }
 }

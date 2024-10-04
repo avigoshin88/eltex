@@ -36,6 +36,8 @@ export class ArchiveVideoService implements ModeService {
 
   private isLoaded = false;
 
+  private virtualTimeOffset: number = 0;
+
   constructor(
     options: ConnectionOptions,
     player: VideoPlayerService,
@@ -106,6 +108,8 @@ export class ArchiveVideoService implements ModeService {
   }
 
   async reset(): Promise<void> {
+    this.virtualTimeOffset = 0;
+
     this.archiveControl.clear();
     this.webRTCClient.reset();
     this.timelineDrawer.disableExportMode();
@@ -120,6 +124,10 @@ export class ArchiveVideoService implements ModeService {
 
   cancelExport(): void {
     this.timelineDrawer.disableExportMode();
+  }
+
+  public getVirtualCurrentTime(currentVideoTime: number): number {
+    return currentVideoTime - this.virtualTimeOffset;
   }
 
   private onNewArchiveFragmentStarted(range: RangeDto) {
@@ -172,10 +180,9 @@ export class ArchiveVideoService implements ModeService {
       return;
     }
 
-    const currentTime = event.timeStamp;
-    console.log("🚀 ~ ArchiveVideoService ~ currentTime:", currentTime);
+    const currentTime = (event.target as HTMLVideoElement).currentTime;
 
-    this.timelineDrawer.draw(currentTime);
+    this.timelineDrawer.draw(this.getVirtualCurrentTime(currentTime));
   };
 
   private supportConnect() {
@@ -200,20 +207,19 @@ export class ArchiveVideoService implements ModeService {
 
     this.datachannelClient.send(DatachannelMessageType.DROP_BUFFER);
 
-    this.logger.log("============== NEW FRAGMENT STARTED ==============");
-    this.logger.log(DatachannelMessageType.DROP_BUFFER);
+    this.logger.log("============== Начался новый фрагмент ==============");
+    this.logger.log(DatachannelMessageType.DROP_BUFFER, fragment);
   }
 
   private onChangeCurrentTime(
     ...[timestamp, range]: Parameters<TimelineClickCallback>
   ) {
-    const customRange: RangeDto = {
-      ...range,
-      start_time: timestamp,
-      duration: range.end_time - timestamp,
-    };
+    this.logger.log("Изменение текущего времени", timestamp, range);
 
-    this.archiveControl.setCurrentRange(customRange);
+    this.player.pause();
+    this.archiveControl.setCurrentRange(timestamp, range);
+
+    this.virtualTimeOffset = this.player.video.currentTime;
   }
 
   private onDropComplete() {
@@ -222,7 +228,9 @@ export class ArchiveVideoService implements ModeService {
       return;
     }
 
-    this.logger.log(DatachannelMessageType.GET_KEY);
+    this.logger.log(DatachannelMessageType.GET_KEY, {
+      start_time: this.nextProcessedRange.start_time,
+    });
 
     this.datachannelClient.send(DatachannelMessageType.GET_KEY, {
       start_time: this.nextProcessedRange.start_time,
@@ -255,11 +263,9 @@ export class ArchiveVideoService implements ModeService {
 
         this.nextProcessedRange = null;
       }
-
-      return;
+    } else {
+      this.play();
     }
-
-    this.play();
   }
 
   private onStreamPlay() {
@@ -267,11 +273,12 @@ export class ArchiveVideoService implements ModeService {
       this.logger.log("Фрагмент стрима начался: ", this.nextProcessedRange);
     }
 
+    this.player.play();
     this.nextProcessedRange = null;
   }
 
   play() {
-    this.logger.log(DatachannelMessageType.PLAY);
+    this.logger.log("==========", DatachannelMessageType.PLAY, "==========");
     this.datachannelClient.send(DatachannelMessageType.PLAY_STREAM);
   }
 
