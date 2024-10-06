@@ -91,6 +91,7 @@ export class ArchiveVideoService implements ModeService {
 
     this.webRTCClient.startTURN("archive").catch((turnError: Error) => {
       this.logger.error(
+        "info",
         "Не удается установить соединение через TURN, причина:",
         turnError.message
       );
@@ -221,7 +222,11 @@ export class ArchiveVideoService implements ModeService {
     if (this.isPreRequestRange) {
       this.isPreRequestRange = false;
 
-      this.logger.log("Фрагмент стрима начался: ", this.nextProcessedRange);
+      this.logger.log(
+        "info",
+        "Фрагмент стрима начался: ",
+        this.nextProcessedRange
+      );
       this.nextProcessedRange = null;
 
       return;
@@ -232,7 +237,11 @@ export class ArchiveVideoService implements ModeService {
 
   private onStreamPlay() {
     if (this.nextProcessedRange) {
-      this.logger.log("Фрагмент стрима начался: ", this.nextProcessedRange);
+      this.logger.log(
+        "info",
+        "Фрагмент стрима начался: ",
+        this.nextProcessedRange
+      );
     }
 
     this.nextProcessedRange = null;

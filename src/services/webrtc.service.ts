@@ -71,27 +71,30 @@ export class WebRTCService {
 
     if (!peerConnection) return;
 
-    this.logger.log("prepareTransceivers: Подготавливаем трансиверы");
+    this.logger.log("info", "prepareTransceivers: Подготавливаем трансиверы");
 
-    this.logger.log("prepareTransceivers: Подготавливаем данные о трансиверах");
+    this.logger.log(
+      "info",
+      "prepareTransceivers: Подготавливаем данные о трансиверах"
+    );
 
     const VideoTransceiverInit: RTCRtpTransceiverInit = {
       direction: "recvonly",
       sendEncodings: [],
     };
 
-    this.logger.log("prepareTransceivers: Добавляем трансиверы");
+    this.logger.log("info", "prepareTransceivers: Добавляем трансиверы");
 
     this.currentType === "archive"
       ? await this.microphoneService?.receiveOnlyAudio(peerConnection)
       : await this.microphoneService?.enableMicrophone(peerConnection);
     peerConnection.addTransceiver("video", VideoTransceiverInit);
 
-    this.logger.log("prepareTransceivers: Трансиверы добавлены");
+    this.logger.log("info", "prepareTransceivers: Трансиверы добавлены");
   }
 
   public async startP2P() {
-    this.logger.log("P2P: Начало соединения через P2P");
+    this.logger.log("info", "P2P: Начало соединения через P2P");
 
     this.currentType = "play_analytic";
 
@@ -104,7 +107,7 @@ export class WebRTCService {
 
     const { app, stream } = this.options;
 
-    this.logger.log("P2P: Запрашиваем SDP offer");
+    this.logger.log("info", "P2P: Запрашиваем SDP offer");
 
     const getSDPOfferResponse = await getSDPOffer(app, stream);
 
@@ -116,30 +119,34 @@ export class WebRTCService {
       );
     }
 
-    this.logger.log("P2P: Ответ на запрос SDP offer:", getSDPOfferResponse);
+    this.logger.log(
+      "info",
+      "P2P: Ответ на запрос SDP offer:",
+      getSDPOfferResponse
+    );
 
     const offer: RTCSessionDescriptionInit = {
       sdp: getSDPOfferResponse.sdp,
       type: "offer",
     };
 
-    this.logger.log("P2P: setRemoteDescription");
+    this.logger.log("info", "P2P: setRemoteDescription");
     await peerConnection.setRemoteDescription(offer);
 
-    this.logger.log("P2P: Подготавливаем ответ на SDP offer");
+    this.logger.log("info", "P2P: Подготавливаем ответ на SDP offer");
     const answer = await peerConnection.createAnswer();
 
     if (!answer.sdp) throw Error("P2P: Не удается подготовить SDP offer");
 
-    this.logger.log("P2P: Ответ на SDP offer:", answer);
+    this.logger.log("info", "P2P: Ответ на SDP offer:", answer);
 
-    this.logger.log("P2P: Отправляем ответный SDP offer");
+    this.logger.log("info", "P2P: Отправляем ответный SDP offer");
 
     await requestSDPOfferExchangeP2P(app, stream, answer.sdp);
 
-    this.logger.log("P2P: Ответный SDP offer отправлен успешно");
+    this.logger.log("info", "P2P: Ответный SDP offer отправлен успешно");
 
-    this.logger.log("P2P: setLocalDescription");
+    this.logger.log("info", "P2P: setLocalDescription");
     await peerConnection.setLocalDescription(answer).catch((e) => {
       throw Error(
         `P2P: Не удалось установить Local Description, ошибка: ${JSON.stringify(
@@ -148,11 +155,11 @@ export class WebRTCService {
       );
     });
 
-    this.logger.log("P2P: setLocalDescription установлено");
+    this.logger.log("info", "P2P: setLocalDescription установлено");
   }
 
   public async startTURN(connectionType: TURNConnectionType) {
-    this.logger.log("TURN: Начало соединения через TURN");
+    this.logger.log("info", "TURN: Начало соединения через TURN");
 
     this.currentType = connectionType;
 
@@ -165,14 +172,14 @@ export class WebRTCService {
 
     const { app, stream } = this.options;
 
-    this.logger.log("TURN: Подготавливаем SDP offer");
+    this.logger.log("info", "TURN: Подготавливаем SDP offer");
     const offer = await peerConnection.createOffer();
-    this.logger.log("TURN: SDP offer подготовлен: ", offer);
+    this.logger.log("info", "TURN: SDP offer подготовлен: ", offer);
 
-    this.logger.log("TURN: Устанавливаем свой SDP offer");
+    this.logger.log("info", "TURN: Устанавливаем свой SDP offer");
     await peerConnection.setLocalDescription(offer);
 
-    this.logger.log("TURN: Запрашиваем обмен SDP offer");
+    this.logger.log("info", "TURN: Запрашиваем обмен SDP offer");
     const requestSDPOfferExchangeResponse = await requestSDPOfferExchangeTURN(
       app,
       stream,
@@ -191,6 +198,7 @@ export class WebRTCService {
       );
     }
     this.logger.log(
+      "info",
       "TURN: Ответ на обмен SDP offer:",
       requestSDPOfferExchangeResponse
     );
@@ -200,7 +208,7 @@ export class WebRTCService {
       sdp: requestSDPOfferExchangeResponse.sdp,
     };
 
-    this.logger.log("TURN: setRemoteDescription");
+    this.logger.log("info", "TURN: setRemoteDescription");
     peerConnection.setRemoteDescription(answer);
   }
 
@@ -217,7 +225,7 @@ export class WebRTCService {
   }
 
   public reset() {
-    this.logger.log("Начало очистки сервиса");
+    this.logger.log("info", "Начало очистки сервиса");
 
     this.peerConnection
       ?.getTransceivers()
@@ -230,7 +238,7 @@ export class WebRTCService {
     this.peerConnection = null;
     this.datachannelClient.close();
 
-    this.logger.log("Сервис очищен");
+    this.logger.log("info", "Сервис очищен");
   }
 
   private _onIceCandidate(event: RTCPeerConnectionIceEvent) {
@@ -240,6 +248,7 @@ export class WebRTCService {
 
     if (event.candidate) {
       this.logger.log(
+        "info",
         "Удаленный ICE candidate: \n " + event.candidate.candidate
       );
       this.processIceCandidateEvent(event);
@@ -247,24 +256,28 @@ export class WebRTCService {
   }
 
   private processIceCandidateEvent(e: RTCPeerConnectionIceEvent) {
-    this.logger.log("Начинаем процессинг и отправку кандидата");
+    this.logger.log("info", "Начинаем процессинг и отправку кандидата");
 
     if (!e.candidate) throw Error(`Кандидат отсутствует, event: ${e}`);
     if (!this.currentType) throw Error("Не указан текущий тип соединения");
 
-    this.logger.log("Обрабатываем кандидата");
+    this.logger.log("info", "Обрабатываем кандидата");
 
     const candidate = this.parseCandidate(e.candidate.candidate);
 
     const { app, stream } = this.options;
 
-    this.logger.log("Отправляем обработанного кандидата");
+    this.logger.log("info", "Отправляем обработанного кандидата");
 
     requestPutCandidate(app, stream, this.currentType, candidate);
   }
 
   private _onTrack(event: RTCTrackEvent) {
-    this.logger.log("Получен новый Track event, kind:", event.track.kind);
+    this.logger.log(
+      "info",
+      "Получен новый Track event, kind:",
+      event.track.kind
+    );
 
     if (!this.peerConnection) throw Error("Peer connection отсутствует");
 
@@ -276,17 +289,19 @@ export class WebRTCService {
       this.setSource(event.streams[0]);
     } else {
       this.logger.error(
+        "info",
         "onTrack: Дожидаемся пока придут все треки и их количество будет совпадать с количеством получателей"
       );
     }
   }
 
   private _onIceCandidateError(event: RTCPeerConnectionIceErrorEvent) {
-    this.logger.error("Ошибка ICE_CANDIDATE_ERROR: ", event);
+    this.logger.error("info", "Ошибка ICE_CANDIDATE_ERROR: ", event);
   }
 
   private _onConnectionStateChange(event: Event) {
     this.logger.log(
+      "info",
       "Статус подключения изменился, новый статус:",
       this.peerConnection?.connectionState,
       ", event:",

@@ -155,10 +155,14 @@ export class PlayerModeService {
   }
 
   async enable(newMode: Mode) {
-    this.logger.log("Включение режима: ", newMode);
+    this.logger.log("info", "Включение режима: ", newMode);
 
     if (this.currentMode === newMode) {
-      this.logger.warn("Попытка включить включенный режим плеера", newMode);
+      this.logger.warn(
+        "info",
+        "Попытка включить включенный режим плеера",
+        newMode
+      );
     }
 
     switch (newMode) {
