@@ -53,6 +53,7 @@ export class TimelineOverflowDrawer {
   private trackObserver: Nullable<IntersectionObserver> = null;
 
   private customTrackTimestamp: Nullable<number> = null; // Пользовательское время для трека
+  private currentTimestamp: number = 0;
 
   private exportMode: boolean = false; // Режим экспорта
   private exportStartTime: Nullable<number> = null; // Время начала выбранного диапазона
@@ -160,19 +161,19 @@ export class TimelineOverflowDrawer {
     const currentTimeMs = currentTime * 1000;
 
     // Используем customTrackTimestamp (если он установлен) + текущий прогресс видео (в миллисекундах)
-    const currentTimestamp =
+    this.currentTimestamp =
       this.customTrackTimestamp !== null
         ? this.customTrackTimestamp + currentTimeMs
         : startTime + currentTimeMs;
 
     // Рассчитываем общую длительность breaks до текущего времени (включая текущий range, если это break)
-    const breakDuration = this.getBreakDurationUntil(currentTimestamp);
+    const breakDuration = this.getBreakDurationUntil(this.currentTimestamp);
 
     // Рассчитываем длину break в пикселях
     const breakLengthPx = breakDuration / (totalTimeRange / totalRangeWidth);
 
     // Получаем ближайший корректный timestamp (игнорируя breaks)
-    const nearestTimestamp = this.getNearestTimestamp(currentTimestamp);
+    const nearestTimestamp = this.getNearestTimestamp(this.currentTimestamp);
 
     if (nearestTimestamp === undefined) {
       return;
@@ -224,6 +225,10 @@ export class TimelineOverflowDrawer {
     }
 
     return undefined; // Если нет доступных диапазонов с типом "data"
+  }
+
+  getCurrentTimestamp(): number {
+    return this.currentTimestamp;
   }
 
   private getBreakDurationUntil(timestamp: number): number {

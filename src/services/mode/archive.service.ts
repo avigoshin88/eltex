@@ -224,7 +224,7 @@ export class ArchiveVideoService implements ModeService {
 
   private onDropComplete() {
     if (!this.nextProcessedRange) {
-      this.logger.warn("onDropComplete: nextProcessedRange is empty");
+      this.logger.warn("Следующий диапазон пустой: нечего очищать");
       return;
     }
 
@@ -239,7 +239,7 @@ export class ArchiveVideoService implements ModeService {
 
   private onKeyFragmentUpload() {
     if (!this.nextProcessedRange) {
-      this.logger.warn("onKeyFragmentUpload: nextProcessedRange is empty");
+      this.logger.warn("Нечего загружать в буфер: следующий диапазон пустой");
       return;
     }
 
@@ -277,14 +277,21 @@ export class ArchiveVideoService implements ModeService {
     this.nextProcessedRange = null;
   }
 
-  play() {
-    this.logger.log("==========", DatachannelMessageType.PLAY, "==========");
-    this.datachannelClient.send(DatachannelMessageType.PLAY_STREAM);
+  play(isContinue = false) {
+    this.logger.log("Воспроизведение стрима");
+
+    if (!isContinue) {
+      this.datachannelClient.send(DatachannelMessageType.PLAY_STREAM);
+    } else {
+      this.archiveControl.resume();
+    }
   }
 
   stop() {
     this.logger.log(DatachannelMessageType.STOP_STREAM);
     this.datachannelClient.send(DatachannelMessageType.STOP_STREAM);
+
+    this.archiveControl.pause(this.timelineDrawer.getCurrentTimestamp());
   }
 
   setSource(stream: MediaStream) {

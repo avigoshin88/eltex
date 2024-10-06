@@ -58,6 +58,7 @@ export class ArchiveControlService {
   private currentTimestamp: number = 0;
 
   private isFirstPreloadDone = false; // Флаг для отслеживания первой дозагрузки
+  private isPause = false;
 
   constructor(emit: Emitter, supportConnect: () => void) {
     this.emit = emit;
@@ -100,7 +101,8 @@ export class ArchiveControlService {
     this.logger.log("Очистка состояния ArchiveControlService.");
     this.fragmentIndex = 0;
     this.ranges = [];
-    this.isFirstPreloadDone = false; // Сбрасываем флаг при очистке
+    this.isFirstPreloadDone = false;
+    this.isPause = false;
     this.clearSupportConnectInterval();
     this.clearPreloadTimeout();
   }
@@ -119,11 +121,36 @@ export class ArchiveControlService {
       "Переключение на следующий фрагмент с индексом",
       this.fragmentIndex
     );
+    this.isPause = false;
 
     EventBus.emit("new-archive-fragment-started", this.currentFragment);
     this.clearPreloadTimeout();
     this.preloadRangeFragment(); // Переход на новый range
     this.scheduleNextPreload(); // Начинаем дозагрузку
+  }
+
+  pause(currentTimestamp: number) {
+    this.logger.log("Пауза дозагрузки фрагментов.");
+
+    this.currentTimestamp = currentTimestamp;
+    this.fragmentIndex = this.findRangeIndex(
+      currentTimestamp,
+      currentTimestamp
+    );
+
+    this.isPause = true;
+
+    this.clearPreloadTimeout();
+  }
+
+  resume() {
+    this.logger.log("Возобновление дозагрузки фрагментов.");
+
+    this.isPause = false;
+
+    this.initGenerator(this.currentTimestamp);
+    this.preloadRangeFragment();
+    this.scheduleNextPreload();
   }
 
   toPrevFragment() {
@@ -140,6 +167,8 @@ export class ArchiveControlService {
       "Переключение на предыдущий фрагмент с индексом",
       this.fragmentIndex
     );
+
+    this.isPause = false;
 
     EventBus.emit("new-archive-fragment-started", this.currentFragment);
     this.clearPreloadTimeout();
@@ -163,7 +192,8 @@ export class ArchiveControlService {
       this.currentTimestamp
     );
 
-    // EventBus.emit("new-archive-fragment-started", this.currentFragment);
+    this.isPause = false;
+
     this.clearPreloadTimeout();
     this.preloadRangeFragment(); // Переход на новый range
     this.scheduleNextPreload(); // Начинаем дозагрузку
@@ -230,6 +260,10 @@ export class ArchiveControlService {
   }
 
   private scheduleNextPreload() {
+    if (this.isPause) {
+      return;
+    }
+
     // Если первый фрагмент уже отправлен, начинаем с дозагрузки второго
     if (this.isFirstPreloadDone) {
       const rangeFragmentResult = this.rangeFragmentsGenerator.next();

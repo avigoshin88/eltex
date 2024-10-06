@@ -214,7 +214,7 @@ export class PlayerModeService {
 
   private switchPlayState() {
     if (!this.player.isPlaying) {
-      this.modeConnection.play?.();
+      this.modeConnection.play?.(true);
       this.player.play();
     } else {
       this.modeConnection.stop?.();
@@ -241,11 +241,11 @@ export class PlayerModeService {
   }
 
   private toNextFragment() {
-    this.archiveControl?.toNextFragment(true);
+    this.archiveControl?.toNextFragment();
   }
 
   private toPrevFragment() {
-    this.archiveControl?.toPrevFragment(true);
+    this.archiveControl?.toPrevFragment();
   }
 
   private snap() {
