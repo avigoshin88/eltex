@@ -116,10 +116,8 @@ export class TimelineOverflowDrawer {
 
     // Если ширина всех диапазонов больше ширины контейнера, включаем скролл
     if (totalRangeWidth > containerWidth) {
-      // this.container.style.overflowX = "auto"; // Включаем скролл
       this.timelineContainer.style.width = `${totalRangeWidth}px`; // Задаем большую ширину таймлайна
     } else {
-      // this.container.style.overflowX = "hidden"; // Отключаем скролл
       this.timelineContainer.style.width = `${containerWidth}px`; // Устанавливаем стандартную ширину
     }
 
