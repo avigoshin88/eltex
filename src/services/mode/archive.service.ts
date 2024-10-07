@@ -14,9 +14,10 @@ import { TimelineClickCallback } from "../../types/timeline";
 import { Nullable } from "../../types/global";
 import { ExportURLDto } from "../../dto/export";
 import { FileDownloader } from "../file-downloader.service";
+import { EventBus } from "../event-bus.service";
 
 export class ArchiveVideoService implements ModeService {
-  private logger = new Logger(ArchiveVideoService.name);
+  private logger = new Logger("ArchiveVideoService");
 
   private readonly webRTCClient!: WebRTCService;
   private readonly datachannelClient: DatachannelClientService;
@@ -34,6 +35,8 @@ export class ArchiveVideoService implements ModeService {
   private isPreRequestRange = false;
 
   private isLoaded = false;
+
+  private virtualTimeOffset: number = 0;
 
   constructor(
     options: ConnectionOptions,
@@ -63,6 +66,11 @@ export class ArchiveVideoService implements ModeService {
       this.onChangeCurrentTime.bind(this)
     );
     this.metaDrawer = new MetaOverflowDrawerService(this.player.videoContainer);
+
+    EventBus.on(
+      "new-archive-fragment-started",
+      this.onNewArchiveFragmentStarted.bind(this)
+    );
 
     setControl(this.archiveControl);
   }
@@ -100,6 +108,8 @@ export class ArchiveVideoService implements ModeService {
   }
 
   async reset(): Promise<void> {
+    this.virtualTimeOffset = 0;
+
     this.archiveControl.clear();
     this.webRTCClient.reset();
     this.timelineDrawer.disableExportMode();
@@ -116,6 +126,17 @@ export class ArchiveVideoService implements ModeService {
     this.timelineDrawer.disableExportMode();
   }
 
+  public getVirtualCurrentTime(currentVideoTime: number): number {
+    return currentVideoTime - this.virtualTimeOffset;
+  }
+
+  private onNewArchiveFragmentStarted(range: RangeDto) {
+    const startTime = range.start_time;
+
+    this.timelineDrawer.setCustomTrackTimestamp(startTime);
+    this.timelineDrawer.draw(startTime);
+  }
+
   private async onOpenDatachannel() {
     this.datachannelClient.send(DatachannelMessageType.GET_RANGES);
   }
@@ -128,6 +149,7 @@ export class ArchiveVideoService implements ModeService {
         duration: range.duration,
       }
     );
+    this.timelineDrawer.disableExportMode();
   }
 
   private onExportFragment(data: ExportURLDto) {
@@ -158,9 +180,9 @@ export class ArchiveVideoService implements ModeService {
       return;
     }
 
-    const currentTime = event.timeStamp;
+    const currentTime = (event.target as HTMLVideoElement).currentTime;
 
-    this.timelineDrawer.draw(currentTime);
+    this.timelineDrawer.draw(this.getVirtualCurrentTime(currentTime));
   };
 
   private supportConnect() {
@@ -171,6 +193,8 @@ export class ArchiveVideoService implements ModeService {
     this.isPreRequestRange = isPreRequestRange;
 
     if (this.isPreRequestRange) {
+      this.logger.log(DatachannelMessageType.GET_ARCHIVE_FRAGMENT, fragment);
+
       this.datachannelClient.send(DatachannelMessageType.GET_ARCHIVE_FRAGMENT, {
         start_time: fragment.start_time,
         duration: fragment.duration,
@@ -182,24 +206,31 @@ export class ArchiveVideoService implements ModeService {
     this.nextProcessedRange = fragment;
 
     this.datachannelClient.send(DatachannelMessageType.DROP_BUFFER);
+
+    this.logger.log("============== Начался новый фрагмент ==============");
+    this.logger.log(DatachannelMessageType.DROP_BUFFER, fragment);
   }
 
   private onChangeCurrentTime(
     ...[timestamp, range]: Parameters<TimelineClickCallback>
   ) {
-    const customRange: RangeDto = {
-      ...range,
-      start_time: timestamp,
-      duration: range.end_time - timestamp,
-    };
+    this.logger.log("Изменение текущего времени", timestamp, range);
 
-    this.emitStartNewFragment(customRange);
+    this.player.pause();
+    this.archiveControl.setCurrentRange(timestamp, range);
+
+    this.virtualTimeOffset = this.player.video.currentTime;
   }
 
   private onDropComplete() {
     if (!this.nextProcessedRange) {
+      this.logger.warn("Следующий диапазон пустой: нечего очищать");
       return;
     }
+
+    this.logger.log(DatachannelMessageType.GET_KEY, {
+      start_time: this.nextProcessedRange.start_time,
+    });
 
     this.datachannelClient.send(DatachannelMessageType.GET_KEY, {
       start_time: this.nextProcessedRange.start_time,
@@ -208,8 +239,14 @@ export class ArchiveVideoService implements ModeService {
 
   private onKeyFragmentUpload() {
     if (!this.nextProcessedRange) {
+      this.logger.warn("Нечего загружать в буфер: следующий диапазон пустой");
       return;
     }
+
+    this.logger.log(
+      DatachannelMessageType.GET_ARCHIVE_FRAGMENT,
+      this.nextProcessedRange
+    );
 
     this.datachannelClient.send(DatachannelMessageType.GET_ARCHIVE_FRAGMENT, {
       start_time: this.nextProcessedRange.start_time,
@@ -221,13 +258,14 @@ export class ArchiveVideoService implements ModeService {
     if (this.isPreRequestRange) {
       this.isPreRequestRange = false;
 
-      this.logger.log("Фрагмент стрима начался: ", this.nextProcessedRange);
-      this.nextProcessedRange = null;
+      if (this.nextProcessedRange) {
+        this.logger.log("Фрагмент стрима начался: ", this.nextProcessedRange);
 
-      return;
+        this.nextProcessedRange = null;
+      }
+    } else {
+      this.play();
     }
-
-    this.play();
   }
 
   private onStreamPlay() {
@@ -235,15 +273,25 @@ export class ArchiveVideoService implements ModeService {
       this.logger.log("Фрагмент стрима начался: ", this.nextProcessedRange);
     }
 
+    this.player.play();
     this.nextProcessedRange = null;
   }
 
-  play() {
-    this.datachannelClient.send(DatachannelMessageType.PLAY_STREAM);
+  play(isContinue = false) {
+    this.logger.log("Воспроизведение стрима");
+
+    if (!isContinue) {
+      this.datachannelClient.send(DatachannelMessageType.PLAY_STREAM);
+    } else {
+      this.archiveControl.resume();
+    }
   }
 
   stop() {
+    this.logger.log(DatachannelMessageType.STOP_STREAM);
     this.datachannelClient.send(DatachannelMessageType.STOP_STREAM);
+
+    this.archiveControl.pause(this.timelineDrawer.getCurrentTimestamp());
   }
 
   setSource(stream: MediaStream) {

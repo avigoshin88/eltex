@@ -93,12 +93,14 @@
 .video-player__timeline__track {
   position: absolute;
 
-  width: 2px;
+  width: 6px;
   height: 100%;
 
   z-index: 1;
 
   background: var(--timeline_range_track);
+
+  transform: translateX(-50%);
 }
 
 .video-player__timeline__export-marker {
@@ -118,4 +120,11 @@
 
 .video-player__timeline__export-marker_end {
   background-color: var(--timeline_export_marker_end);
+}
+
+.video-player__timeline__track,
+.video-player__timeline__range,
+.video-player__timeline__period,
+.video-player__timeline__export-marker {
+  pointer-events: none;
 }

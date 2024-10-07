@@ -246,7 +246,7 @@ export class PlayerModeService {
 
   private switchPlayState() {
     if (!this.player.isPlaying) {
-      this.modeConnection.play?.();
+      this.modeConnection.play?.(true);
       this.player.play();
     } else {
       this.modeConnection.stop?.();
