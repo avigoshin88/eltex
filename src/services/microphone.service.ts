@@ -116,7 +116,6 @@ export class MicrophoneService {
 
       this.logger.log(
         "info",
-        "info",
         "Устройства ввода аудио изменены:",
         audioDevices
       );
