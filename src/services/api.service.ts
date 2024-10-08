@@ -1,7 +1,6 @@
-import { CONFIG_KEY } from "../constants/configKeys";
-import { Env } from "./env.service";
-
 export class APIService {
+  private baseUrl = "";
+
   async get<T extends any>(url: string): Promise<T> {
     return this.processResponse(fetch(this.makeURL(url), { method: "GET" }));
   }
@@ -28,7 +27,7 @@ export class APIService {
   }
 
   init(baseUrl: string) {
-    Env.set(CONFIG_KEY.API_URL, this.processBaseApiUrl(baseUrl));
+    this.baseUrl = this.processBaseApiUrl(baseUrl);
   }
 
   private async processResponse(request: Promise<Response>) {
@@ -64,7 +63,7 @@ export class APIService {
   }
 
   private makeURL(url: string) {
-    return `${Env.get(CONFIG_KEY.API_URL)}/${url}`;
+    return `${this.baseUrl}/${url}`;
   }
 }
 

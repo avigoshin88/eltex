@@ -122,13 +122,17 @@ export class MicrophoneService {
         await this.enableMicrophone(peerConnection, newDevice.deviceId); // Переключаемся на новое устройство
       }
 
-      navigator.mediaDevices.removeEventListener(
+      // Проверка на наличие mediaDevices тк они недоступны на незащищенном
+      // соединении и приложение может ломаться
+      navigator.mediaDevices?.removeEventListener(
         "devicechange",
         onDeviceChange
       );
     };
 
-    navigator.mediaDevices.addEventListener("devicechange", onDeviceChange);
+    // Проверка на наличие mediaDevices тк они недоступны на незащищенном
+    // соединении и приложение может ломаться
+    navigator.mediaDevices?.addEventListener("devicechange", onDeviceChange);
   }
 
   // Получение устройства по умолчанию

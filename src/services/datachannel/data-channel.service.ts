@@ -1,4 +1,5 @@
 import {
+  DatachannelEventListener,
   DatachannelEventListeners,
   DatachannelMessageType,
   DatachannelNativeEventListeners,
@@ -11,6 +12,7 @@ export class DatachannelClientService {
   private datachannel!: RTCDataChannel;
   private readonly datachannelTransportBuilder: DatachannelTransportBuilderService =
     new DatachannelTransportBuilderService();
+  private listeners: DatachannelEventListeners = {};
 
   register(
     peerConnection: RTCPeerConnection,
@@ -45,7 +47,17 @@ export class DatachannelClientService {
       };
     }
 
-    this.datachannel.onmessage = (event) => this.onMessage(event, listeners);
+    this.listeners = listeners;
+
+    this.datachannel.onmessage = (e) => this.onMessage(e);
+  }
+
+  updateListener(
+    type: DatachannelMessageType,
+    cb: DatachannelEventListener | undefined
+  ) {
+    this.logger.log(`Обновляем слушателя события типа ${type}`);
+    this.listeners[type] = cb;
   }
 
   send(type: DatachannelMessageType, data?: unknown) {
@@ -56,10 +68,12 @@ export class DatachannelClientService {
     this.datachannel.send(this.datachannelTransportBuilder.build(type, data));
   }
 
-  private onMessage(event: MessageEvent, listeners: DatachannelEventListeners) {
+  private onMessage(event: MessageEvent) {
     this.logger.log("Новое сообщение:", event.data);
 
-    const listenerNames = Object.keys(listeners) as DatachannelMessageType[];
+    const listenerNames = Object.keys(
+      this.listeners
+    ) as DatachannelMessageType[];
     if (listenerNames.length === 0) {
       this.logger.warn("Нет подписок на datachannel");
       return;
@@ -74,12 +88,6 @@ export class DatachannelClientService {
 
       const { type, data } = result;
 
-      // времянка пока не поменяли формат данных
-      if (listenerNames.includes(DatachannelMessageType.META) && !type) {
-        listeners[DatachannelMessageType.META]?.(result);
-        return;
-      }
-
       if (type == null) {
         throw new Error("Неправильный тип ответа, отсутствует тип");
       }
@@ -93,7 +101,7 @@ export class DatachannelClientService {
         return;
       }
 
-      listeners[listener]?.(data);
+      this.listeners[listener]?.(data);
     } catch (error) {
       this.logger.error(
         "Не удалось расшифровать сообщение:",

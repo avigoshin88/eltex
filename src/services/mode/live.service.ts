@@ -11,6 +11,8 @@ import { DatachannelClientService } from "../datachannel/data-channel.service";
 import { VideoPlayerService } from "../player/player.service";
 import { MetaOverflowDrawerService } from "../player/overflow-elements/meta-drawer.service";
 
+const TURN_CONNECTION_TYPE = "play_analytic";
+
 export class LiveVideoService implements ModeService {
   private logger = new Logger(LiveVideoService.name);
 
@@ -57,13 +59,15 @@ export class LiveVideoService implements ModeService {
       this.webRTCClient.reset();
       this.webRTCClient.setupPeerConnection(datachannelListeners);
 
-      this.webRTCClient.startTURN("play").catch((turnError: Error) => {
-        this.webRTCClient.reset();
-        this.logger.error(
-          "Не удается установить соединение через TURN, причина:",
-          turnError.message
-        );
-      });
+      this.webRTCClient
+        .startTURN(TURN_CONNECTION_TYPE)
+        .catch((turnError: Error) => {
+          this.webRTCClient.reset();
+          this.logger.error(
+            "Не удается установить соединение через TURN, причина:",
+            turnError.message
+          );
+        });
     });
   }
 

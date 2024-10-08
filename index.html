@@ -20,104 +20,208 @@
   <body>
     <div
       id="app"
-      style="width: 100%;"
+      style="
+        width: 100%;
+        height: 100%;
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+      "
     >
+      <!-- лайв мета -->
+      <!-- <video-player
+        api_url="https://evi-webrtc.eltex-co.ru:18083"
+        app="live"
+        stream="ce03f8bc-87a8-4a0b-8874-c5d9ce571a2d"
+        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
+      ></video-player>
+      <video-player
+        api_url="https://evi-webrtc.eltex-co.ru:18083"
+        app="live"
+        stream="ce03f8bc-87a8-4a0b-8874-c5d9ce571a2d"
+        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
+      ></video-player>
+      <video-player
+        api_url="https://evi-webrtc.eltex-co.ru:18083"
+        app="live"
+        stream="ce03f8bc-87a8-4a0b-8874-c5d9ce571a2d"
+        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
+      ></video-player>
+      <video-player
+        api_url="https://evi-webrtc.eltex-co.ru:18083"
+        app="live"
+        stream="ce03f8bc-87a8-4a0b-8874-c5d9ce571a2d"
+        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
+      ></video-player>
+      <video-player
+        api_url="https://evi-webrtc.eltex-co.ru:18083"
+        app="live"
+        stream="ce03f8bc-87a8-4a0b-8874-c5d9ce571a2d"
+        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
+      ></video-player>
+      <video-player
+        api_url="https://evi-webrtc.eltex-co.ru:18083"
+        app="live"
+        stream="ce03f8bc-87a8-4a0b-8874-c5d9ce571a2d"
+        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
+      ></video-player>
+      <video-player
+        api_url="https://evi-webrtc.eltex-co.ru:18083"
+        app="live"
+        stream="ce03f8bc-87a8-4a0b-8874-c5d9ce571a2d"
+        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
+      ></video-player>
+      <video-player
+        api_url="https://evi-webrtc.eltex-co.ru:18083"
+        app="live"
+        stream="ce03f8bc-87a8-4a0b-8874-c5d9ce571a2d"
+        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
+      ></video-player>
+      <video-player
+        api_url="https://evi-webrtc.eltex-co.ru:18083"
+        app="live"
+        stream="ce03f8bc-87a8-4a0b-8874-c5d9ce571a2d"
+        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
+      ></video-player>
+      <video-player
+        api_url="https://evi-webrtc.eltex-co.ru:18083"
+        app="live"
+        stream="ce03f8bc-87a8-4a0b-8874-c5d9ce571a2d"
+        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
+      ></video-player>
+      <video-player
+        api_url="https://evi-webrtc.eltex-co.ru:18083"
+        app="live"
+        stream="ce03f8bc-87a8-4a0b-8874-c5d9ce571a2d"
+        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
+      ></video-player>
+      <video-player
+        api_url="https://evi-webrtc.eltex-co.ru:18083"
+        app="live"
+        stream="ce03f8bc-87a8-4a0b-8874-c5d9ce571a2d"
+        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
+      ></video-player>
+      <video-player
+        api_url="https://evi-webrtc.eltex-co.ru:18083"
+        app="live"
+        stream="ce03f8bc-87a8-4a0b-8874-c5d9ce571a2d"
+        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
+      ></video-player>
+      <video-player
+        api_url="https://evi-webrtc.eltex-co.ru:18083"
+        app="live"
+        stream="ce03f8bc-87a8-4a0b-8874-c5d9ce571a2d"
+        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
+      ></video-player>
+      <video-player
+        api_url="https://evi-webrtc.eltex-co.ru:18083"
+        app="live"
+        stream="ce03f8bc-87a8-4a0b-8874-c5d9ce571a2d"
+        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
+      ></video-player>
+      <video-player
+        api_url="https://evi-webrtc.eltex-co.ru:18083"
+        app="live"
+        stream="ce03f8bc-87a8-4a0b-8874-c5d9ce571a2d"
+        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
+      ></video-player> -->
+
+      <!-- тестовый поток -->
       <video-player
         api_url="https://evi-webrtc.eltex-co.ru:18083"
         app="live"
         stream="test"
         ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
       ></video-player>
-      <!-- <video-player
+      <video-player
         api_url="https://evi-webrtc.eltex-co.ru:18083"
         app="live"
         stream="test"
-        iceServers="stun:evi-webrtc.eltex-co.ru:3478"
+        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
       ></video-player>
       <video-player
         api_url="https://evi-webrtc.eltex-co.ru:18083"
         app="live"
         stream="test"
-        iceServers="stun:evi-webrtc.eltex-co.ru:3478"
+        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
       ></video-player>
       <video-player
         api_url="https://evi-webrtc.eltex-co.ru:18083"
         app="live"
         stream="test"
-        iceServers="stun:evi-webrtc.eltex-co.ru:3478"
+        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
       ></video-player>
       <video-player
         api_url="https://evi-webrtc.eltex-co.ru:18083"
         app="live"
         stream="test"
-        iceServers="stun:evi-webrtc.eltex-co.ru:3478"
+        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
       ></video-player>
       <video-player
         api_url="https://evi-webrtc.eltex-co.ru:18083"
         app="live"
         stream="test"
-        iceServers="stun:evi-webrtc.eltex-co.ru:3478"
+        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
       ></video-player>
       <video-player
         api_url="https://evi-webrtc.eltex-co.ru:18083"
         app="live"
         stream="test"
-        iceServers="stun:evi-webrtc.eltex-co.ru:3478"
+        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
       ></video-player>
       <video-player
         api_url="https://evi-webrtc.eltex-co.ru:18083"
         app="live"
         stream="test"
-        iceServers="stun:evi-webrtc.eltex-co.ru:3478"
+        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
       ></video-player>
       <video-player
         api_url="https://evi-webrtc.eltex-co.ru:18083"
         app="live"
         stream="test"
-        iceServers="stun:evi-webrtc.eltex-co.ru:3478"
+        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
       ></video-player>
       <video-player
         api_url="https://evi-webrtc.eltex-co.ru:18083"
         app="live"
         stream="test"
-        iceServers="stun:evi-webrtc.eltex-co.ru:3478"
+        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
       ></video-player>
       <video-player
         api_url="https://evi-webrtc.eltex-co.ru:18083"
         app="live"
         stream="test"
-        iceServers="stun:evi-webrtc.eltex-co.ru:3478"
+        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
       ></video-player>
       <video-player
         api_url="https://evi-webrtc.eltex-co.ru:18083"
         app="live"
         stream="test"
-        iceServers="stun:evi-webrtc.eltex-co.ru:3478"
+        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
       ></video-player>
       <video-player
         api_url="https://evi-webrtc.eltex-co.ru:18083"
         app="live"
         stream="test"
-        iceServers="stun:evi-webrtc.eltex-co.ru:3478"
+        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
       ></video-player>
       <video-player
         api_url="https://evi-webrtc.eltex-co.ru:18083"
         app="live"
         stream="test"
-        iceServers="stun:evi-webrtc.eltex-co.ru:3478"
+        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
       ></video-player>
       <video-player
         api_url="https://evi-webrtc.eltex-co.ru:18083"
         app="live"
         stream="test"
-        iceServers="stun:evi-webrtc.eltex-co.ru:3478"
+        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
       ></video-player>
       <video-player
         api_url="https://evi-webrtc.eltex-co.ru:18083"
         app="live"
         stream="test"
-        iceServers="stun:evi-webrtc.eltex-co.ru:3478"
-      ></video-player> -->
+        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
+      ></video-player>
     </div>
   </body>
 </html>

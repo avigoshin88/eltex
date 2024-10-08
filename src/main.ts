@@ -1,7 +1,5 @@
 import { ATTRIBUTE } from "./constants/attributes";
-import { CONFIG_KEY } from "./constants/configKeys";
 import { API } from "./services/api.service";
-import { Env } from "./services/env.service";
 import { VideoPlayerBuilderService } from "./services/player/player-builder.service";
 import { VideoPlayerService } from "./services/player/player.service";
 
@@ -20,7 +18,9 @@ class VideoPlayerElement extends HTMLElement {
 
   modeService!: PlayerModeService;
 
-  connectedCallback() {}
+  connectedCallback() {
+    this.initElement();
+  }
 
   disconnectedCallback() {
     this.clear();
@@ -44,32 +44,16 @@ class VideoPlayerElement extends HTMLElement {
       return;
     }
 
-    if (
-      !(
-        [
-          ATTRIBUTE.API_URL,
-          ATTRIBUTE.APP,
-          ATTRIBUTE.STREAM,
-          ATTRIBUTE.ICE_SERVERS,
-        ] as string[]
-      ).includes(name)
-    ) {
-      return;
-    }
-
-    Env.set(name, newValue ?? oldValue);
-
     if (oldValue !== null) {
       this.clear();
     }
-    this.initElement();
   }
 
   private initElement() {
-    const apiUrl = Env.get(CONFIG_KEY.API_URL);
-    const app = Env.get(CONFIG_KEY.APP);
-    const stream = Env.get(CONFIG_KEY.STREAM);
-    const iceServersRaw = Env.get(CONFIG_KEY.ICE_SERVERS);
+    const apiUrl = this.getAttribute(ATTRIBUTE.API_URL);
+    const app = this.getAttribute(ATTRIBUTE.APP);
+    const stream = this.getAttribute(ATTRIBUTE.STREAM);
+    const iceServersRaw = this.getAttribute(ATTRIBUTE.ICE_SERVERS);
 
     if (
       apiUrl == null ||
