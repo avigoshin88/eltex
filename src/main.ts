@@ -1,16 +1,17 @@
 import { ATTRIBUTE } from "./constants/attributes";
-import { CONFIG_KEY } from "./constants/configKeys";
-import { API } from "./services/api.service";
-import { Env } from "./services/env.service";
 import { VideoPlayerService } from "./services/player/player.service";
 
 import "./style.css";
 import { PlayerModeService } from "./services/player/player-mode.service";
+import { CustomEvents } from "./services/custom-events.service";
 
 class VideoPlayerElement extends HTMLElement {
   constructor() {
     super();
   }
+
+  options: Partial<Record<(typeof ATTRIBUTE)[keyof typeof ATTRIBUTE], string>> =
+    {};
 
   container!: HTMLDivElement;
 
@@ -26,9 +27,9 @@ class VideoPlayerElement extends HTMLElement {
 
   static get observedAttributes() {
     return [
-      ATTRIBUTE.API_URL,
-      ATTRIBUTE.APP,
-      ATTRIBUTE.STREAM,
+      ATTRIBUTE.ID,
+      ATTRIBUTE.CAMERA_NAME,
+      ATTRIBUTE.MODE,
       ATTRIBUTE.ICE_SERVERS,
     ];
   }
@@ -42,20 +43,7 @@ class VideoPlayerElement extends HTMLElement {
       return;
     }
 
-    if (
-      !(
-        [
-          ATTRIBUTE.API_URL,
-          ATTRIBUTE.APP,
-          ATTRIBUTE.STREAM,
-          ATTRIBUTE.ICE_SERVERS,
-        ] as string[]
-      ).includes(name)
-    ) {
-      return;
-    }
-
-    Env.set(name, newValue ?? oldValue);
+    this.options = { ...this.options, [name]: newValue };
 
     if (oldValue !== null) {
       this.clear();
@@ -64,21 +52,21 @@ class VideoPlayerElement extends HTMLElement {
   }
 
   private initElement() {
-    const apiUrl = Env.get(CONFIG_KEY.API_URL);
-    const app = Env.get(CONFIG_KEY.APP);
-    const stream = Env.get(CONFIG_KEY.STREAM);
-    const iceServersRaw = Env.get(CONFIG_KEY.ICE_SERVERS);
+    const id = this.options[ATTRIBUTE.ID];
+    const mode = this.options[ATTRIBUTE.MODE];
+    const cameraName = this.options[ATTRIBUTE.CAMERA_NAME];
+    const iceServersRaw = this.options[ATTRIBUTE.ICE_SERVERS];
 
     if (
-      apiUrl == null ||
-      app == null ||
-      stream == null ||
+      id == null ||
+      mode == null ||
+      cameraName == null ||
       iceServersRaw == null
     ) {
       return;
     }
 
-    API.init(apiUrl);
+    CustomEvents.setId(id);
 
     const iceServers = iceServersRaw.split(";").map((urls) => ({
       urls,
@@ -97,8 +85,6 @@ class VideoPlayerElement extends HTMLElement {
     // TODO: Вынести в отдельный метод
     this.modeService = new PlayerModeService(
       {
-        app,
-        stream,
         config: {
           iceServers,
         },
