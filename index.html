@@ -48,28 +48,26 @@
         .then((response) => response.json())
     }
 
-    window.addEventListener('local-sdp-answer-1', (event) => {
-      console.log('local-sdp-answer-1', event.detail);
+    // window.addEventListener('local-sdp-answer-1', (event) => {
+    //   console.log('local-sdp-answer-1', event.detail);
 
-      saveOffer(app, stream, 'p2p_play', event.detail).then((response) => {
-        console.log('saveOffer', response);
-      });
-    });
+    //   saveOffer(app, stream, 'p2p_play', event.detail).then((response) => {
+    //     console.log('saveOffer', response);
+    //   });
+    // });
+
+    let localOffer = null
 
     window.addEventListener('local-sdp-offer-1', (event) => {
       console.log('local-sdp-offer-1');
 
-      saveOffer(app, stream, 'play', event.detail).then((response) => {
-        const event = new CustomEvent("remote-sdp-offer-1", {
-          detail: response,
-        });
-
-        window.dispatchEvent(event);
-      });
+      localOffer = event.detail;
     });
 
-    window.onload = () => {
-      getSDPOffer(app, stream).then((response) => {
+    window.addEventListener('request-remote-sdp-offer-1', (event) => {
+      console.log('request-remote-sdp-offer-1');
+
+      saveOffer(app, stream, 'archive', localOffer).then((response) => {
         console.log('getSDPOffer', response);
 
         const event = new CustomEvent("remote-sdp-offer-1", {
@@ -86,17 +84,33 @@
 
         window.dispatchEvent(event);
       })
-    }
+    });
+
+    // window.onload = () => {
+    //   getSDPOffer(app, stream).then((response) => {
+    //     console.log('getSDPOffer', response);
+
+    //     const event = new CustomEvent("remote-sdp-offer-1", {
+    //       detail: response,
+    //     });
+
+    //     window.dispatchEvent(event);
+    //   }).catch((error) => {
+    //     console.log(error);
+
+    //     const event = new CustomEvent("remote-sdp-error-1", {
+    //       detail: error,
+    //     });
+
+    //     window.dispatchEvent(event);
+    //   })
+    // }
   </script>
 </head>
 
 <body>
   <div id="app" style="width: 100%">
-    <video-player 
-      id="1"
-      mode="archive"
-      camera_name="camera_name"
-      ice_servers="stun:evi-webrtc.eltex-co.ru:3478">
+    <video-player id="1" mode="archive" camera_name="camera_name" ice_servers="stun:evi-webrtc.eltex-co.ru:3478">
     </video-player>
     <!-- <video-player
         api_url="https://evi-webrtc.eltex-co.ru:18083"

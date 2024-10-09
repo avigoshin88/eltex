@@ -273,6 +273,8 @@ export class ArchiveVideoService implements ModeService {
       this.logger.log("Фрагмент стрима начался: ", this.nextProcessedRange);
     }
 
+    this.archiveControl.scheduleNextPreload();
+
     this.player.play();
     this.nextProcessedRange = null;
   }

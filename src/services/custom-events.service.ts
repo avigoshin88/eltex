@@ -6,6 +6,7 @@ export type CustomEventName =
   | "local-sdp-answer"
   | "remote-sdp-offer"
   | "remote-sdp-error"
+  | 'request-remote-sdp-offer'
   | "ice-candidate";
 
 export type CustomEventCallback<T = any> = (data: T) => void;
@@ -46,7 +47,7 @@ class CustomEventsService {
     }
   }
 
-  emit<T = any>(name: CustomEventName, data: T) {
+  emit<T = any>(name: CustomEventName, data?: T) {
     const eventName = this.getEventNameWithId(name);
 
     const event = new CustomEvent(eventName, {

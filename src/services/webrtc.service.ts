@@ -89,17 +89,35 @@ export class WebRTCService {
 
   private async waitForRemoteOffer() {
     return new Promise<GetSDPOfferResponse>((resolve, reject) => {
+      let isResolved = false;
+
       const onRemoteOffer = (response: GetSDPOfferResponse) => {
-        CustomEvents.off("remote-sdp-offer", onRemoteOffer);
-        resolve(response);
+        if (!isResolved) {
+          isResolved = true;
+          CustomEvents.off("remote-sdp-offer", onRemoteOffer);
+          CustomEvents.off("remote-sdp-error", onError);
+          resolve(response);
+        }
       };
-      CustomEvents.on("remote-sdp-offer", onRemoteOffer);
 
       const onError = (error: any) => {
-        CustomEvents.off("remote-sdp-error", onError);
-        reject(error);
+        if (!isResolved) {
+          isResolved = true;
+          CustomEvents.off("remote-sdp-offer", onRemoteOffer);
+          CustomEvents.off("remote-sdp-error", onError);
+          reject(error);
+        }
       };
+
+      CustomEvents.on("remote-sdp-offer", onRemoteOffer);
       CustomEvents.on("remote-sdp-error", onError);
+
+      // Проверка, если событие уже было отправлено до подписки
+      setTimeout(() => {
+        if (!isResolved) {
+          CustomEvents.emit("request-remote-sdp-offer");
+        }
+      }, 0);
     });
   }
 
