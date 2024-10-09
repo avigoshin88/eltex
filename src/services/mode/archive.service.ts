@@ -3,7 +3,11 @@ import { WebRTCService } from "../webrtc.service";
 import { ConnectionOptions } from "../../types/connection-options";
 import { ModeService } from "../../interfaces/mode";
 import { DatachannelClientService } from "../datachannel/data-channel.service";
-import { DatachannelMessageType } from "../../types/datachannel-listener";
+import {
+  DatachannelEventListeners,
+  DatachannelMessageType,
+  DatachannelNativeEventListeners,
+} from "../../types/datachannel-listener";
 import { VideoPlayerService } from "../player/player.service";
 import { RangeDto } from "../../dto/ranges";
 import { TimelineOverflowDrawer } from "../player/overflow-elements/timeline-drawer.service";
@@ -19,12 +23,12 @@ import { EventBus } from "../event-bus.service";
 export class ArchiveVideoService implements ModeService {
   private logger = new Logger("ArchiveVideoService");
 
-  private readonly webRTCClient!: WebRTCService;
-  private readonly datachannelClient: DatachannelClientService;
+  private webRTCClient!: WebRTCService;
+  private datachannelClient: DatachannelClientService;
   private readonly player: VideoPlayerService;
 
   private readonly timelineDrawer!: TimelineOverflowDrawer;
-  private readonly metaDrawer!: MetaOverflowDrawerService;
+  private metaDrawer!: MetaOverflowDrawerService;
 
   private readonly rangeMapper = new RangeMapperService();
   private readonly archiveControl!: ArchiveControlService;
@@ -105,6 +109,55 @@ export class ArchiveVideoService implements ModeService {
     });
 
     this.metaDrawer.init();
+  }
+
+  public async reinitWithNewOptions(options: ConnectionOptions) {
+    this.logger.log(
+      "Перезапускаем live соединение с новыми параметрами:",
+      JSON.stringify(options)
+    );
+
+    const metaDrawer = new MetaOverflowDrawerService(
+      this.player.videoContainer
+    );
+    const datachannelClient = new DatachannelClientService();
+    const webRTCClient = new WebRTCService(
+      options,
+      datachannelClient,
+      this.setSource.bind(this)
+    );
+
+    metaDrawer.init();
+
+    const datachannelListeners: {
+      nativeListeners: DatachannelNativeEventListeners;
+      listeners: DatachannelEventListeners;
+    } = {
+      listeners: {
+        // ругается на unknown
+        // @ts-ignore
+        [DatachannelMessageType.META]: metaDrawer.draw,
+      },
+      nativeListeners: {
+        open: async () => {
+          await this.reset();
+
+          this.metaDrawer = metaDrawer;
+          this.datachannelClient = datachannelClient;
+          this.webRTCClient = webRTCClient;
+        },
+      },
+    };
+
+    webRTCClient.setupPeerConnection(datachannelListeners);
+
+    webRTCClient.startTURN("archive").catch((turnError: Error) => {
+      webRTCClient.reset();
+      this.logger.error(
+        "Не удается установить соединение через TURN, причина:",
+        turnError.message
+      );
+    });
   }
 
   async reset(): Promise<void> {
