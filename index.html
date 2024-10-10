@@ -19,19 +19,17 @@
 
   <script>
     // const port = 5080;
-    const port = 18083;
+    // const port = 18083;
 
     const app = "live";
     const stream = "test";
     // const type = "archive";
 
+    let localOffer = null;
+
     let mode = 'archive';
 
-    document.addEventListener("local-sdp-answer-1", (event) => {
-      console.log("remote-sdp-answer-1", event.detail);
-    });
-
-    function getSDPOffer(app, stream) {
+    function getSDPOffer(port = 18083, app, stream) {
       return fetch(
         `https://evi-webrtc.eltex-co.ru:${port}/index/api/webrtc?app=${app}&stream=${stream}`,
         { method: "GET" }
@@ -40,7 +38,7 @@
     }
 
 
-    function saveOffer(app, stream, type, offer) {
+    function saveOffer(port = 18083, app, stream, type, offer) {
       return fetch(
         `https://evi-webrtc.eltex-co.ru:${port}/index/api/webrtc?app=${app}&stream=${stream}&type=${type}`,
         { method: "POST", body: offer }
@@ -48,63 +46,111 @@
         .then((response) => response.json())
     }
 
-    // window.addEventListener('local-sdp-answer-1', (event) => {
-    //   console.log('local-sdp-answer-1', event.detail);
+    let remoteOffer = null;
 
-    //   saveOffer(app, stream, 'p2p_play', event.detail).then((response) => {
-    //     console.log('saveOffer', response);
-    //   });
-    // });
+    function registerLiveP2P() {
+      window.onload = () => {
+        getSDPOffer(5080, app, stream).then((response) => {
+          console.log('getSDPOffer', response);
 
-    let localOffer = null
+          const event = new CustomEvent("remote-sdp-offer-1", {
+            detail: response,
+          });
 
-    window.addEventListener('local-sdp-offer-1', (event) => {
-      console.log('local-sdp-offer-1');
+          window.dispatchEvent(event);
+        }).catch((error) => {
+          console.log(error);
 
-      localOffer = event.detail;
-    });
+          const event = new CustomEvent("remote-sdp-error-1", {
+            detail: error,
+          });
 
-    window.addEventListener('request-remote-sdp-offer-1', (event) => {
-      console.log('request-remote-sdp-offer-1');
+          window.dispatchEvent(event);
+        })
+      }
 
-      saveOffer(app, stream, 'archive', localOffer).then((response) => {
-        console.log('getSDPOffer', response);
+      window.addEventListener('local-sdp-answer-1', (event) => {
+        console.log('local-sdp-answer-1');
 
-        const event = new CustomEvent("remote-sdp-offer-1", {
-          detail: response,
+        // localOffer = event.detail;
+
+        saveOffer(5080, app, stream, 'p2p_play', event.detail).then((response) => {
+          console.log('saveOffer');
         });
+      });
+    }
 
-        window.dispatchEvent(event);
-      }).catch((error) => {
-        console.log(error);
+    function registerLiveTurn() {
+      window.addEventListener('local-sdp-offer-1', (event) => {
+        console.log('local-sdp-offer-1', event.detail);
 
-        const event = new CustomEvent("remote-sdp-error-1", {
-          detail: error,
-        });
+        localOffer = event.detail;
 
-        window.dispatchEvent(event);
-      })
-    });
+      });
 
-    // window.onload = () => {
-    //   getSDPOffer(app, stream).then((response) => {
-    //     console.log('getSDPOffer', response);
+      window.addEventListener('local-sdp-answer-1', (event) => {
+        console.log('local-sdp-answer-1', event.detail);
 
-    //     const event = new CustomEvent("remote-sdp-offer-1", {
-    //       detail: response,
-    //     });
+        localOffer = event.detail;
+      });
 
-    //     window.dispatchEvent(event);
-    //   }).catch((error) => {
-    //     console.log(error);
+      window.addEventListener('request-remote-sdp-offer-1', (event) => {
+        console.log('request-remote-sdp-offer-1');
 
-    //     const event = new CustomEvent("remote-sdp-error-1", {
-    //       detail: error,
-    //     });
+        saveOffer(undefined, app, stream, 'play_analytic', localOffer).then((response) => {
+          console.log('getSDPOffer', response);
 
-    //     window.dispatchEvent(event);
-    //   })
-    // }
+          const event = new CustomEvent("remote-sdp-offer-1", {
+            detail: response,
+          });
+
+          window.dispatchEvent(event);
+        }).catch((error) => {
+          console.log(error);
+
+          const event = new CustomEvent("remote-sdp-error-1", {
+            detail: error,
+          });
+
+          window.dispatchEvent(event);
+        })
+      });
+    }
+
+
+    function registerArchiveEvents() {
+      window.addEventListener('local-sdp-offer-1', (event) => {
+        console.log('local-sdp-offer-1');
+
+        localOffer = event.detail;
+      });
+
+      window.addEventListener('request-remote-sdp-offer-1', (event) => {
+        console.log('request-remote-sdp-offer-1');
+
+        saveOffer(undefined, app, stream, 'archive', localOffer).then((response) => {
+          console.log('getSDPOffer', response);
+
+          const event = new CustomEvent("remote-sdp-offer-1", {
+            detail: response,
+          });
+
+          window.dispatchEvent(event);
+        }).catch((error) => {
+          console.log(error);
+
+          const event = new CustomEvent("remote-sdp-error-1", {
+            detail: error,
+          });
+
+          window.dispatchEvent(event);
+        })
+      });
+    }
+
+    // registerLiveP2P();
+    // registerLiveTurn();
+    // registerArchiveEvents();
   </script>
 </head>
 

@@ -140,6 +140,11 @@ export class WebRTCService {
         outerThis.logger.log("P2P: Запрашиваем SDP offer");
         const remoteOffer = await outerThis.waitForRemoteOffer().catch(reject);
 
+        if (!remoteOffer) {
+          reject();
+          return;
+        }
+
         outerThis.logger.log("P2P: SDP offer получен: ", remoteOffer);
 
         const offer: RTCSessionDescriptionInit = {
@@ -164,11 +169,11 @@ export class WebRTCService {
           );
         });
 
+        CustomEvents.emit("local-sdp-answer", answer.sdp!);
+
         outerThis.logger.log("P2P: setLocalDescription установлено");
 
         yield;
-
-        CustomEvents.emit("local-sdp-answer", answer.sdp!);
 
         outerThis.logger.log("P2P: очищаем генератор");
 

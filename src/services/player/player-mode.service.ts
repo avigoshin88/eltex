@@ -46,7 +46,7 @@ export class PlayerModeService {
       this.onUpdateStats.bind(this)
     );
 
-    this.enable(Mode.ARCHIVE);
+    this.enable(Mode.LIVE);
   }
 
   async switch() {
