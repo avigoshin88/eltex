@@ -19,6 +19,7 @@ import { Nullable } from "../../types/global";
 import { ExportURLDto } from "../../dto/export";
 import { FileDownloader } from "../file-downloader.service";
 import { EventBus } from "../event-bus.service";
+import { RangeData } from "../../types/range";
 
 export class ArchiveVideoService implements ModeService {
   private logger = new Logger("ArchiveVideoService");
@@ -41,6 +42,9 @@ export class ArchiveVideoService implements ModeService {
   private isLoaded = false;
 
   private virtualTimeOffset: number = 0;
+
+  private renewStartTime: Nullable<number> = null;
+  private renewFragment: Nullable<RangeData> = null;
 
   constructor(
     options: ConnectionOptions,
@@ -112,6 +116,12 @@ export class ArchiveVideoService implements ModeService {
   }
 
   public async reinitWithNewOptions(options: ConnectionOptions) {
+    this.renewStartTime = this.timelineDrawer.getCurrentTimestamp();
+    this.renewFragment = {
+      ...this.archiveControl.currentFragment,
+      type: "data",
+    };
+
     this.logger.log(
       "Перезапускаем live соединение с новыми параметрами:",
       JSON.stringify(options)
@@ -140,11 +150,13 @@ export class ArchiveVideoService implements ModeService {
       },
       nativeListeners: {
         open: async () => {
-          await this.reset();
+          await this.reset(false);
 
           this.metaDrawer = metaDrawer;
           this.datachannelClient = datachannelClient;
           this.webRTCClient = webRTCClient;
+
+          this.onOpenDatachannel();
         },
       },
     };
@@ -160,15 +172,20 @@ export class ArchiveVideoService implements ModeService {
     });
   }
 
-  async reset(): Promise<void> {
+  async reset(fullReset = true): Promise<void> {
     this.virtualTimeOffset = 0;
 
-    this.archiveControl.clear();
     this.webRTCClient.reset();
-    this.timelineDrawer.disableExportMode();
-    this.timelineDrawer.clear();
 
     this.metaDrawer.destroy();
+
+    if (fullReset) {
+      this.archiveControl.clear();
+      this.timelineDrawer.disableExportMode();
+      this.timelineDrawer.clear();
+      this.renewStartTime = null;
+      this.renewFragment = null;
+    }
   }
 
   export(): void {
@@ -191,7 +208,11 @@ export class ArchiveVideoService implements ModeService {
   }
 
   private async onOpenDatachannel() {
-    this.datachannelClient.send(DatachannelMessageType.GET_RANGES);
+    if (this.renewStartTime !== null && this.renewFragment !== null) {
+      this.onChangeCurrentTime(this.renewStartTime, this.renewFragment);
+    } else {
+      this.datachannelClient.send(DatachannelMessageType.GET_RANGES);
+    }
   }
 
   private exportFragment(range: RangeDto) {
