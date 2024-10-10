@@ -18,16 +18,10 @@
   <script type="module" src="./src/main.ts"></script>
 
   <script>
-    // const port = 5080;
-    // const port = 18083;
-
     const app = "live";
     const stream = "test";
-    // const type = "archive";
 
     let localOffer = null;
-
-    let mode = 'archive';
 
     function getSDPOffer(port = 18083, app, stream) {
       return fetch(
@@ -48,11 +42,15 @@
 
     let remoteOffer = null;
 
+    window.addEventListener('mode-changed-1', (event) => {
+      console.log('mode-changed-1 - external', event.detail)
+
+      document.getElementById('1').setAttribute('mode', event.detail);
+    });
+
     function registerLiveP2P() {
       window.onload = () => {
         getSDPOffer(5080, app, stream).then((response) => {
-          console.log('getSDPOffer', response);
-
           const event = new CustomEvent("remote-sdp-offer-1", {
             detail: response,
           });
@@ -129,8 +127,6 @@
         console.log('request-remote-sdp-offer-1');
 
         saveOffer(undefined, app, stream, 'archive', localOffer).then((response) => {
-          console.log('getSDPOffer', response);
-
           const event = new CustomEvent("remote-sdp-offer-1", {
             detail: response,
           });
@@ -150,13 +146,18 @@
 
     // registerLiveP2P();
     // registerLiveTurn();
-    // registerArchiveEvents();
+    registerArchiveEvents();
   </script>
 </head>
 
 <body>
   <div id="app" style="width: 100%">
-    <video-player id="1" mode="archive" camera_name="camera_name" ice_servers="stun:evi-webrtc.eltex-co.ru:3478">
+    <video-player 
+      id="1"
+      mode="live"
+      camera_name="camera_name"
+      ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
+    >
     </video-player>
     <!-- <video-player
         api_url="https://evi-webrtc.eltex-co.ru:18083"

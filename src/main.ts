@@ -4,6 +4,7 @@ import { VideoPlayerService } from "./services/player/player.service";
 import "./style.css";
 import { PlayerModeService } from "./services/player/player-mode.service";
 import { CustomEvents } from "./services/custom-events.service";
+import { Mode } from "./constants/mode";
 
 class VideoPlayerElement extends HTMLElement {
   constructor() {
@@ -84,6 +85,7 @@ class VideoPlayerElement extends HTMLElement {
 
     // TODO: Вынести в отдельный метод
     this.modeService = new PlayerModeService(
+      mode as Mode,
       {
         config: {
           iceServers,
@@ -93,8 +95,8 @@ class VideoPlayerElement extends HTMLElement {
     );
   }
 
-  private clear() {
-    this.modeService.reset();
+  private async clear() {
+    await this.modeService.reset();
     this.player.destroy();
   }
 }

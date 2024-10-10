@@ -2,11 +2,12 @@ import { Nullable } from "../types/global";
 
 export type CustomEventName =
   | "meta"
+  | "mode-changed"
   | "local-sdp-offer"
   | "local-sdp-answer"
   | "remote-sdp-offer"
   | "remote-sdp-error"
-  | 'request-remote-sdp-offer'
+  | "request-remote-sdp-offer"
   | "ice-candidate";
 
 export type CustomEventCallback<T = any> = (data: T) => void;

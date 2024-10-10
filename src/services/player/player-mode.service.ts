@@ -12,6 +12,7 @@ import { SnapshotService } from "../snapshot.service";
 import { ControlsOverflowDrawerService } from "./overflow-elements/controls-drawer.service";
 import { PlayerStatsService } from "./player-stats.service";
 import { VideoPlayerService } from "./player.service";
+import { CustomEvents } from "../custom-events.service";
 
 const quality = {
   sd: { name: "SD", bitrate: 500 },
@@ -37,7 +38,11 @@ export class PlayerModeService {
   private speed = "1.0";
   private quality: keyof typeof quality = "fhd";
 
-  constructor(options: ConnectionOptions, player: VideoPlayerService) {
+  constructor(
+    mode: Mode,
+    options: ConnectionOptions,
+    player: VideoPlayerService
+  ) {
     this.options = { ...options };
     this.player = player;
 
@@ -46,16 +51,14 @@ export class PlayerModeService {
       this.onUpdateStats.bind(this)
     );
 
-    this.enable(Mode.LIVE);
+    this.enable(mode);
   }
 
-  async switch() {
-    await this.reset();
-    if (this.currentMode === Mode.LIVE) {
-      this.enable(Mode.ARCHIVE);
-    } else {
-      this.enable(Mode.LIVE);
-    }
+  switch() {
+    CustomEvents.emit(
+      "mode-changed",
+      this.currentMode === Mode.LIVE ? Mode.ARCHIVE : Mode.LIVE
+    );
   }
 
   setupControlsDrawer() {
