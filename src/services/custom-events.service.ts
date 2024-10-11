@@ -1,14 +1,14 @@
 import { Nullable } from "../types/global";
 
-export type CustomEventName =
+export type CustomEventListenerName =
   | "meta"
   | "mode-changed"
   | "local-sdp-offer"
   | "local-sdp-answer"
-  | "remote-sdp-offer"
-  | "remote-sdp-error"
   | "request-remote-sdp-offer"
   | "ice-candidate";
+
+export type CustomEventEmitName = "remote-sdp-offer" | "remote-sdp-error";
 
 export type CustomEventCallback<T = any> = (data: T) => void;
 
@@ -24,7 +24,7 @@ class CustomEventsService {
     this.id = id;
   }
 
-  on<T = any>(name: CustomEventName, callback: CustomEventCallback<T>) {
+  on<T = any>(name: CustomEventEmitName, callback: CustomEventCallback<T>) {
     const eventName = this.getEventNameWithId(name);
 
     const eventListener = (event: CustomEvent) => {
@@ -37,7 +37,7 @@ class CustomEventsService {
     this.storeEventListener(eventName, callback, eventListener);
   }
 
-  off<T = any>(name: CustomEventName, callback: CustomEventCallback<T>) {
+  off<T = any>(name: CustomEventEmitName, callback: CustomEventCallback<T>) {
     const eventName = this.getEventNameWithId(name);
 
     const eventListener = this.retrieveEventListener(eventName, callback);
@@ -48,7 +48,7 @@ class CustomEventsService {
     }
   }
 
-  emit<T = any>(name: CustomEventName, data?: T) {
+  emit<T = any>(name: CustomEventListenerName, data?: T) {
     const eventName = this.getEventNameWithId(name);
 
     const event = new CustomEvent(eventName, {
@@ -58,7 +58,9 @@ class CustomEventsService {
     window.dispatchEvent(event);
   }
 
-  private getEventNameWithId(name: CustomEventName): string {
+  private getEventNameWithId(
+    name: CustomEventListenerName | CustomEventEmitName
+  ): string {
     if (!this.id) {
       throw new Error("ID is not set");
     }
