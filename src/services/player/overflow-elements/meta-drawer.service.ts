@@ -1,4 +1,5 @@
 import { MetaDto } from "../../../dto/meta";
+import { CustomEvents } from "../../custom-events.service";
 
 const svgns = "http://www.w3.org/2000/svg";
 const green = "rgb(18, 117, 49)";
@@ -47,6 +48,8 @@ export class MetaOverflowDrawerService {
   };
 
   draw = (meta: MetaDto): void => {
+    CustomEvents.emit("meta", meta);
+
     const svgWidth = this.svg.scrollWidth;
     const svgHeight = this.svg.scrollHeight;
 
