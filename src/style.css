@@ -9,6 +9,10 @@
   --timeline_export_marker_end: blue;
 }
 
+video-player {
+  overflow: hidden;
+}
+
 .video-player {
   display: flex;
   flex-direction: column;
