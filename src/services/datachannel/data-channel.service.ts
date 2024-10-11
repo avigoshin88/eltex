@@ -3,6 +3,7 @@ import {
   DatachannelMessageType,
   DatachannelNativeEventListeners,
 } from "../../types/datachannel-listener";
+import { CustomEvents } from "../custom-events.service";
 import { Logger } from "../logger/logger.service";
 import { DatachannelTransportBuilderService } from "./data-channel-transport-builder.service";
 
@@ -74,6 +75,8 @@ export class DatachannelClientService {
 
       const { type, data } = result;
 
+      this.signalData(type, data);
+
       // времянка пока не поменяли формат данных
       if (listenerNames.includes(DatachannelMessageType.META) && !type) {
         listeners[DatachannelMessageType.META]?.(result);
@@ -106,5 +109,13 @@ export class DatachannelClientService {
 
   close() {
     this.datachannel?.close();
+  }
+
+  private signalData(type: string, data: object) {
+    switch (type) {
+      case DatachannelMessageType.META:
+        CustomEvents.emit("meta", data);
+        break;
+    }
   }
 }
