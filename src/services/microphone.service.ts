@@ -102,37 +102,40 @@ export class MicrophoneService {
     }
   }
 
-  // Обработка изменения доступных устройств (например, подключение нового микрофона)
-  private listenForDeviceChanges(peerConnection: RTCPeerConnection): void {
-    const onDeviceChange = async () => {
-      const devices = await navigator.mediaDevices.enumerateDevices();
-      const audioDevices = devices.filter(
-        (device) => device.kind === "audioinput"
-      );
+  private async onDeviceChange(peerConnection: RTCPeerConnection) {
+    const devices = await navigator.mediaDevices.enumerateDevices();
+    const audioDevices = devices.filter(
+      (device) => device.kind === "audioinput"
+    );
 
-      this.logger.log("Устройства ввода аудио изменены:", audioDevices);
+    this.logger.log("Устройства ввода аудио изменены:", audioDevices);
 
-      // Находим новое устройство, которое отличается от текущего
-      const newDevice = audioDevices.find(
-        (device) => device.deviceId !== this.currentDeviceId
-      );
+    // Находим новое устройство, которое отличается от текущего
+    const newDevice = audioDevices.find(
+      (device) => device.deviceId !== this.currentDeviceId
+    );
 
-      if (newDevice) {
-        this.logger.log("Переключаемся на новое устройство:", newDevice.label);
-        await this.enableMicrophone(peerConnection, newDevice.deviceId); // Переключаемся на новое устройство
-      }
-
+    if (newDevice) {
       // Проверка на наличие mediaDevices тк они недоступны на незащищенном
       // соединении и приложение может ломаться
-      navigator.mediaDevices?.removeEventListener(
-        "devicechange",
-        onDeviceChange
-      );
-    };
+      if (navigator.mediaDevices) {
+        navigator.mediaDevices.ondevicechange = null;
+      }
 
+      this.logger.log("Переключаемся на новое устройство:", newDevice.label);
+      await this.enableMicrophone(peerConnection, newDevice.deviceId); // Переключаемся на новое устройство
+    }
+  }
+
+  // Обработка изменения доступных устройств (например, подключение нового микрофона)
+  private listenForDeviceChanges(peerConnection: RTCPeerConnection): void {
     // Проверка на наличие mediaDevices тк они недоступны на незащищенном
     // соединении и приложение может ломаться
-    navigator.mediaDevices?.addEventListener("devicechange", onDeviceChange);
+
+    if (navigator.mediaDevices) {
+      navigator.mediaDevices.ondevicechange = () =>
+        this.onDeviceChange(peerConnection);
+    }
   }
 
   // Получение устройства по умолчанию
@@ -251,6 +254,10 @@ export class MicrophoneService {
         this.audioTransceiver.stop();
         this.audioTransceiver = null;
       }
+    }
+
+    if (navigator.mediaDevices) {
+      navigator.mediaDevices.ondevicechange = null;
     }
   }
 }
