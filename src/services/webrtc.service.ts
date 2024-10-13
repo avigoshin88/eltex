@@ -281,8 +281,8 @@ export class WebRTCService {
 
     this.microphoneService?.close();
     this.peerConnection?.close();
+    this.currentMode = null;
     this._tracks = [];
-    this.currentType = null;
     this.peerConnection = null;
     this.datachannelClient.close();
 
