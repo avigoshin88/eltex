@@ -3,12 +3,15 @@ import { Nullable } from "../types/global";
 export type CustomEventListenerName =
   | "meta"
   | "mode-changed"
-  | "local-sdp-offer"
-  | "local-sdp-answer"
-  | "request-remote-sdp-offer"
-  | "ice-candidate";
+  | "local-description"
+  | "ice-candidate"
+  | "peerconnection-status";
 
-export type CustomEventEmitName = "remote-sdp-offer" | "remote-sdp-error";
+export type CustomEventEmitName =
+  | "reinit-connection"
+  | "request-local-description"
+  | "remote-description"
+  | "remote-description-error";
 
 export type CustomEventCallback<T = any> = (data: T) => void;
 

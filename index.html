@@ -49,28 +49,24 @@
     });
 
     function registerLiveP2P() {
-      window.onload = () => {
-        getSDPOffer(5080, app, stream).then((response) => {
-          const event = new CustomEvent("remote-sdp-offer-1", {
-            detail: response,
-          });
+      window.addEventListener('peerconnection-status-1', (event) => {
+        if (event.detail === 'new') {
+          setTimeout(() => {
+            getSDPOffer(5080, app, stream).then((response) => {
+              const event = new CustomEvent("remote-description-1", {
+                detail: response,
+              });
 
-          window.dispatchEvent(event);
-        }).catch((error) => {
-          console.log(error);
+              window.dispatchEvent(event);
+            })
+          })
+        }
+      });
 
-          const event = new CustomEvent("remote-sdp-error-1", {
-            detail: error,
-          });
+      window.addEventListener('local-description-1', (event) => {
+        console.log('local-description-1123123', event.detail);
 
-          window.dispatchEvent(event);
-        })
-      }
-
-      window.addEventListener('local-sdp-answer-1', (event) => {
-        console.log('local-sdp-answer-1');
-
-        // localOffer = event.detail;
+        localOffer = event.detail;
 
         saveOffer(5080, app, stream, 'p2p_play', event.detail).then((response) => {
           console.log('saveOffer');
@@ -79,35 +75,22 @@
     }
 
     function registerLiveTurn() {
-      window.addEventListener('local-sdp-offer-1', (event) => {
-        console.log('local-sdp-offer-1', event.detail);
+      window.addEventListener('peerconnection-status-1', (event) => {
+        if (event.detail === 'new') {
+          setTimeout(() => {
+            const event = new CustomEvent("request-local-description-1");
 
-        localOffer = event.detail;
-
+            window.dispatchEvent(event);
+          })
+        }
       });
 
-      window.addEventListener('local-sdp-answer-1', (event) => {
-        console.log('local-sdp-answer-1', event.detail);
-
+      window.addEventListener('local-description-1', (event) => {
         localOffer = event.detail;
-      });
-
-      window.addEventListener('request-remote-sdp-offer-1', (event) => {
-        console.log('request-remote-sdp-offer-1');
 
         saveOffer(undefined, app, stream, 'play_analytic', localOffer).then((response) => {
-          console.log('getSDPOffer', response);
-
-          const event = new CustomEvent("remote-sdp-offer-1", {
+          const event = new CustomEvent("remote-description-1", {
             detail: response,
-          });
-
-          window.dispatchEvent(event);
-        }).catch((error) => {
-          console.log(error);
-
-          const event = new CustomEvent("remote-sdp-error-1", {
-            detail: error,
           });
 
           window.dispatchEvent(event);
@@ -117,26 +100,23 @@
 
 
     function registerArchiveEvents() {
-      window.addEventListener('local-sdp-offer-1', (event) => {
-        console.log('local-sdp-offer-1');
+      window.addEventListener('peerconnection-status-1', (event) => {
 
-        localOffer = event.detail;
+        if (event.detail === 'new') {
+          setTimeout(() => {
+            const event = new CustomEvent("request-local-description-1");
+
+            window.dispatchEvent(event);
+          })
+        }
       });
 
-      window.addEventListener('request-remote-sdp-offer-1', (event) => {
-        console.log('request-remote-sdp-offer-1');
+      window.addEventListener('local-description-1', (event) => {
+        localOffer = event.detail;
 
         saveOffer(undefined, app, stream, 'archive', localOffer).then((response) => {
-          const event = new CustomEvent("remote-sdp-offer-1", {
+          const event = new CustomEvent("remote-description-1", {
             detail: response,
-          });
-
-          window.dispatchEvent(event);
-        }).catch((error) => {
-          console.log(error);
-
-          const event = new CustomEvent("remote-sdp-error-1", {
-            detail: error,
           });
 
           window.dispatchEvent(event);
@@ -144,20 +124,15 @@
       });
     }
 
-    // registerLiveP2P();
+    registerLiveP2P();
     // registerLiveTurn();
-    registerArchiveEvents();
+    // registerArchiveEvents();
   </script>
 </head>
 
 <body>
   <div id="app" style="width: 100%; display: grid;">
-    <video-player 
-      id="1"
-      mode="live"
-      camera_name="camera_name"
-      ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
-    >
+    <video-player id="1" mode="live" camera_name="camera_name" ice_servers="stun:evi-webrtc.eltex-co.ru:3478">
     </video-player>
     <!-- <video-player
         id="2"

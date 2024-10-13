@@ -45,26 +45,26 @@ export class LiveVideoService implements ModeService {
       nativeListeners: {},
     };
 
-    this.webRTCClient.setupPeerConnection(datachannelListeners);
+    await this.webRTCClient.setupPeerConnection(datachannelListeners);
 
-    this.webRTCClient.startP2P().catch((p2pError: Error) => {
-      this.logger.error(
-        "Не удается установить соединение через P2P, причина:",
-        p2pError.message
-      );
+    // this.webRTCClient.startP2P().catch((p2pError: Error) => {
+    //   this.logger.error(
+    //     "Не удается установить соединение через P2P, причина:",
+    //     p2pError.message
+    //   );
 
-      this.logger.log("Пробуем соединиться через TURN");
-      this.webRTCClient.reset();
-      this.webRTCClient.setupPeerConnection(datachannelListeners);
+    //   this.logger.log("Пробуем соединиться через TURN");
+    //   this.webRTCClient.reset();
+    //   this.webRTCClient.setupPeerConnection(datachannelListeners);
 
-      this.webRTCClient.startTURN("play").catch((turnError: Error) => {
-        this.webRTCClient.reset();
-        this.logger.error(
-          "Не удается установить соединение через TURN, причина:",
-          turnError.message
-        );
-      });
-    });
+    //   this.webRTCClient.startTURN("play").catch((turnError: Error) => {
+    //     this.webRTCClient.reset();
+    //     this.logger.error(
+    //       "Не удается установить соединение через TURN, причина:",
+    //       turnError.message
+    //     );
+    //   });
+    // });
   }
 
   public async reinitWithNewOptions(options: ConnectionOptions) {
@@ -105,26 +105,7 @@ export class LiveVideoService implements ModeService {
       },
     };
 
-    webRTCClient.setupPeerConnection(datachannelListeners);
-
-    webRTCClient.startP2P().catch((p2pError: Error) => {
-      this.logger.error(
-        "Не удается установить соединение через P2P, причина:",
-        p2pError.message
-      );
-
-      this.logger.log("Пробуем соединиться через TURN");
-      webRTCClient.reset();
-      webRTCClient.setupPeerConnection(datachannelListeners);
-
-      webRTCClient.startTURN("play").catch((turnError: Error) => {
-        webRTCClient.reset();
-        this.logger.error(
-          "Не удается установить соединение через TURN, причина:",
-          turnError.message
-        );
-      });
-    });
+    await this.webRTCClient.setupPeerConnection(datachannelListeners);
   }
 
   public get mic() {

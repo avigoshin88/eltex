@@ -84,7 +84,7 @@ export class ArchiveVideoService implements ModeService {
   }
 
   async init(): Promise<void> {
-    this.webRTCClient.setupPeerConnection({
+    await this.webRTCClient.setupPeerConnection({
       nativeListeners: {
         open: this.onOpenDatachannel.bind(this),
       },
@@ -103,13 +103,6 @@ export class ArchiveVideoService implements ModeService {
         // @ts-ignore
         [DatachannelMessageType.META]: this.metaDrawer.draw,
       },
-    });
-
-    this.webRTCClient.startTURN("archive").catch((turnError: Error) => {
-      this.logger.error(
-        "Не удается установить соединение через TURN, причина:",
-        turnError.message
-      );
     });
 
     this.metaDrawer.init();
@@ -161,15 +154,7 @@ export class ArchiveVideoService implements ModeService {
       },
     };
 
-    webRTCClient.setupPeerConnection(datachannelListeners);
-
-    webRTCClient.startTURN("archive").catch((turnError: Error) => {
-      webRTCClient.reset();
-      this.logger.error(
-        "Не удается установить соединение через TURN, причина:",
-        turnError.message
-      );
-    });
+    await webRTCClient.setupPeerConnection(datachannelListeners);
   }
 
   async reset(fullReset = true): Promise<void> {

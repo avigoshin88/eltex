@@ -6,7 +6,6 @@ import {
 import { Nullable } from "../types/global";
 import {
   ConnectionType,
-  TURNConnectionType,
   GetSDPOfferResponse,
   Candidate,
 } from "../dto/connection";
@@ -24,9 +23,11 @@ export class WebRTCService {
   private currentType: null | ConnectionType = null;
   private datachannelClient: DatachannelClientService;
 
+  private nativeListeners: DatachannelNativeEventListeners = {};
+  private listeners: DatachannelEventListeners = {};
+
   private setSource: (stream: MediaStream) => void;
   private _tracks: MediaStreamTrack[] = [];
-  private generator: AsyncGenerator<undefined, void, unknown> | undefined;
 
   constructor(
     options: ConnectionOptions,
@@ -38,15 +39,20 @@ export class WebRTCService {
     this.datachannelClient = datachannel;
     this.microphoneService = new MicrophoneService();
     this.setSource = setSource;
+
+    CustomEvents.on("reinit-connection", this.reinitPeerConnection.bind(this));
   }
 
-  public setupPeerConnection({
+  public async setupPeerConnection({
     nativeListeners,
     listeners,
   }: {
     nativeListeners: DatachannelNativeEventListeners;
     listeners: DatachannelEventListeners;
   }) {
+    this.nativeListeners = nativeListeners;
+    this.listeners = listeners;
+
     this.peerConnection = new RTCPeerConnection(this.options.config);
 
     this.datachannelClient.register(
@@ -61,6 +67,51 @@ export class WebRTCService {
     this.peerConnection.ontrack = this._onTrack.bind(this);
     this.peerConnection.onconnectionstatechange =
       this._onConnectionStateChange.bind(this);
+
+    this.peerConnection.onicegatheringstatechange =
+      this.onIceatheringsStateChange.bind(this);
+
+    await this.prepareTransceivers();
+
+    this.initListeners();
+
+    CustomEvents.emit(
+      "peerconnection-status",
+      this.peerConnection!.connectionState
+    );
+  }
+
+  private async reinitPeerConnection() {
+    await this.setupPeerConnection({
+      nativeListeners: this.nativeListeners,
+      listeners: this.listeners,
+    });
+  }
+
+  private initListeners() {
+    CustomEvents.on("remote-description", this.onRemoteDescription.bind(this));
+    CustomEvents.on(
+      "request-local-description",
+      this.onRequestLocalDescription.bind(this)
+    );
+
+    if (!this.peerConnection) {
+      return;
+    }
+
+    this.peerConnection.onconnectionstatechange = () => {
+      CustomEvents.emit(
+        "peerconnection-status",
+        this.peerConnection?.connectionState
+      );
+
+      if (
+        this.peerConnection?.connectionState === "disconnected" ||
+        this.peerConnection?.connectionState === "failed"
+      ) {
+        this.reset();
+      }
+    };
   }
 
   private async prepareTransceivers() {
@@ -87,239 +138,71 @@ export class WebRTCService {
     this.logger.log("prepareTransceivers: Трансиверы добавлены");
   }
 
-  private async waitForRemoteOffer() {
-    return new Promise<GetSDPOfferResponse>((resolve, reject) => {
-      let isResolved = false;
-
-      const onRemoteOffer = (response: GetSDPOfferResponse) => {
-        if (!isResolved) {
-          isResolved = true;
-          CustomEvents.off("remote-sdp-offer", onRemoteOffer);
-          CustomEvents.off("remote-sdp-error", onError);
-          resolve(response);
-        }
-      };
-
-      const onError = (error: any) => {
-        if (!isResolved) {
-          isResolved = true;
-          CustomEvents.off("remote-sdp-offer", onRemoteOffer);
-          CustomEvents.off("remote-sdp-error", onError);
-          reject(error);
-        }
-      };
-
-      CustomEvents.on("remote-sdp-offer", onRemoteOffer);
-      CustomEvents.on("remote-sdp-error", onError);
-
-      // Проверка, если событие уже было отправлено до подписки
-      setTimeout(() => {
-        if (!isResolved) {
-          CustomEvents.emit("request-remote-sdp-offer");
-        }
-      }, 0);
-    });
-  }
-
-  public async startP2P() {
-    return new Promise<void>(async (resolve, reject) => {
-      const outerThis = this;
-
-      if (!outerThis.peerConnection)
-        throw Error("P2P: Live сервис не инициализирован");
-
-      const peerConnection = outerThis.peerConnection;
-
-      async function* startP2PGen() {
-        outerThis.logger.log("P2P: Начало соединения через P2P");
-
-        outerThis.currentType = "play_analytic";
-
-        await outerThis.prepareTransceivers();
-
-        outerThis.logger.log("P2P: Запрашиваем SDP offer");
-        const remoteOffer = await outerThis.waitForRemoteOffer().catch(reject);
-
-        if (!remoteOffer) {
-          reject();
-          return;
-        }
-
-        outerThis.logger.log("P2P: SDP offer получен: ", remoteOffer);
-
-        const offer: RTCSessionDescriptionInit = {
-          sdp: remoteOffer?.sdp,
-          type: "offer",
-        };
-
-        outerThis.logger.log("P2P: setRemoteDescription");
-        await peerConnection.setRemoteDescription(offer);
-
-        outerThis.logger.log("P2P: Готовим локальный SDP offer");
-
-        const answer = await outerThis.getSDP.bind(outerThis)("P2P");
-
-        outerThis.logger.log("P2P: setLocalDescription");
-
-        await peerConnection.setLocalDescription(answer).catch((e) => {
-          throw Error(
-            `P2P: Не удалось установить Local Description, ошибка: ${JSON.stringify(
-              e
-            )}`
-          );
-        });
-
-        CustomEvents.emit("local-sdp-answer", answer.sdp!);
-
-        outerThis.logger.log("P2P: setLocalDescription установлено");
-
-        yield;
-
-        outerThis.logger.log("P2P: очищаем генератор");
-
-        outerThis.generator = undefined;
-      }
-
-      outerThis.logger.log("P2P: устанавливаем генератор");
-
-      const onIceGatheringStateChange = async () => {
-        try {
-          if (
-            peerConnection.iceGatheringState === "complete" &&
-            this.generator
-          ) {
-            const result = await this.generator.next();
-
-            if (result.done) {
-              peerConnection.onicegatheringstatechange = null;
-              resolve();
-            }
-          }
-        } catch (e) {
-          reject(e);
-        }
-      };
-
-      peerConnection.onicegatheringstatechange = onIceGatheringStateChange;
-
-      this.generator = startP2PGen();
-      await this.generator.next();
-    });
-  }
-
-  public async startTURN(connectionType: TURNConnectionType) {
-    return new Promise<void>(async (resolve, reject) => {
-      const outerThis = this;
-
-      if (!outerThis.peerConnection)
-        throw Error("TURN: Live сервис не инициализирован");
-
-      const peerConnection = outerThis.peerConnection;
-
-      async function* startTURNGen() {
-        outerThis.logger.log("TURN: Начало соединения через TURN");
-
-        outerThis.currentType = connectionType;
-
-        await outerThis.prepareTransceivers();
-
-        outerThis.logger.log("TURN: Готовим локальный SDP offer");
-
-        const offer = await outerThis.getSDP.bind(outerThis)("TURN");
-
-        CustomEvents.emit("local-sdp-offer", offer.sdp!);
-
-        outerThis.logger.log("TURN: setLocalDescription");
-
-        await peerConnection.setLocalDescription(offer).catch((e) => {
-          throw Error(
-            `TURN: Не удалось установить Local Description, ошибка: ${JSON.stringify(
-              e
-            )}`
-          );
-        });
-
-        yield;
-
-        outerThis.logger.log(
-          "TURN: Запрашиваем обмен SDP offer",
-          peerConnection.localDescription?.sdp!
-        );
-
-        const remoteOffer = await outerThis.waitForRemoteOffer();
-
-        if (remoteOffer.code !== 0 || !remoteOffer.sdp) {
-          throw Error(
-            `TURN: Не удается получить SDP offer, ответ: ${JSON.stringify(
-              remoteOffer
-            )}`
-          );
-        }
-
-        const answer: RTCSessionDescriptionInit = {
-          type: "answer",
-          sdp: remoteOffer.sdp!,
-        };
-
-        outerThis.logger.log("TURN: setRemoteDescription");
-        await peerConnection.setRemoteDescription(answer);
-
-        outerThis.logger.log("TURN: очищаем генератор");
-
-        outerThis.generator = undefined;
-      }
-
-      outerThis.logger.log("TURN: устанавливаем генератор");
-
-      const onIceGatheringStateChange = async () => {
-        try {
-          if (
-            peerConnection.iceGatheringState === "complete" &&
-            this.generator
-          ) {
-            const result = await this.generator.next();
-
-            if (result.done) {
-              peerConnection.onicegatheringstatechange = null;
-              resolve();
-            }
-          }
-        } catch (e) {
-          reject(e);
-        }
-      };
-
-      peerConnection.onicegatheringstatechange = onIceGatheringStateChange;
-
-      this.generator = startTURNGen();
-      await this.generator.next();
-    });
-  }
-
-  private async getSDP(type: "P2P" | "TURN") {
-    let data = await (type === "P2P"
-      ? this.peerConnection!.createAnswer()
-      : this.peerConnection!.createOffer());
-
-    if (!data.sdp) {
-      throw Error(`${type}: Не удается подготовить SDP offer`);
+  private onRemoteDescription(remoteOffer: GetSDPOfferResponse) {
+    if (!this.peerConnection) {
+      throw Error("Peer connection отсутствует");
     }
 
-    this.logger.log(`${type}: SDP offer подготовлен: `, data);
+    this.logger.log("Получен Remote Description: ", remoteOffer);
 
-    if (this.options.constrains) {
-      this.logger.log(
-        "TURN: Устанавливаем ограничения битрейта равное ",
-        this.options.constrains.maxBitrate
+    const remoteDescription: RTCSessionDescriptionInit = {
+      type:
+        this.peerConnection.signalingState === "have-local-offer"
+          ? "answer"
+          : "offer",
+      sdp: remoteOffer.sdp,
+    };
+
+    this.peerConnection?.setRemoteDescription(remoteDescription).then(() => {
+      this.logger.log("Remote Description установлен");
+    });
+  }
+
+  private async onRequestLocalDescription() {
+    if (!this.peerConnection) {
+      throw Error("Peer connection отсутствует");
+    }
+
+    this.logger.log(
+      "Запрос локального описания, текущее состояние сигнала:",
+      this.peerConnection.signalingState
+    );
+
+    try {
+      let description: RTCSessionDescriptionInit;
+
+      if (this.peerConnection.signalingState === "have-remote-offer") {
+        this.logger.log("Создание ответа на удаленное предложение");
+        description = await this.peerConnection.createAnswer();
+      } else {
+        this.logger.log("Создание нового предложения");
+        description = await this.peerConnection.createOffer();
+      }
+
+      description.sdp = this.modifySDP(
+        description.sdp!,
+        this.options.constrains?.maxBitrate ?? 0
       );
 
-      data = {
-        ...data,
-        sdp: this.modifySDP(data.sdp, this.options.constrains.maxBitrate),
-      };
-    }
+      await this.peerConnection.setLocalDescription(description);
 
-    return data;
+      this.logger.log("Local Description установлен:", description);
+    } catch (error) {
+      this.logger.error(
+        "Ошибка при создании или установке локального описания:",
+        error
+      );
+      // throw error;
+    }
+  }
+
+  private onIceatheringsStateChange() {
+    if (this.peerConnection?.iceGatheringState === "complete") {
+      CustomEvents.emit(
+        "local-description",
+        this.peerConnection.localDescription?.sdp
+      );
+    }
   }
 
   public get hasAccessToMicrophone() {

@@ -26,5 +26,3 @@ export type ConnectionType =
   | "push"
   | "archive"
   | "play_analytic";
-
-export type TURNConnectionType = Exclude<ConnectionType, "p2p" | "p2p_play">;
