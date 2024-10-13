@@ -10,8 +10,7 @@ export type CustomEventListenerName =
 export type CustomEventEmitName =
   | "reinit-connection"
   | "request-local-description"
-  | "remote-description"
-  | "remote-description-error";
+  | "remote-description";
 
 export type CustomEventCallback<T = any> = (data: T) => void;
 

@@ -96,15 +96,15 @@
 
 - `meta` – передает meta, каждый раз когда она обновляется
 - `mode-changed` – режим изменен – вернет новый режим
-- `local-sdp-offer` – принимает сгенерированный внутри плеера local sdp offer
-- `local-sdp-answer` – принимает сгенерированный внутри плеера local sdp answer
-- `ice-candidate"` – принимает ice candidate
-- `request-remote-sdp-offer` – принудительная генерация sdp offer, нужно в случаях когда плеер не может установить подписку на событие до вызова
+- `local-description` – принимает сгенерированный внутри плеера local sdp offer/answer
+- `ice-candidate` – принимает ice candidate
+- `peerconnection-status"` – принимает статусы peerconnection
 
 Отправляющие:
 
-- `remote-sdp-offer` – отправка remote sdp offer, сгенерированного уровнем выше
-- `remote-sdp-error` – отправка ошибки на генерацию remote sdp offer
+- `reinit-connection` – инициализация нового подключения после первого запуска (например при переключении со STUN на TURN)
+- `request-local-description` – запрос локального офера (для TURN)
+- `remote-description"` – отправка remote sdp offer, сгенерированного уровнем выше
 
 **Все события формируются следующим видом**: `<event-name>-<id>`
 
