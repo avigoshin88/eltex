@@ -146,9 +146,9 @@ export class WebRTCService {
 
     const remoteDescription: RTCSessionDescriptionInit = {
       type:
-        this.peerConnection.signalingState === "have-local-offer"
-          ? "answer"
-          : "offer",
+        this.peerConnection.signalingState === "have-remote-offer"
+          ? "offer"
+          : "answer",
       sdp: remoteOffer.sdp,
     };
 
