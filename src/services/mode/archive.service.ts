@@ -127,6 +127,7 @@ export class ArchiveVideoService implements ModeService {
     );
     const datachannelClient = new DatachannelClientService();
     const webRTCClient = new WebRTCService(
+      Mode.ARCHIVE,
       options,
       datachannelClient,
       this.setSource.bind(this)
