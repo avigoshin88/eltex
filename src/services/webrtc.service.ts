@@ -191,7 +191,6 @@ export class WebRTCService {
         "Ошибка при создании или установке локального описания:",
         error
       );
-      // throw error;
     }
   }
 
