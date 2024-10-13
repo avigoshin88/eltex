@@ -3,7 +3,11 @@ import { WebRTCService } from "../webrtc.service";
 import { ConnectionOptions } from "../../types/connection-options";
 import { ModeService } from "../../interfaces/mode";
 import { DatachannelClientService } from "../datachannel/data-channel.service";
-import { DatachannelMessageType } from "../../types/datachannel-listener";
+import {
+  DatachannelEventListeners,
+  DatachannelMessageType,
+  DatachannelNativeEventListeners,
+} from "../../types/datachannel-listener";
 import { VideoPlayerService } from "../player/player.service";
 import { RangeDto } from "../../dto/ranges";
 import { TimelineOverflowDrawer } from "../player/overflow-elements/timeline-drawer.service";
@@ -15,16 +19,18 @@ import { Nullable } from "../../types/global";
 import { ExportURLDto } from "../../dto/export";
 import { FileDownloader } from "../file-downloader.service";
 import { EventBus } from "../event-bus.service";
+import { RangeData } from "../../types/range";
+import { Mode } from "../../constants/mode";
 
 export class ArchiveVideoService implements ModeService {
   private logger = new Logger("ArchiveVideoService");
 
-  private readonly webRTCClient!: WebRTCService;
-  private readonly datachannelClient: DatachannelClientService;
+  private webRTCClient!: WebRTCService;
+  private datachannelClient: DatachannelClientService;
   private readonly player: VideoPlayerService;
 
   private readonly timelineDrawer!: TimelineOverflowDrawer;
-  private readonly metaDrawer!: MetaOverflowDrawerService;
+  private metaDrawer!: MetaOverflowDrawerService;
 
   private readonly rangeMapper = new RangeMapperService();
   private readonly archiveControl!: ArchiveControlService;
@@ -37,6 +43,9 @@ export class ArchiveVideoService implements ModeService {
   private isLoaded = false;
 
   private virtualTimeOffset: number = 0;
+
+  private renewStartTime: Nullable<number> = null;
+  private renewFragment: Nullable<RangeData> = null;
 
   constructor(
     options: ConnectionOptions,
@@ -51,6 +60,7 @@ export class ArchiveVideoService implements ModeService {
     this.datachannelClient = new DatachannelClientService();
 
     this.webRTCClient = new WebRTCService(
+      Mode.ARCHIVE,
       options,
       this.datachannelClient,
       this.setSource.bind(this)
@@ -76,7 +86,7 @@ export class ArchiveVideoService implements ModeService {
   }
 
   async init(): Promise<void> {
-    this.webRTCClient.setupPeerConnection({
+    await this.webRTCClient.setupPeerConnection({
       nativeListeners: {
         open: this.onOpenDatachannel.bind(this),
       },
@@ -97,25 +107,73 @@ export class ArchiveVideoService implements ModeService {
       },
     });
 
-    this.webRTCClient.startTURN("archive").catch((turnError: Error) => {
-      this.logger.error(
-        "Не удается установить соединение через TURN, причина:",
-        turnError.message
-      );
-    });
-
     this.metaDrawer.init();
   }
 
-  async reset(): Promise<void> {
+  public async reinitWithNewOptions(options: ConnectionOptions) {
+    this.renewStartTime = this.timelineDrawer.getCurrentTimestamp();
+    this.renewFragment = {
+      ...this.archiveControl.currentFragment,
+      type: "data",
+    };
+
+    this.logger.log(
+      "Перезапускаем live соединение с новыми параметрами:",
+      JSON.stringify(options)
+    );
+
+    const metaDrawer = new MetaOverflowDrawerService(
+      this.player.videoContainer
+    );
+    const datachannelClient = new DatachannelClientService();
+    const webRTCClient = new WebRTCService(
+      Mode.ARCHIVE,
+      options,
+      datachannelClient,
+      this.setSource.bind(this)
+    );
+
+    metaDrawer.init();
+
+    const datachannelListeners: {
+      nativeListeners: DatachannelNativeEventListeners;
+      listeners: DatachannelEventListeners;
+    } = {
+      listeners: {
+        // ругается на unknown
+        // @ts-ignore
+        [DatachannelMessageType.META]: metaDrawer.draw,
+      },
+      nativeListeners: {
+        open: async () => {
+          await this.reset(false);
+
+          this.metaDrawer = metaDrawer;
+          this.datachannelClient = datachannelClient;
+          this.webRTCClient = webRTCClient;
+
+          this.onOpenDatachannel();
+        },
+      },
+    };
+
+    await webRTCClient.setupPeerConnection(datachannelListeners);
+  }
+
+  async reset(fullReset = true): Promise<void> {
     this.virtualTimeOffset = 0;
 
-    this.archiveControl.clear();
     this.webRTCClient.reset();
-    this.timelineDrawer.disableExportMode();
-    this.timelineDrawer.clear();
 
     this.metaDrawer.destroy();
+
+    if (fullReset) {
+      this.archiveControl.clear();
+      this.timelineDrawer.disableExportMode();
+      this.timelineDrawer.clear();
+      this.renewStartTime = null;
+      this.renewFragment = null;
+    }
   }
 
   export(): void {
@@ -138,7 +196,11 @@ export class ArchiveVideoService implements ModeService {
   }
 
   private async onOpenDatachannel() {
-    this.datachannelClient.send(DatachannelMessageType.GET_RANGES);
+    if (this.renewStartTime !== null && this.renewFragment !== null) {
+      this.onChangeCurrentTime(this.renewStartTime, this.renewFragment);
+    } else {
+      this.datachannelClient.send(DatachannelMessageType.GET_RANGES);
+    }
   }
 
   private exportFragment(range: RangeDto) {
@@ -272,6 +334,8 @@ export class ArchiveVideoService implements ModeService {
     if (this.nextProcessedRange) {
       this.logger.log("Фрагмент стрима начался: ", this.nextProcessedRange);
     }
+
+    this.archiveControl.scheduleNextPreload();
 
     this.player.play();
     this.nextProcessedRange = null;

@@ -1,9 +1,6 @@
-import { Logger } from "../logger/logger.service";
 import { VideoPlayerBuilderService } from "./player-builder.service";
 
 export class VideoPlayerService {
-  private readonly logger = new Logger(VideoPlayerService.name);
-
   builder = new VideoPlayerBuilderService();
   container!: HTMLDivElement;
   videoContainer!: HTMLDivElement;
