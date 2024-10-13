@@ -4,15 +4,12 @@ import {
   DatachannelEventListeners,
 } from "../types/datachannel-listener";
 import { Nullable } from "../types/global";
-import {
-  ConnectionType,
-  GetSDPOfferResponse,
-  Candidate,
-} from "../dto/connection";
+import { GetSDPOfferResponse, Candidate } from "../dto/connection";
 import { CustomEvents } from "./custom-events.service";
 import { DatachannelClientService } from "./datachannel/data-channel.service";
 import { Logger } from "./logger/logger.service";
 import { MicrophoneService } from "./microphone.service";
+import { Mode } from "../constants/mode";
 
 export class WebRTCService {
   private logger = new Logger(WebRTCService.name);
@@ -20,7 +17,7 @@ export class WebRTCService {
   private peerConnection: Nullable<RTCPeerConnection> = null;
   private microphoneService: Nullable<MicrophoneService> = null;
   private options!: ConnectionOptions;
-  private currentType: null | ConnectionType = null;
+  private currentMode: Nullable<Mode> = null;
   private datachannelClient: DatachannelClientService;
 
   private nativeListeners: DatachannelNativeEventListeners = {};
@@ -30,11 +27,13 @@ export class WebRTCService {
   private _tracks: MediaStreamTrack[] = [];
 
   constructor(
+    mode: Mode,
     options: ConnectionOptions,
     datachannel: DatachannelClientService,
     setSource: (stream: MediaStream) => void
   ) {
     this.options = { ...options };
+    this.currentMode = mode;
 
     this.datachannelClient = datachannel;
     this.microphoneService = new MicrophoneService();
@@ -130,7 +129,7 @@ export class WebRTCService {
 
     this.logger.log("prepareTransceivers: Добавляем трансиверы");
 
-    this.currentType === "archive"
+    this.currentMode === Mode.ARCHIVE
       ? await this.microphoneService?.receiveOnlyAudio(peerConnection)
       : await this.microphoneService?.enableMicrophone(peerConnection);
     peerConnection.addTransceiver("video", VideoTransceiverInit);

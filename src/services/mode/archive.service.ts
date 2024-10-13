@@ -20,6 +20,7 @@ import { ExportURLDto } from "../../dto/export";
 import { FileDownloader } from "../file-downloader.service";
 import { EventBus } from "../event-bus.service";
 import { RangeData } from "../../types/range";
+import { Mode } from "../../constants/mode";
 
 export class ArchiveVideoService implements ModeService {
   private logger = new Logger("ArchiveVideoService");
@@ -59,6 +60,7 @@ export class ArchiveVideoService implements ModeService {
     this.datachannelClient = new DatachannelClientService();
 
     this.webRTCClient = new WebRTCService(
+      Mode.ARCHIVE,
       options,
       this.datachannelClient,
       this.setSource.bind(this)
