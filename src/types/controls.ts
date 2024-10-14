@@ -12,6 +12,7 @@ export enum ControlName {
   PREV_FRAGMENT = "prev_fragment",
 
   SOUND = "sound",
+  QUALITY = "quality",
 }
 
 export type ControlType = "button" | "select" | "range";
@@ -89,4 +90,6 @@ export type ControlsOptions = {
   [ControlName.SPEED]: SelectControlOptions;
 
   [ControlName.SOUND]: RangeControlOptions;
+
+  [ControlName.QUALITY]: SelectControlOptions;
 };

@@ -1,123 +1,230 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Eltex WebRTC Video Player Demo</title>
 
-    <style>
-      body {
-        width: 100vw;
-        min-height: 100vh;
-        margin: 0;
-      }
-    </style>
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Eltex WebRTC Video Player Demo</title>
 
-    <script type="module" src="./src/main.ts"></script>
-  </head>
+  <style>
+    body {
+      width: 100vw;
+      min-height: 100vh;
+      margin: 0;
+    }
+  </style>
 
-  <body>
-    <div
-      id="app"
-      style="width: 100%; display: grid; grid-template-columns: repeat(2, 1fr)"
-    >
-      <video-player
-        api_url="https://evi-webrtc.eltex-co.ru:18083"
-        app="live"
-        stream="test"
+  <script type="module" src="./src/main.ts"></script>
+
+  <script>
+    const app = "live";
+    const stream = "test";
+
+    let localOffer = null;
+
+    function getSDPOffer(port = 18083, app, stream) {
+      return fetch(
+        `https://evi-webrtc.eltex-co.ru:${port}/index/api/webrtc?app=${app}&stream=${stream}`,
+        { method: "GET" }
+      )
+        .then((response) => response.json())
+    }
+
+
+    function saveOffer(port = 18083, app, stream, type, offer) {
+      return fetch(
+        `https://evi-webrtc.eltex-co.ru:${port}/index/api/webrtc?app=${app}&stream=${stream}&type=${type}`,
+        { method: "POST", body: offer }
+      )
+        .then((response) => response.json())
+    }
+
+    let remoteOffer = null;
+
+    window.addEventListener('mode-changed-1', (event) => {
+      console.log('mode-changed-1 - external', event.detail)
+
+      document.getElementById('1').setAttribute('mode', event.detail);
+    });
+
+    function registerLiveP2P() {
+      window.addEventListener('peerconnection-status-1', (event) => {
+        if (event.detail === 'new') {
+          setTimeout(() => {
+            getSDPOffer(5080, app, stream).then((response) => {
+              const event = new CustomEvent("remote-description-1", {
+                detail: response,
+              });
+
+              window.dispatchEvent(event);
+            })
+          })
+        }
+      });
+
+      window.addEventListener('local-description-1', (event) => {
+        console.log('local-description-1123123', event.detail);
+
+        localOffer = event.detail;
+
+        saveOffer(5080, app, stream, 'p2p_play', event.detail).then((response) => {
+          console.log('saveOffer');
+        });
+      });
+    }
+
+    function registerLiveTurn() {
+      window.addEventListener('peerconnection-status-1', (event) => {
+        if (event.detail === 'new') {
+          setTimeout(() => {
+            const event = new CustomEvent("request-local-description-1");
+
+            window.dispatchEvent(event);
+          })
+        }
+      });
+
+      window.addEventListener('local-description-1', (event) => {
+        localOffer = event.detail;
+
+        saveOffer(undefined, app, stream, 'play_analytic', localOffer).then((response) => {
+          const event = new CustomEvent("remote-description-1", {
+            detail: response,
+          });
+
+          window.dispatchEvent(event);
+        })
+      });
+    }
+
+
+    function registerArchiveEvents() {
+      window.addEventListener('peerconnection-status-1', (event) => {
+
+        if (event.detail === 'new') {
+          setTimeout(() => {
+            const event = new CustomEvent("request-local-description-1");
+
+            window.dispatchEvent(event);
+          })
+        }
+      });
+
+      window.addEventListener('local-description-1', (event) => {
+        localOffer = event.detail;
+
+        saveOffer(undefined, app, stream, 'archive', localOffer).then((response) => {
+          const event = new CustomEvent("remote-description-1", {
+            detail: response,
+          });
+
+          window.dispatchEvent(event);
+        })
+      });
+    }
+
+    // registerLiveP2P();
+    // registerLiveTurn();
+    registerArchiveEvents();
+  </script>
+</head>
+
+<body>
+  <div id="app" style="width: 100%; display: grid;">
+    <video-player id="1" mode="live" camera_name="camera_name" ice_servers="stun:evi-webrtc.eltex-co.ru:3478">
+    </video-player>
+    <!-- <video-player
+        id="2"
+        mode="live"
+        camera_name="camera_name"
         ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
       ></video-player>
-      <!-- <video-player
-        api_url="https://evi-webrtc.eltex-co.ru:18083"
-        app="live"
-        stream="test"
-        iceServers="stun:evi-webrtc.eltex-co.ru:3478"
+      <video-player
+        id="3"
+        mode="live"
+        camera_name="camera_name"
+        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
       ></video-player>
       <video-player
-        api_url="https://evi-webrtc.eltex-co.ru:18083"
-        app="live"
-        stream="test"
-        iceServers="stun:evi-webrtc.eltex-co.ru:3478"
+        id="4"
+        mode="live"
+        camera_name="camera_name"
+        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
       ></video-player>
       <video-player
-        api_url="https://evi-webrtc.eltex-co.ru:18083"
-        app="live"
-        stream="test"
-        iceServers="stun:evi-webrtc.eltex-co.ru:3478"
+        id="5"
+        mode="live"
+        camera_name="camera_name"
+        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
       ></video-player>
       <video-player
-        api_url="https://evi-webrtc.eltex-co.ru:18083"
-        app="live"
-        stream="test"
-        iceServers="stun:evi-webrtc.eltex-co.ru:3478"
+        id="6"
+        mode="live"
+        camera_name="camera_name"
+        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
       ></video-player>
       <video-player
-        api_url="https://evi-webrtc.eltex-co.ru:18083"
-        app="live"
-        stream="test"
-        iceServers="stun:evi-webrtc.eltex-co.ru:3478"
+        id="7"
+        mode="live"
+        camera_name="camera_name"
+        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
       ></video-player>
       <video-player
-        api_url="https://evi-webrtc.eltex-co.ru:18083"
-        app="live"
-        stream="test"
-        iceServers="stun:evi-webrtc.eltex-co.ru:3478"
+        id="8"
+        mode="live"
+        camera_name="camera_name"
+        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
       ></video-player>
       <video-player
-        api_url="https://evi-webrtc.eltex-co.ru:18083"
-        app="live"
-        stream="test"
-        iceServers="stun:evi-webrtc.eltex-co.ru:3478"
+        id="9"
+        mode="live"
+        camera_name="camera_name"
+        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
       ></video-player>
       <video-player
-        api_url="https://evi-webrtc.eltex-co.ru:18083"
-        app="live"
-        stream="test"
-        iceServers="stun:evi-webrtc.eltex-co.ru:3478"
+        id="10"
+        mode="live"
+        camera_name="camera_name"
+        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
       ></video-player>
       <video-player
-        api_url="https://evi-webrtc.eltex-co.ru:18083"
-        app="live"
-        stream="test"
-        iceServers="stun:evi-webrtc.eltex-co.ru:3478"
+        id="11"
+        mode="live"
+        camera_name="camera_name"
+        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
       ></video-player>
       <video-player
-        api_url="https://evi-webrtc.eltex-co.ru:18083"
-        app="live"
-        stream="test"
-        iceServers="stun:evi-webrtc.eltex-co.ru:3478"
+        id="12"
+        mode="live"
+        camera_name="camera_name"
+        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
       ></video-player>
       <video-player
-        api_url="https://evi-webrtc.eltex-co.ru:18083"
-        app="live"
-        stream="test"
-        iceServers="stun:evi-webrtc.eltex-co.ru:3478"
+        id="13"
+        mode="live"
+        camera_name="camera_name"
+        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
       ></video-player>
       <video-player
-        api_url="https://evi-webrtc.eltex-co.ru:18083"
-        app="live"
-        stream="test"
-        iceServers="stun:evi-webrtc.eltex-co.ru:3478"
+        id="14"
+        mode="live"
+        camera_name="camera_name"
+        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
       ></video-player>
       <video-player
-        api_url="https://evi-webrtc.eltex-co.ru:18083"
-        app="live"
-        stream="test"
-        iceServers="stun:evi-webrtc.eltex-co.ru:3478"
+        id="15"
+        mode="live"
+        camera_name="camera_name"
+        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
       ></video-player>
       <video-player
-        api_url="https://evi-webrtc.eltex-co.ru:18083"
-        app="live"
-        stream="test"
-        iceServers="stun:evi-webrtc.eltex-co.ru:3478"
-      ></video-player>
-      <video-player
-        api_url="https://evi-webrtc.eltex-co.ru:18083"
-        app="live"
-        stream="test"
-        iceServers="stun:evi-webrtc.eltex-co.ru:3478"
+        id="16"
+        mode="live"
+        camera_name="camera_name"
+        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
       ></video-player> -->
-    </div>
-  </body>
+  </div>
+</body>
+
 </html>
