@@ -31,7 +31,7 @@ export class SnapshotService {
 
     const context = canvas.getContext("2d");
     if (!context) {
-      this.logger.warn("Скриншот невозможен: контекст неопределен");
+      this.logger.warn("info", "Скриншот невозможен: контекст неопределен");
       return;
     }
 

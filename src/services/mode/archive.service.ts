@@ -118,6 +118,7 @@ export class ArchiveVideoService implements ModeService {
     };
 
     this.logger.log(
+      "info",
       "Перезапускаем live соединение с новыми параметрами:",
       JSON.stringify(options)
     );
@@ -255,7 +256,7 @@ export class ArchiveVideoService implements ModeService {
     this.isPreRequestRange = isPreRequestRange;
 
     if (this.isPreRequestRange) {
-      this.logger.log(DatachannelMessageType.GET_ARCHIVE_FRAGMENT, fragment);
+      this.logger.log("info",DatachannelMessageType.GET_ARCHIVE_FRAGMENT, fragment);
 
       this.datachannelClient.send(DatachannelMessageType.GET_ARCHIVE_FRAGMENT, {
         start_time: fragment.start_time,
@@ -269,14 +270,14 @@ export class ArchiveVideoService implements ModeService {
 
     this.datachannelClient.send(DatachannelMessageType.DROP_BUFFER);
 
-    this.logger.log("============== Начался новый фрагмент ==============");
-    this.logger.log(DatachannelMessageType.DROP_BUFFER, fragment);
+    this.logger.log("info","============== Начался новый фрагмент ==============");
+    this.logger.log("info",DatachannelMessageType.DROP_BUFFER, fragment);
   }
 
   private onChangeCurrentTime(
     ...[timestamp, range]: Parameters<TimelineClickCallback>
   ) {
-    this.logger.log("Изменение текущего времени", timestamp, range);
+    this.logger.log("info","Изменение текущего времени", timestamp, range);
 
     this.player.pause();
     this.archiveControl.setCurrentRange(timestamp, range);
@@ -286,11 +287,11 @@ export class ArchiveVideoService implements ModeService {
 
   private onDropComplete() {
     if (!this.nextProcessedRange) {
-      this.logger.warn("Следующий диапазон пустой: нечего очищать");
+      this.logger.warn("info","Следующий диапазон пустой: нечего очищать");
       return;
     }
 
-    this.logger.log(DatachannelMessageType.GET_KEY, {
+    this.logger.log("info",DatachannelMessageType.GET_KEY, {
       start_time: this.nextProcessedRange.start_time,
     });
 
@@ -301,12 +302,12 @@ export class ArchiveVideoService implements ModeService {
 
   private onKeyFragmentUpload() {
     if (!this.nextProcessedRange) {
-      this.logger.warn("Нечего загружать в буфер: следующий диапазон пустой");
+      this.logger.warn("info","Нечего загружать в буфер: следующий диапазон пустой");
       return;
     }
 
     this.logger.log(
-      DatachannelMessageType.GET_ARCHIVE_FRAGMENT,
+     "info", DatachannelMessageType.GET_ARCHIVE_FRAGMENT,
       this.nextProcessedRange
     );
 
@@ -321,7 +322,11 @@ export class ArchiveVideoService implements ModeService {
       this.isPreRequestRange = false;
 
       if (this.nextProcessedRange) {
-        this.logger.log("Фрагмент стрима начался: ", this.nextProcessedRange);
+        this.logger.log(
+          "info",
+          "Фрагмент стрима начался: ",
+          this.nextProcessedRange
+        );
 
         this.nextProcessedRange = null;
       }
@@ -332,7 +337,11 @@ export class ArchiveVideoService implements ModeService {
 
   private onStreamPlay() {
     if (this.nextProcessedRange) {
-      this.logger.log("Фрагмент стрима начался: ", this.nextProcessedRange);
+      this.logger.log(
+        "info",
+        "Фрагмент стрима начался: ",
+        this.nextProcessedRange
+      );
     }
 
     this.archiveControl.scheduleNextPreload();
@@ -342,7 +351,7 @@ export class ArchiveVideoService implements ModeService {
   }
 
   play(isContinue = false) {
-    this.logger.log("Воспроизведение стрима");
+    this.logger.log("info", "Воспроизведение стрима");
 
     if (!isContinue) {
       this.datachannelClient.send(DatachannelMessageType.PLAY_STREAM);
@@ -352,7 +361,7 @@ export class ArchiveVideoService implements ModeService {
   }
 
   stop() {
-    this.logger.log(DatachannelMessageType.STOP_STREAM);
+    this.logger.log("info", DatachannelMessageType.STOP_STREAM);
     this.datachannelClient.send(DatachannelMessageType.STOP_STREAM);
 
     this.archiveControl.pause(this.timelineDrawer.getCurrentTimestamp());

@@ -44,7 +44,11 @@ export class MicrophoneService {
 
       this.hasAccessToMic = true;
     } catch (error) {
-      this.logger.error("Не удалось получить доступ к микрофону:", error);
+      this.logger.error(
+        "info",
+        "Не удалось получить доступ к микрофону:",
+        error
+      );
 
       // Переключаем трансивер на только прием, если не удалось получить микрофон
       if (this.audioTransceiver) {
@@ -112,7 +116,11 @@ export class MicrophoneService {
         (device) => device.kind === "audioinput"
       );
 
-      this.logger.log("Устройства ввода аудио изменены:", audioDevices);
+      this.logger.log(
+        "info",
+        "Устройства ввода аудио изменены:",
+        audioDevices
+      );
 
       // Находим новое устройство, которое отличается от текущего
       const newDevice = audioDevices.find(
@@ -120,7 +128,11 @@ export class MicrophoneService {
       );
 
       if (newDevice) {
-        this.logger.log("Переключаемся на новое устройство:", newDevice.label);
+        this.logger.log(
+          "info",
+          "Переключаемся на новое устройство:",
+          newDevice.label
+        );
         await this.enableMicrophone(peerConnection, newDevice.deviceId); // Переключаемся на новое устройство
       }
 
@@ -174,11 +186,11 @@ export class MicrophoneService {
     if (this.isMicOn) {
       this.muteMicrophone();
       this.isMicOn = false;
-      this.logger.log("Микрофон выключен");
+      this.logger.log("info", "Микрофон выключен");
     } else {
       this.unmuteMicrophone();
       this.isMicOn = true;
-      this.logger.log("Микрофон включен");
+      this.logger.log("info", "Микрофон включен");
     }
   }
 
@@ -186,13 +198,13 @@ export class MicrophoneService {
   public startPushToTalk() {
     this.isPushToTalk = true;
     this.pushToTalk(true); // Включаем микрофон
-    this.logger.log("Рация: микрофон включен");
+    this.logger.log("info", "Рация: микрофон включен");
   }
 
   public stopPushToTalk() {
     this.isPushToTalk = false;
     this.pushToTalk(false); // Выключаем микрофон
-    this.logger.log("Рация: микрофон выключен");
+    this.logger.log("info", "Рация: микрофон выключен");
   }
 
   private onMouseDown() {

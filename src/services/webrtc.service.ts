@@ -118,23 +118,26 @@ export class WebRTCService {
 
     if (!peerConnection) return;
 
-    this.logger.log("prepareTransceivers: Подготавливаем трансиверы");
+    this.logger.log("info", "prepareTransceivers: Подготавливаем трансиверы");
 
-    this.logger.log("prepareTransceivers: Подготавливаем данные о трансиверах");
+    this.logger.log(
+      "info",
+      "prepareTransceivers: Подготавливаем данные о трансиверах"
+    );
 
     const VideoTransceiverInit: RTCRtpTransceiverInit = {
       direction: "recvonly",
       sendEncodings: [],
     };
 
-    this.logger.log("prepareTransceivers: Добавляем трансиверы");
+    this.logger.log("info", "prepareTransceivers: Добавляем трансиверы");
 
     this.currentMode === Mode.ARCHIVE
       ? await this.microphoneService?.receiveOnlyAudio(peerConnection)
       : await this.microphoneService?.enableMicrophone(peerConnection);
     peerConnection.addTransceiver("video", VideoTransceiverInit);
 
-    this.logger.log("prepareTransceivers: Трансиверы добавлены");
+    this.logger.log("info", "prepareTransceivers: Трансиверы добавлены");
   }
 
   private onRemoteDescription(remoteOffer: GetSDPOfferResponse) {
@@ -142,7 +145,7 @@ export class WebRTCService {
       throw Error("Peer connection отсутствует");
     }
 
-    this.logger.log("Получен Remote Description: ", remoteOffer);
+    this.logger.log("info", "Получен Remote Description: ", remoteOffer);
 
     const remoteDescription: RTCSessionDescriptionInit = {
       type:
@@ -153,7 +156,7 @@ export class WebRTCService {
     };
 
     this.peerConnection?.setRemoteDescription(remoteDescription).then(() => {
-      this.logger.log("Remote Description установлен");
+      this.logger.log("info", "Remote Description установлен");
     });
   }
 
@@ -163,6 +166,7 @@ export class WebRTCService {
     }
 
     this.logger.log(
+      "info",
       "Запрос локального описания, текущее состояние сигнала:",
       this.peerConnection.signalingState
     );
@@ -171,10 +175,10 @@ export class WebRTCService {
       let description: RTCSessionDescriptionInit;
 
       if (this.peerConnection.signalingState === "have-remote-offer") {
-        this.logger.log("Создание ответа на удаленное предложение");
+        this.logger.log("info", "Создание ответа на удаленное предложение");
         description = await this.peerConnection.createAnswer();
       } else {
-        this.logger.log("Создание нового предложения");
+        this.logger.log("info", "Создание нового предложения");
         description = await this.peerConnection.createOffer();
       }
 
@@ -185,9 +189,10 @@ export class WebRTCService {
 
       await this.peerConnection.setLocalDescription(description);
 
-      this.logger.log("Local Description установлен:", description);
+      this.logger.log("info", "Local Description установлен:", description);
     } catch (error) {
       this.logger.error(
+        "info",
         "Ошибка при создании или установке локального описания:",
         error
       );
@@ -273,7 +278,7 @@ export class WebRTCService {
   }
 
   public reset() {
-    this.logger.log("Начало очистки сервиса");
+    this.logger.log("info", "Начало очистки сервиса");
 
     this.peerConnection
       ?.getTransceivers()
@@ -286,16 +291,19 @@ export class WebRTCService {
     this.peerConnection = null;
     this.datachannelClient.close();
 
-    this.logger.log("Сервис очищен");
+    this.logger.log("info", "Сервис очищен");
   }
 
   private _onIceCandidate(event: RTCPeerConnectionIceEvent) {
     if (!event.candidate) {
-      this.logger.warn("ICE candidate: null");
+      this.logger.warn("info", "ICE candidate: null");
       return;
     }
 
-    this.logger.log("Удаленный ICE candidate: \n " + event.candidate.candidate);
+    this.logger.log(
+      "info",
+      "Удаленный ICE candidate: \n " + event.candidate.candidate
+    );
 
     CustomEvents.emit(
       "ice-candidate",
@@ -304,7 +312,11 @@ export class WebRTCService {
   }
 
   private _onTrack(event: RTCTrackEvent) {
-    this.logger.log("Получен новый Track event, kind:", event.track.kind);
+    this.logger.log(
+      "info",
+      "Получен новый Track event, kind:",
+      event.track.kind
+    );
 
     if (!this.peerConnection) throw Error("Peer connection отсутствует");
 
@@ -316,6 +328,7 @@ export class WebRTCService {
       this.setSource(event.streams[0]);
     } else {
       this.logger.error(
+        "info",
         "onTrack: Дожидаемся пока придут все треки и их количество будет совпадать с количеством получателей"
       );
     }
@@ -323,6 +336,7 @@ export class WebRTCService {
 
   private _onIceCandidateError(event: RTCPeerConnectionIceErrorEvent) {
     this.logger.error(
+      "info",
       "Ошибка ICE_CANDIDATE_ERROR:",
       event.errorText,
       ", код",
@@ -336,6 +350,7 @@ export class WebRTCService {
 
   private _onConnectionStateChange(event: Event) {
     this.logger.log(
+      "info",
       "Статус подключения изменился, новый статус:",
       this.peerConnection?.connectionState,
       ", event:",

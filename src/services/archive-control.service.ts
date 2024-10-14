@@ -109,6 +109,7 @@ export class ArchiveControlService {
   toNextFragment() {
     if (!this.nextFragment) {
       this.logger.warn(
+        "info",
         "Нельзя переключиться к следующему фрагменту: текущий фрагмент последний."
       );
       return;
@@ -153,6 +154,7 @@ export class ArchiveControlService {
   toPrevFragment() {
     if (!this.prevFragment) {
       this.logger.warn(
+        "info",
         "Нельзя переключиться к предыдущему фрагменту: текущий фрагмент первый."
       );
       return;

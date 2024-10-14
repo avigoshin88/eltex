@@ -52,6 +52,7 @@ export class LiveVideoService implements ModeService {
 
   public async reinitWithNewOptions(options: ConnectionOptions) {
     this.logger.log(
+      "info",
       "Перезапускаем live соединение с новыми параметрами:",
       JSON.stringify(options)
     );
