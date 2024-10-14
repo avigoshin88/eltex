@@ -3,7 +3,11 @@ import { WebRTCService } from "../webrtc.service";
 import { ConnectionOptions } from "../../types/connection-options";
 import { ModeService } from "../../interfaces/mode";
 import { DatachannelClientService } from "../datachannel/data-channel.service";
-import { DatachannelMessageType } from "../../types/datachannel-listener";
+import {
+  DatachannelEventListeners,
+  DatachannelMessageType,
+  DatachannelNativeEventListeners,
+} from "../../types/datachannel-listener";
 import { VideoPlayerService } from "../player/player.service";
 import { RangeDto } from "../../dto/ranges";
 import { TimelineOverflowDrawer } from "../player/overflow-elements/timeline-drawer.service";
@@ -14,16 +18,19 @@ import { TimelineClickCallback } from "../../types/timeline";
 import { Nullable } from "../../types/global";
 import { ExportURLDto } from "../../dto/export";
 import { FileDownloader } from "../file-downloader.service";
+import { EventBus } from "../event-bus.service";
+import { RangeData } from "../../types/range";
+import { Mode } from "../../constants/mode";
 
 export class ArchiveVideoService implements ModeService {
-  private logger = new Logger(ArchiveVideoService.name);
+  private logger = new Logger("ArchiveVideoService");
 
-  private readonly webRTCClient!: WebRTCService;
-  private readonly datachannelClient: DatachannelClientService;
+  private webRTCClient!: WebRTCService;
+  private datachannelClient: DatachannelClientService;
   private readonly player: VideoPlayerService;
 
   private readonly timelineDrawer!: TimelineOverflowDrawer;
-  private readonly metaDrawer!: MetaOverflowDrawerService;
+  private metaDrawer!: MetaOverflowDrawerService;
 
   private readonly rangeMapper = new RangeMapperService();
   private readonly archiveControl!: ArchiveControlService;
@@ -34,6 +41,11 @@ export class ArchiveVideoService implements ModeService {
   private isPreRequestRange = false;
 
   private isLoaded = false;
+
+  private virtualTimeOffset: number = 0;
+
+  private renewStartTime: Nullable<number> = null;
+  private renewFragment: Nullable<RangeData> = null;
 
   constructor(
     options: ConnectionOptions,
@@ -48,6 +60,7 @@ export class ArchiveVideoService implements ModeService {
     this.datachannelClient = new DatachannelClientService();
 
     this.webRTCClient = new WebRTCService(
+      Mode.ARCHIVE,
       options,
       this.datachannelClient,
       this.setSource.bind(this)
@@ -64,11 +77,16 @@ export class ArchiveVideoService implements ModeService {
     );
     this.metaDrawer = new MetaOverflowDrawerService(this.player.videoContainer);
 
+    EventBus.on(
+      "new-archive-fragment-started",
+      this.onNewArchiveFragmentStarted.bind(this)
+    );
+
     setControl(this.archiveControl);
   }
 
   async init(): Promise<void> {
-    this.webRTCClient.setupPeerConnection({
+    await this.webRTCClient.setupPeerConnection({
       nativeListeners: {
         open: this.onOpenDatachannel.bind(this),
       },
@@ -89,23 +107,74 @@ export class ArchiveVideoService implements ModeService {
       },
     });
 
-    this.webRTCClient.startTURN("archive").catch((turnError: Error) => {
-      this.logger.error(
-        "Не удается установить соединение через TURN, причина:",
-        turnError.message
-      );
-    });
-
     this.metaDrawer.init();
   }
 
-  async reset(): Promise<void> {
-    this.archiveControl.clear();
+  public async reinitWithNewOptions(options: ConnectionOptions) {
+    this.renewStartTime = this.timelineDrawer.getCurrentTimestamp();
+    this.renewFragment = {
+      ...this.archiveControl.currentFragment,
+      type: "data",
+    };
+
+    this.logger.log(
+      "info",
+      "Перезапускаем live соединение с новыми параметрами:",
+      JSON.stringify(options)
+    );
+
+    const metaDrawer = new MetaOverflowDrawerService(
+      this.player.videoContainer
+    );
+    const datachannelClient = new DatachannelClientService();
+    const webRTCClient = new WebRTCService(
+      Mode.ARCHIVE,
+      options,
+      datachannelClient,
+      this.setSource.bind(this)
+    );
+
+    metaDrawer.init();
+
+    const datachannelListeners: {
+      nativeListeners: DatachannelNativeEventListeners;
+      listeners: DatachannelEventListeners;
+    } = {
+      listeners: {
+        // ругается на unknown
+        // @ts-ignore
+        [DatachannelMessageType.META]: metaDrawer.draw,
+      },
+      nativeListeners: {
+        open: async () => {
+          await this.reset(false);
+
+          this.metaDrawer = metaDrawer;
+          this.datachannelClient = datachannelClient;
+          this.webRTCClient = webRTCClient;
+
+          this.onOpenDatachannel();
+        },
+      },
+    };
+
+    await webRTCClient.setupPeerConnection(datachannelListeners);
+  }
+
+  async reset(fullReset = true): Promise<void> {
+    this.virtualTimeOffset = 0;
+
     this.webRTCClient.reset();
-    this.timelineDrawer.disableExportMode();
-    this.timelineDrawer.clear();
 
     this.metaDrawer.destroy();
+
+    if (fullReset) {
+      this.archiveControl.clear();
+      this.timelineDrawer.disableExportMode();
+      this.timelineDrawer.clear();
+      this.renewStartTime = null;
+      this.renewFragment = null;
+    }
   }
 
   export(): void {
@@ -116,8 +185,23 @@ export class ArchiveVideoService implements ModeService {
     this.timelineDrawer.disableExportMode();
   }
 
+  public getVirtualCurrentTime(currentVideoTime: number): number {
+    return currentVideoTime - this.virtualTimeOffset;
+  }
+
+  private onNewArchiveFragmentStarted(range: RangeDto) {
+    const startTime = range.start_time;
+
+    this.timelineDrawer.setCustomTrackTimestamp(startTime);
+    this.timelineDrawer.draw(startTime);
+  }
+
   private async onOpenDatachannel() {
-    this.datachannelClient.send(DatachannelMessageType.GET_RANGES);
+    if (this.renewStartTime !== null && this.renewFragment !== null) {
+      this.onChangeCurrentTime(this.renewStartTime, this.renewFragment);
+    } else {
+      this.datachannelClient.send(DatachannelMessageType.GET_RANGES);
+    }
   }
 
   private exportFragment(range: RangeDto) {
@@ -128,6 +212,7 @@ export class ArchiveVideoService implements ModeService {
         duration: range.duration,
       }
     );
+    this.timelineDrawer.disableExportMode();
   }
 
   private onExportFragment(data: ExportURLDto) {
@@ -158,9 +243,9 @@ export class ArchiveVideoService implements ModeService {
       return;
     }
 
-    const currentTime = event.timeStamp;
+    const currentTime = (event.target as HTMLVideoElement).currentTime;
 
-    this.timelineDrawer.draw(currentTime);
+    this.timelineDrawer.draw(this.getVirtualCurrentTime(currentTime));
   };
 
   private supportConnect() {
@@ -171,6 +256,8 @@ export class ArchiveVideoService implements ModeService {
     this.isPreRequestRange = isPreRequestRange;
 
     if (this.isPreRequestRange) {
+      this.logger.log("info",DatachannelMessageType.GET_ARCHIVE_FRAGMENT, fragment);
+
       this.datachannelClient.send(DatachannelMessageType.GET_ARCHIVE_FRAGMENT, {
         start_time: fragment.start_time,
         duration: fragment.duration,
@@ -182,24 +269,31 @@ export class ArchiveVideoService implements ModeService {
     this.nextProcessedRange = fragment;
 
     this.datachannelClient.send(DatachannelMessageType.DROP_BUFFER);
+
+    this.logger.log("info","============== Начался новый фрагмент ==============");
+    this.logger.log("info",DatachannelMessageType.DROP_BUFFER, fragment);
   }
 
   private onChangeCurrentTime(
     ...[timestamp, range]: Parameters<TimelineClickCallback>
   ) {
-    const customRange: RangeDto = {
-      ...range,
-      start_time: timestamp,
-      duration: range.end_time - timestamp,
-    };
+    this.logger.log("info","Изменение текущего времени", timestamp, range);
 
-    this.emitStartNewFragment(customRange);
+    this.player.pause();
+    this.archiveControl.setCurrentRange(timestamp, range);
+
+    this.virtualTimeOffset = this.player.video.currentTime;
   }
 
   private onDropComplete() {
     if (!this.nextProcessedRange) {
+      this.logger.warn("info","Следующий диапазон пустой: нечего очищать");
       return;
     }
+
+    this.logger.log("info",DatachannelMessageType.GET_KEY, {
+      start_time: this.nextProcessedRange.start_time,
+    });
 
     this.datachannelClient.send(DatachannelMessageType.GET_KEY, {
       start_time: this.nextProcessedRange.start_time,
@@ -208,8 +302,14 @@ export class ArchiveVideoService implements ModeService {
 
   private onKeyFragmentUpload() {
     if (!this.nextProcessedRange) {
+      this.logger.warn("info","Нечего загружать в буфер: следующий диапазон пустой");
       return;
     }
+
+    this.logger.log(
+     "info", DatachannelMessageType.GET_ARCHIVE_FRAGMENT,
+      this.nextProcessedRange
+    );
 
     this.datachannelClient.send(DatachannelMessageType.GET_ARCHIVE_FRAGMENT, {
       start_time: this.nextProcessedRange.start_time,
@@ -221,29 +321,50 @@ export class ArchiveVideoService implements ModeService {
     if (this.isPreRequestRange) {
       this.isPreRequestRange = false;
 
-      this.logger.log("Фрагмент стрима начался: ", this.nextProcessedRange);
-      this.nextProcessedRange = null;
+      if (this.nextProcessedRange) {
+        this.logger.log(
+          "info",
+          "Фрагмент стрима начался: ",
+          this.nextProcessedRange
+        );
 
-      return;
+        this.nextProcessedRange = null;
+      }
+    } else {
+      this.play();
     }
-
-    this.play();
   }
 
   private onStreamPlay() {
     if (this.nextProcessedRange) {
-      this.logger.log("Фрагмент стрима начался: ", this.nextProcessedRange);
+      this.logger.log(
+        "info",
+        "Фрагмент стрима начался: ",
+        this.nextProcessedRange
+      );
     }
 
+    this.archiveControl.scheduleNextPreload();
+
+    this.player.play();
     this.nextProcessedRange = null;
   }
 
-  play() {
-    this.datachannelClient.send(DatachannelMessageType.PLAY_STREAM);
+  play(isContinue = false) {
+    this.logger.log("info", "Воспроизведение стрима");
+
+    if (!isContinue) {
+      this.datachannelClient.send(DatachannelMessageType.PLAY_STREAM);
+    } else {
+      this.archiveControl.resume();
+    }
   }
 
   stop() {
+    this.logger.log("info", DatachannelMessageType.STOP_STREAM);
     this.datachannelClient.send(DatachannelMessageType.STOP_STREAM);
+
+    this.archiveControl.pause(this.timelineDrawer.getCurrentTimestamp());
   }
 
   setSource(stream: MediaStream) {

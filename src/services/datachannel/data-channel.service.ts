@@ -3,6 +3,7 @@ import {
   DatachannelMessageType,
   DatachannelNativeEventListeners,
 } from "../../types/datachannel-listener";
+import { CustomEvents } from "../custom-events.service";
 import { Logger } from "../logger/logger.service";
 import { DatachannelTransportBuilderService } from "./data-channel-transport-builder.service";
 
@@ -17,20 +18,20 @@ export class DatachannelClientService {
     nativeListeners: DatachannelNativeEventListeners,
     listeners: DatachannelEventListeners
   ) {
-    this.logger.log("Регистрируем datachannel");
+    this.logger.log("info", "Регистрируем datachannel");
     this.datachannel = peerConnection.createDataChannel("data");
 
     for (const listenerName in nativeListeners) {
       if (listenerName === "open") {
         this.datachannel.addEventListener(listenerName, (event) => {
-          this.logger.log("datachannel открыт");
+          this.logger.log("info", "datachannel открыт");
           nativeListeners[listenerName]?.(event);
         });
       }
 
       if (listenerName === "close") {
         this.datachannel.addEventListener(listenerName, (event) => {
-          this.logger.log("datachannel закрыт");
+          this.logger.log("info", "datachannel закрыт");
           nativeListeners[listenerName]?.(event);
         });
       }
@@ -38,10 +39,10 @@ export class DatachannelClientService {
 
     if (Object.keys(nativeListeners).length === 0) {
       this.datachannel.onopen = () => {
-        this.logger.log("datachannel открыт");
+        this.logger.log("info", "datachannel открыт");
       };
       this.datachannel.onclose = () => {
-        this.logger.log("datachannel закрыт");
+        this.logger.log("info", "datachannel закрыт");
       };
     }
 
@@ -50,6 +51,7 @@ export class DatachannelClientService {
 
   send(type: DatachannelMessageType, data?: unknown) {
     this.logger.log(
+      "info",
       "Отправлено событие:",
       this.datachannelTransportBuilder.build(type, data)
     );
@@ -57,11 +59,11 @@ export class DatachannelClientService {
   }
 
   private onMessage(event: MessageEvent, listeners: DatachannelEventListeners) {
-    this.logger.log("Новое сообщение:", event.data);
+    this.logger.log("info", "Новое сообщение:", event.data);
 
     const listenerNames = Object.keys(listeners) as DatachannelMessageType[];
     if (listenerNames.length === 0) {
-      this.logger.warn("Нет подписок на datachannel");
+      this.logger.warn("info", "Нет подписок на datachannel");
       return;
     }
 
@@ -73,6 +75,8 @@ export class DatachannelClientService {
       }
 
       const { type, data } = result;
+
+      this.signalData(type, data);
 
       // времянка пока не поменяли формат данных
       if (listenerNames.includes(DatachannelMessageType.META) && !type) {
@@ -89,13 +93,14 @@ export class DatachannelClientService {
       );
 
       if (!listener) {
-        this.logger.warn("Слушателя события нет:", type);
+        this.logger.warn("info", "Слушателя события нет:", type);
         return;
       }
 
       listeners[listener]?.(data);
     } catch (error) {
       this.logger.error(
+        "info",
         "Не удалось расшифровать сообщение:",
         error,
         "сообщение:",
@@ -106,5 +111,13 @@ export class DatachannelClientService {
 
   close() {
     this.datachannel?.close();
+  }
+
+  private signalData(type: string, data: object) {
+    switch (type) {
+      case DatachannelMessageType.META:
+        CustomEvents.emit("meta", data);
+        break;
+    }
   }
 }

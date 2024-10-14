@@ -9,7 +9,7 @@ import { Nullable } from "../../../types/global";
 
 type ButtonControl = Exclude<
   ControlName,
-  ControlName.SPEED | ControlName.SOUND
+  ControlName.SPEED | ControlName.SOUND | ControlName.QUALITY
 >;
 
 type CommonButtonControl = Exclude<
@@ -122,6 +122,9 @@ export class ControlsOverflowDrawerService {
 
     if (!this.hiddenButtons[ControlName.SOUND]) {
       controlsContainer.appendChild(this.makeControl(ControlName.SOUND));
+    }
+    if (!this.hiddenButtons[ControlName.QUALITY]) {
+      controlsContainer.appendChild(this.makeControl(ControlName.QUALITY));
     }
 
     this.clear();

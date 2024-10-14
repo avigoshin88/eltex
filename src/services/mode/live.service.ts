@@ -10,21 +10,23 @@ import {
 import { DatachannelClientService } from "../datachannel/data-channel.service";
 import { VideoPlayerService } from "../player/player.service";
 import { MetaOverflowDrawerService } from "../player/overflow-elements/meta-drawer.service";
+import { Mode } from "../../constants/mode";
 
 export class LiveVideoService implements ModeService {
   private logger = new Logger(LiveVideoService.name);
 
-  private readonly webRTCClient!: WebRTCService;
-  private readonly datachannelClient: DatachannelClientService;
+  private webRTCClient: WebRTCService;
+  private datachannelClient: DatachannelClientService;
   private readonly player: VideoPlayerService;
 
-  private readonly metaDrawer: MetaOverflowDrawerService;
+  private metaDrawer: MetaOverflowDrawerService;
 
   constructor(options: ConnectionOptions, player: VideoPlayerService) {
     this.player = player;
     this.metaDrawer = new MetaOverflowDrawerService(this.player.videoContainer);
     this.datachannelClient = new DatachannelClientService();
     this.webRTCClient = new WebRTCService(
+      Mode.LIVE,
       options,
       this.datachannelClient,
       this.setSource.bind(this)
@@ -45,26 +47,50 @@ export class LiveVideoService implements ModeService {
       nativeListeners: {},
     };
 
-    this.webRTCClient.setupPeerConnection(datachannelListeners);
+    await this.webRTCClient.setupPeerConnection(datachannelListeners);
+  }
 
-    this.webRTCClient.startP2P().catch((p2pError: Error) => {
-      this.logger.error(
-        "Не удается установить соединение через P2P, причина:",
-        p2pError.message
-      );
+  public async reinitWithNewOptions(options: ConnectionOptions) {
+    this.logger.log(
+      "info",
+      "Перезапускаем live соединение с новыми параметрами:",
+      JSON.stringify(options)
+    );
 
-      this.logger.log("Пробуем соединиться через TURN");
-      this.webRTCClient.reset();
-      this.webRTCClient.setupPeerConnection(datachannelListeners);
+    const metaDrawer = new MetaOverflowDrawerService(
+      this.player.videoContainer
+    );
+    const datachannelClient = new DatachannelClientService();
+    const webRTCClient = new WebRTCService(
+      Mode.LIVE,
+      options,
+      datachannelClient,
+      this.setSource.bind(this)
+    );
 
-      this.webRTCClient.startTURN("play").catch((turnError: Error) => {
-        this.webRTCClient.reset();
-        this.logger.error(
-          "Не удается установить соединение через TURN, причина:",
-          turnError.message
-        );
-      });
-    });
+    metaDrawer.init();
+
+    const datachannelListeners: {
+      nativeListeners: DatachannelNativeEventListeners;
+      listeners: DatachannelEventListeners;
+    } = {
+      listeners: {
+        // ругается на unknown
+        // @ts-ignore
+        [DatachannelMessageType.META]: metaDrawer.draw,
+      },
+      nativeListeners: {
+        open: async () => {
+          await this.reset();
+
+          this.metaDrawer = metaDrawer;
+          this.datachannelClient = datachannelClient;
+          this.webRTCClient = webRTCClient;
+        },
+      },
+    };
+
+    await this.webRTCClient.setupPeerConnection(datachannelListeners);
   }
 
   public get mic() {
@@ -73,9 +99,10 @@ export class LiveVideoService implements ModeService {
     return { hasAccessToMicrophone, isMicEnabled, micCallbacks };
   }
 
-  async reset(): Promise<void> {
-    this.webRTCClient.reset();
+  async reset() {
     this.metaDrawer.destroy();
+    this.datachannelClient.close();
+    this.webRTCClient.reset();
   }
 
   setSource(stream: MediaStream) {

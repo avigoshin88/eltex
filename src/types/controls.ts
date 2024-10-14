@@ -13,6 +13,7 @@ export enum ControlName {
   STATS = "stats",
 
   SOUND = "sound",
+  QUALITY = "quality",
 }
 
 export type ControlType = "button" | "select" | "range";
@@ -92,4 +93,5 @@ export type ControlsOptions = {
   [ControlName.SOUND]: RangeControlOptions;
 
   [ControlName.STATS]: BinaryButtonControlOptions;
+  [ControlName.QUALITY]: SelectControlOptions;
 };

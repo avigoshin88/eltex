@@ -1,8 +1,9 @@
-import { RangeDto } from "../../../dto/ranges";
 import { Nullable } from "../../../types/global";
 import { RangeData } from "../../../types/range";
-import { TimelineClickCallback } from "../../../types/timeline";
-
+import {
+  ExportRangeCallback,
+  TimelineClickCallback,
+} from "../../../types/timeline";
 import { format } from "date-fns";
 
 const divisionSteps = [
@@ -33,16 +34,26 @@ const divisionSteps = [
   { scale: 0.00000000005, step: 10 * 365 * 24 * 60 * 60 * 1000 }, // 10 лет (добавлено соответствующее значение scale)
 ];
 
-type ExportRangeCallback = (range: RangeDto) => void;
-
 export class TimelineOverflowDrawer {
   private ranges: RangeData[] = [];
   private readonly container: HTMLDivElement;
+  private scrollContainer: Nullable<HTMLDivElement> = null;
   private timelineContainer: Nullable<HTMLDivElement> = null;
+
   private scale: number = 1; // Начальный масштаб
   private currentStartTime: number = 0; // Текущее начало времени
   private isReady: boolean = false; // Флаг, указывающий готовность к отрисовке
   private clickCallback: TimelineClickCallback; // Callback для кликов
+
+  private isUserScrolling: boolean = false;
+  private isProgrammaticScroll: boolean = false;
+  private userScrollTimeout: Nullable<number> = null;
+  private programmaticScrollTimeout: Nullable<number> = null;
+  private scrollEndTimeout: Nullable<number> = null;
+  private trackObserver: Nullable<IntersectionObserver> = null;
+
+  private customTrackTimestamp: Nullable<number> = null; // Пользовательское время для трека
+  private currentTimestamp: number = 0;
 
   private exportMode: boolean = false; // Режим экспорта
   private exportStartTime: Nullable<number> = null; // Время начала выбранного диапазона
@@ -54,6 +65,8 @@ export class TimelineOverflowDrawer {
     clickCallback?: TimelineClickCallback
   ) {
     this.container = container;
+    this.scrollContainer = document.createElement("div");
+
     this.timelineContainer = document.createElement("div");
     this.clickCallback = clickCallback || (() => {}); // Используем переданную функцию или пустой callback
 
@@ -63,14 +76,32 @@ export class TimelineOverflowDrawer {
     // Изначально скролл отключен
     this.timelineContainer.style.overflowX = "hidden";
     this.timelineContainer.style.whiteSpace = "nowrap";
-    this.registerListeners();
 
-    this.container.appendChild(this.timelineContainer);
+    this.scrollContainer.appendChild(this.timelineContainer);
+
+    this.scrollContainer.style.width = "100%";
+    this.scrollContainer.style.overflowX = "auto";
+
+    this.container.appendChild(this.scrollContainer);
+
+    this.trackObserver = new IntersectionObserver(
+      this.onTrackObserve.bind(this),
+      {
+        root: this.scrollContainer,
+      }
+    );
+
+    this.registerListeners();
   }
 
   draw(currentTime: number): void {
     if (!this.isReady || !this.timelineContainer || this.ranges.length === 0)
       return;
+
+    const oldTrack = document.getElementById("track");
+    if (oldTrack) {
+      this.trackObserver?.unobserve(oldTrack);
+    }
 
     this.timelineContainer.innerHTML = ""; // Очистка контейнера перед отрисовкой
 
@@ -85,10 +116,8 @@ export class TimelineOverflowDrawer {
 
     // Если ширина всех диапазонов больше ширины контейнера, включаем скролл
     if (totalRangeWidth > containerWidth) {
-      this.container.style.overflowX = "auto"; // Включаем скролл
       this.timelineContainer.style.width = `${totalRangeWidth}px`; // Задаем большую ширину таймлайна
     } else {
-      this.container.style.overflowX = "hidden"; // Отключаем скролл
       this.timelineContainer.style.width = `${containerWidth}px`; // Устанавливаем стандартную ширину
     }
 
@@ -111,42 +140,140 @@ export class TimelineOverflowDrawer {
       this.timelineContainer!.appendChild(rangeBlock);
     });
 
-    const currentTimestamp = startTime + currentTime;
+    // Обновление трека и маркеров экспорта
+    this.updateTrackAndExportMarkers(
+      currentTime,
+      startTime,
+      totalTimeRange,
+      totalRangeWidth
+    );
+  }
 
-    // Проверяем, находится ли текущий временной штамп внутри диапазона 'data'
-    const currentRange = this.findRangeByTimestamp(currentTimestamp);
+  private updateTrackAndExportMarkers(
+    currentTime: number,
+    startTime: number,
+    totalTimeRange: number,
+    totalRangeWidth: number
+  ): void {
+    // Конвертируем currentTime из секунд в миллисекунды
+    const currentTimeMs = currentTime * 1000;
 
-    if (currentRange && currentRange.type === "data") {
-      // Если текущий временной штамп внутри диапазона типа 'data', рисуем трек
-      const trackPosition =
-        ((currentTimestamp - startTime) / totalTimeRange) * totalRangeWidth;
+    // Используем customTrackTimestamp (если он установлен) + текущий прогресс видео (в миллисекундах)
+    this.currentTimestamp =
+      this.customTrackTimestamp !== null
+        ? this.customTrackTimestamp + currentTimeMs
+        : startTime + currentTimeMs;
 
-      const track = document.createElement("div");
+    // Рассчитываем общую длительность breaks до текущего времени (включая текущий range, если это break)
+    const breakDuration = this.getBreakDurationUntil(this.currentTimestamp);
+
+    // Рассчитываем длину break в пикселях
+    const breakLengthPx = breakDuration / (totalTimeRange / totalRangeWidth);
+
+    // Получаем ближайший корректный timestamp (игнорируя breaks)
+    const nearestTimestamp = this.getNearestTimestamp(this.currentTimestamp);
+
+    if (nearestTimestamp === undefined) {
+      return;
+    }
+
+    const [validTimestamp] = nearestTimestamp;
+
+    // Рассчитываем смещение трека с учетом breaks
+    const trackPosition =
+      ((validTimestamp - startTime) / totalTimeRange) * totalRangeWidth +
+      breakLengthPx;
+
+    let track = document.getElementById("track");
+    // Проверяем, существует ли трек, если да — обновляем его, если нет — создаем
+    if (!track) {
+      track = document.createElement("div");
+      track.id = "track";
       track.classList.add("video-player__timeline__track");
-      track.style.left = `${trackPosition}px`;
+      this.timelineContainer!.appendChild(track);
+    }
 
-      this.timelineContainer.appendChild(track);
-    } else {
-      // Ищем ближайший диапазон типа 'data'
-      const nearestDataRange = this.findNearestDataRange(currentTimestamp);
+    // Обновляем позицию трека
+    track!.style.left = `${trackPosition}px`;
 
-      if (nearestDataRange) {
-        // Перемещаем трек на начало ближайшего диапазона типа 'data'
-        const trackPosition =
-          ((nearestDataRange.start_time - startTime) / totalTimeRange) *
-          totalRangeWidth;
+    // Следим за треком (если используется IntersectionObserver)
+    this.trackObserver?.observe(track);
 
-        const track = document.createElement("div");
-        track.classList.add("video-player__timeline__track");
-        track.style.left = `${trackPosition}px`;
-
-        this.timelineContainer.appendChild(track);
-      }
+    // Если включен режим экспорта, обновляем маркеры экспорта
+    if (this.exportMode) {
+      this.updateExportMarkers(startTime, totalTimeRange, totalRangeWidth);
     }
   }
 
+  private getNearestTimestamp(
+    timestamp: number
+  ): [nearestTimestamp: number, range: RangeData] | undefined {
+    let currentRange = this.findRangeByTimestamp(timestamp);
+
+    // Если текущий диапазон — "data", просто возвращаем сам timestamp
+    if (currentRange && currentRange.type === "data") {
+      return [timestamp, currentRange];
+    }
+
+    // Если текущий диапазон — "break", находим следующий диапазон с типом "data"
+    const nextDataRange = this.findNextDataRange(timestamp);
+    if (nextDataRange) {
+      // Возвращаем начало следующего диапазона "data"
+      return [nextDataRange.start_time, nextDataRange];
+    }
+
+    return undefined; // Если нет доступных диапазонов с типом "data"
+  }
+
+  getCurrentTimestamp(): number {
+    return this.currentTimestamp;
+  }
+
+  private getBreakDurationUntil(timestamp: number): number {
+    let totalBreakDuration = 0;
+    let startPoint =
+      this.customTrackTimestamp !== null ? this.customTrackTimestamp : 0;
+
+    for (const range of this.ranges) {
+      // Если диапазон начинается после customTrackTimestamp, продолжаем
+      if (range.end_time < startPoint) {
+        continue;
+      }
+
+      // Проверяем диапазоны с типом 'break'
+      if (range.type === "break") {
+        // Если конец диапазона меньше или равен timestamp, добавляем всю длину диапазона
+        if (range.end_time <= timestamp) {
+          totalBreakDuration += range.end_time - range.start_time;
+        }
+        // Если timestamp находится внутри диапазона, добавляем только до timestamp
+        else if (range.start_time <= timestamp) {
+          totalBreakDuration += timestamp - range.start_time;
+          break; // Останавливаемся, так как текущий range перекрывает timestamp
+        }
+      }
+
+      // Прерываем цикл, если диапазон начинается после переданного timestamp
+      if (range.start_time > timestamp) {
+        break;
+      }
+    }
+
+    return totalBreakDuration;
+  }
+
+  private findNextDataRange(timestamp: number): RangeData | null {
+    // Ищем следующий диапазон с типом "data" после указанного времени
+    for (const range of this.ranges) {
+      if (range.start_time > timestamp && range.type === "data") {
+        return range;
+      }
+    }
+    return null; // Если не найден диапазон
+  }
+
   // Включение режима экспорта
-  enableExportMode(callback: (range: RangeDto) => void): void {
+  enableExportMode(callback: ExportRangeCallback): void {
     this.exportMode = true;
     this.exportCallback = callback;
     this.exportStartTime = null;
@@ -210,25 +337,92 @@ export class TimelineOverflowDrawer {
     }
   }
 
+  private onTrackObserve(entries: IntersectionObserverEntry[]) {
+    const trackEntry = entries[0];
+    if (!trackEntry) {
+      return;
+    }
+
+    if (trackEntry.isIntersecting) {
+      this.isUserScrolling = false;
+      return;
+    }
+
+    if (this.isUserScrolling) {
+      return;
+    }
+
+    this.scrollToTrackRightEdge();
+  }
+
+  public scrollToTrackRightEdge(): void {
+    if (!this.scrollContainer || !this.timelineContainer) return;
+
+    // Находим элемент трека
+    const track = this.timelineContainer.querySelector(
+      ".video-player__timeline__track"
+    ) as HTMLElement;
+
+    if (!track) return; // Трек не найден
+
+    // Получаем позицию трека относительно timelineContainer
+    const trackLeft = track.offsetLeft;
+    const trackWidth = track.offsetWidth;
+
+    // Рассчитываем необходимый scrollLeft
+    const scrollContainerWidth = this.scrollContainer.offsetWidth;
+
+    // Устанавливаем scrollLeft так, чтобы трек был на правом краю
+    let newScrollLeft = trackLeft + trackWidth - scrollContainerWidth;
+
+    // Ограничиваем scrollLeft допустимыми значениями
+    const maxScrollLeft =
+      this.scrollContainer.scrollWidth - scrollContainerWidth;
+    newScrollLeft = Math.max(0, Math.min(newScrollLeft, maxScrollLeft));
+
+    // Устанавливаем флаг программной прокрутки
+    this.isProgrammaticScroll = true;
+
+    // Используем плавную прокрутку
+    this.scrollContainer.scrollTo({
+      left: newScrollLeft,
+      behavior: "smooth",
+    });
+
+    // Начинаем отслеживать завершение прокрутки
+    this.monitorProgrammaticScrollEnd();
+  }
+
+  private monitorProgrammaticScrollEnd(): void {
+    // Очищаем предыдущий таймер, если он был установлен
+    if (this.programmaticScrollTimeout) {
+      clearTimeout(this.programmaticScrollTimeout);
+    }
+
+    // Устанавливаем таймер для определения окончания прокрутки
+    this.programmaticScrollTimeout = setTimeout(() => {
+      // Прокрутка завершена
+      this.isProgrammaticScroll = false;
+    }, 500); // Настройте время в соответствии с длительностью плавной прокрутки
+  }
+
   private drawVirtualizedDivisions(
     startTime: number,
     totalTimeRange: number,
     totalRangeWidth: number
   ): void {
-    const divisionStep = this.getDivisionStep(); // Получаем шаг делений в зависимости от масштаба
+    const divisionStep = this.getDivisionStep(); // Шаг делений
 
-    // Получаем текущие границы прокрутки (начало и конец видимой области)
-    const scrollLeft = this.container.scrollLeft;
-    const containerWidth = this.container.offsetWidth;
+    // Границы видимой области
+    const scrollLeft = this.scrollContainer!.scrollLeft;
+    const containerWidth = this.scrollContainer!.offsetWidth;
 
-    // Рассчитываем границы видимой области по времени
     const visibleStartTime =
       startTime + (scrollLeft / totalRangeWidth) * totalTimeRange;
     const visibleEndTime =
       startTime +
       ((scrollLeft + containerWidth) / totalRangeWidth) * totalTimeRange;
 
-    // Рассчитываем индекс первого и последнего видимого деления
     const firstVisibleDivision = Math.floor(
       (visibleStartTime - startTime) / divisionStep
     );
@@ -236,13 +430,35 @@ export class TimelineOverflowDrawer {
       (visibleEndTime - startTime) / divisionStep
     );
 
-    // Удаляем только старые деления
+    // Удаляем старые деления
     const oldDivisions = this.timelineContainer!.querySelectorAll(
       ".video-player__timeline__period"
     );
     oldDivisions.forEach((division) => division.remove());
 
-    // Отрисовываем только видимые деления
+    // Расчет ширины одного деления в пикселях
+    const divisionWidth = divisionStep * this.scale;
+
+    // Динамическое измерение ширины метки
+    const sampleTime = startTime + firstVisibleDivision * divisionStep;
+    const sampleLabelText = this.formatTime(sampleTime);
+
+    const tempLabel = document.createElement("span");
+    tempLabel.classList.add("video-player__timeline__period__text");
+    tempLabel.style.visibility = "hidden"; // Скрываем элемент
+    tempLabel.style.position = "absolute"; // Убираем из потока
+    tempLabel.innerText = sampleLabelText;
+    document.body.appendChild(tempLabel);
+    const labelWidth = tempLabel.offsetWidth;
+    document.body.removeChild(tempLabel);
+
+    // Расчет интервала между метками
+    let labelInterval = 1;
+    if (divisionWidth < labelWidth + 5) {
+      labelInterval = Math.ceil((labelWidth + 5) / divisionWidth);
+    }
+
+    // Отрисовка видимых делений
     for (let i = firstVisibleDivision; i <= lastVisibleDivision; i++) {
       const divisionTime = startTime + i * divisionStep;
       const position =
@@ -252,19 +468,16 @@ export class TimelineOverflowDrawer {
       division.classList.add("video-player__timeline__period");
       division.style.left = `${position}px`;
 
-      // Отображаем время на каждом 5-м делении
-      if (i % 5 === 0) {
+      // Отображение меток в зависимости от интервала
+      if (i % labelInterval === 0) {
         const timeLabel = document.createElement("span");
-
         timeLabel.classList.add("video-player__timeline__period__text");
-
         timeLabel.innerText = this.formatTime(divisionTime);
-
         division.classList.add("video-player__timeline__period_with_text");
         division.appendChild(timeLabel);
       }
 
-      // Добавляем только видимые деления в контейнер
+      // Добавляем деление в контейнер
       this.timelineContainer!.appendChild(division);
     }
   }
@@ -288,28 +501,10 @@ export class TimelineOverflowDrawer {
     return null; // Если не найден диапазон
   }
 
-  private findNearestDataRange(timestamp: number): RangeData | null {
-    // Находим ближайший диапазон с типом "data"
-    let nearestRange: RangeData | null = null;
-    let minDistance = Infinity;
-
-    for (const range of this.ranges) {
-      if (range.type === "data") {
-        const distance = Math.abs(timestamp - range.start_time);
-        if (distance < minDistance) {
-          minDistance = distance;
-          nearestRange = range;
-        }
-      }
-    }
-
-    return nearestRange;
-  }
-
   setOptions(ranges: RangeData[]): void {
     this.ranges = ranges;
     this.currentStartTime = this.ranges[0]?.start_time || 0;
-    this.isReady = true; // Устанавливаем флаг готовности к отрисовке
+    this.isReady = true;
 
     const totalTimeRange =
       ranges[ranges.length - 1].end_time - ranges[0].start_time;
@@ -322,32 +517,43 @@ export class TimelineOverflowDrawer {
   }
 
   clear(): void {
-    if (!this.timelineContainer) {
+    if (!this.scrollContainer) {
       return;
     }
 
     this.clearListeners();
 
-    this.container.removeChild(this.timelineContainer);
+    this.trackObserver?.disconnect();
+
+    this.container.removeChild(this.scrollContainer!);
+    this.scrollContainer = null;
     this.timelineContainer = null;
 
     this.isReady = false;
+  }
+
+  setCustomTrackTimestamp(timestamp: number) {
+    this.customTrackTimestamp = timestamp;
   }
 
   private formatTime(time: number): string {
     const date = new Date(time);
 
     if (this.scale >= 0.00001) {
-      // Малый масштаб: полное время (часы, минуты, секунды)
+      // Малый масштаб: часы, минуты, секунды
       return format(date, "HH:mm:ss");
-    } else if (this.scale >= 0.0000001) {
-      // Средний масштаб: дата и время
-      return format(date, "dd.MM.yyyy HH:mm");
+    } else if (this.scale >= 0.000001) {
+      // Средний масштаб: день, месяц, часы, минуты
+      return format(date, "dd.MM HH:mm");
+    } else if (this.scale >= 0.00000001) {
+      // Большой масштаб: день, месяц
+      return format(date, "dd.MM");
     } else {
-      // Большой масштаб: только дата
-      return format(date, "dd.MM.yyyy");
+      // Очень большой масштаб: год
+      return format(date, "yyyy");
     }
   }
+
   private getDivisionStep(): number {
     const scaleFactor = this.scale;
 
@@ -359,25 +565,41 @@ export class TimelineOverflowDrawer {
   private clickEventListener(event: MouseEvent): void {
     event.preventDefault();
 
-    const clickX = event.offsetX; // Координата клика по оси X
-    const containerWidth = this.container.offsetWidth;
+    // Получаем размеры контейнера
+    const containerRect = this.container.getBoundingClientRect();
+
+    // Позиция клика относительно контейнера
+    const clickX = event.clientX - containerRect.left;
+
+    // Получаем текущую ширину видимого контейнера и всю ширину таймлайна
+    const scrollLeft = this.scrollContainer?.scrollLeft || 0;
+    const totalTimelineWidth = this.timelineContainer?.offsetWidth || 0;
+
+    // Рассчитываем позицию клика с учётом прокрутки и масштаба
+    const totalClickPosition = (clickX + scrollLeft) / totalTimelineWidth;
+
+    // Время на таймлайне, соответствующее позиции клика
     const startTime = this.ranges[0]?.start_time || 0;
     const endTime = this.ranges[this.ranges.length - 1]?.end_time || 0;
     const totalTimeRange = endTime - startTime;
-    const totalRangeWidth = totalTimeRange * this.scale;
 
-    // Вычисляем время на основе позиции клика
-    let clickedTimestamp =
-      startTime + (clickX / containerWidth) * totalTimeRange;
+    const clickedTimestamp = startTime + totalClickPosition * totalTimeRange;
 
+    // Находим ближайшую временную метку
+    const nearestTimestamp = this.getNearestTimestamp(clickedTimestamp);
+    if (nearestTimestamp === undefined) {
+      return;
+    }
+
+    const [timestamp, clickedRange] = nearestTimestamp;
+
+    // Обработка режима экспорта
     if (this.exportMode) {
-      // Если включён режим экспорта
       if (this.exportStartTime === null) {
-        this.exportStartTime = clickedTimestamp;
+        this.exportStartTime = timestamp;
       } else if (this.exportEndTime === null) {
-        this.exportEndTime = clickedTimestamp;
+        this.exportEndTime = timestamp;
 
-        // Проверяем, что время конца больше времени начала
         if (this.exportStartTime > this.exportEndTime) {
           [this.exportStartTime, this.exportEndTime] = [
             this.exportEndTime,
@@ -391,31 +613,56 @@ export class TimelineOverflowDrawer {
           duration: this.exportEndTime - this.exportStartTime,
         });
       } else {
-        // Если оба времени уже установлены, сбрасываем выбор
-        this.exportStartTime = clickedTimestamp;
+        this.exportStartTime = timestamp;
         this.exportEndTime = null;
       }
 
-      this.updateExportMarkers(startTime, totalTimeRange, totalRangeWidth);
+      this.updateExportMarkers(
+        startTime,
+        totalTimeRange,
+        this.timelineContainer!.offsetWidth
+      );
     } else {
-      let clickedRange = this.findRangeByTimestamp(clickedTimestamp);
-
-      // Если диапазон типа break, устанавливаем timestamp на начало диапазона
-      if (clickedRange && clickedRange.type === "break") {
-        clickedRange = this.findNearestDataRange(clickedTimestamp);
-        clickedTimestamp = clickedRange?.start_time ?? startTime;
-      }
-
-      if (clickedRange === null) {
-        return;
-      }
-
-      // Вызов callback-функции с найденным timestamp и range
-      this.clickCallback?.(clickedTimestamp, clickedRange);
+      // Пользовательское время для трека
+      this.customTrackTimestamp = timestamp;
+      this.clickCallback?.(timestamp, clickedRange);
     }
   }
 
   private scrollEventListener() {
+    // Очищаем предыдущий таймер завершения прокрутки
+    if (this.scrollEndTimeout) {
+      clearTimeout(this.scrollEndTimeout);
+    }
+
+    // Устанавливаем таймер для определения окончания прокрутки
+    this.scrollEndTimeout = setTimeout(() => {
+      if (this.isProgrammaticScroll) {
+        this.isProgrammaticScroll = false;
+      }
+    }, 100); // Настройте задержку по необходимости
+
+    if (this.isProgrammaticScroll) {
+      // Если прокрутка программная, ничего не делаем
+      return;
+    }
+
+    // Пользовательская прокрутка
+    this.isUserScrolling = true;
+
+    // Очищаем предыдущий таймер пользовательской прокрутки
+    if (this.userScrollTimeout) {
+      clearTimeout(this.userScrollTimeout);
+    }
+
+    const rangesDuration =
+      this.ranges[this.ranges.length - 1].end_time - this.ranges[0].start_time;
+
+    // Устанавливаем таймер для сброса флага пользовательской прокрутки
+    this.userScrollTimeout = setTimeout(() => {
+      this.isUserScrolling = false;
+    }, rangesDuration);
+
     this.updateVirtualizedDivisions();
   }
 
@@ -427,6 +674,20 @@ export class TimelineOverflowDrawer {
       this.container.scrollLeft += event.deltaY;
     } else {
       // Иначе — изменение масштаба
+
+      // Устанавливаем флаг пользовательского взаимодействия
+      this.isUserScrolling = true;
+
+      // Очищаем предыдущий таймер, если он был установлен
+      if (this.userScrollTimeout) {
+        clearTimeout(this.userScrollTimeout);
+      }
+
+      // Устанавливаем таймер для сброса флага пользовательского взаимодействия
+      // Например, через 2 секунды после последнего масштабирования
+      this.userScrollTimeout = setTimeout(() => {
+        this.isUserScrolling = false;
+      }, 2000);
 
       // Ограничим максимальные изменения при каждом событии скролла
       const scaleChange = Math.sign(event.deltaY) * 0.000002; // Более мелкий шаг для плавности
@@ -440,6 +701,9 @@ export class TimelineOverflowDrawer {
       const maxScale = 1; // Масштабирование не должно превышать единичный масштаб
       const minScale = containerWidth / totalTimeRange; // Минимальный масштаб, при котором диапазоны занимают контейнер
 
+      // Текущее значение масштаба перед изменением
+      const previousScale = this.scale;
+
       // Ограничиваем масштаб значениями от minScale до maxScale
       this.scale = Math.min(
         maxScale,
@@ -447,7 +711,36 @@ export class TimelineOverflowDrawer {
       );
 
       if (this.isReady) {
-        this.draw(this.currentStartTime);
+        // Рассчитаем позицию трека относительно предыдущего масштаба
+        const track = document.getElementById("track");
+        if (track) {
+          const trackLeft = track.offsetLeft; // Позиция трека до масштабирования
+          const visibleWidth = this.scrollContainer!.offsetWidth; // Ширина видимой области
+
+          // Сохраним смещение относительно центра или границы
+          let trackOffsetFromLeft =
+            trackLeft - this.scrollContainer!.scrollLeft;
+
+          if (trackOffsetFromLeft > visibleWidth / 2) {
+            trackOffsetFromLeft = visibleWidth / 2; // Центрируем трек, если он далеко справа
+          } else if (trackLeft <= 0) {
+            trackOffsetFromLeft = 0; // Трек в самом начале
+          }
+
+          // Обновляем отрисовку
+          this.draw(this.currentStartTime);
+
+          // После перерисовки восстанавливаем позицию трека
+          const newTrackLeft = (trackLeft / previousScale) * this.scale;
+          const newScrollLeft = Math.max(0, newTrackLeft - trackOffsetFromLeft);
+          this.scrollContainer!.scrollTo({
+            left: newScrollLeft,
+            behavior: "auto",
+          });
+        } else {
+          // Если трека нет, просто обновляем таймлайн
+          this.draw(this.currentStartTime);
+        }
 
         // Обновляем маркеры экспорта при изменении масштаба
         this.updateExportMarkers(
@@ -460,7 +753,7 @@ export class TimelineOverflowDrawer {
   }
 
   private registerListeners() {
-    this.timelineContainer?.addEventListener(
+    this.scrollContainer?.addEventListener(
       "scroll",
       this.scrollEventListener.bind(this)
     );
@@ -475,7 +768,7 @@ export class TimelineOverflowDrawer {
   }
 
   private clearListeners() {
-    this.timelineContainer?.removeEventListener(
+    this.scrollContainer?.removeEventListener(
       "scroll",
       this.scrollEventListener
     );

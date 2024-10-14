@@ -1,9 +1,8 @@
 import { EventBus } from "../event-bus.service";
-import { Logger } from "../logger/logger.service";
+import { VideoPlayerBuilderService } from "./player-builder.service";
 
 export class VideoPlayerService {
-  private readonly logger = new Logger(VideoPlayerService.name);
-
+  builder = new VideoPlayerBuilderService();
   container!: HTMLDivElement;
   videoContainer!: HTMLDivElement;
   video!: HTMLVideoElement;
@@ -11,21 +10,37 @@ export class VideoPlayerService {
   isPlaying = true;
   isVolumeOn = false;
 
-  init(
-    container: HTMLDivElement,
-    videoContainer: HTMLDivElement,
-    video: HTMLVideoElement
-  ) {
+  init() {
+    const { container, videoContainer, video } = this.builder.createPlayer();
+
     this.container = container;
     this.videoContainer = videoContainer;
 
     EventBus.emit("setup-video", video);
 
     this.video = video;
+
+    return { container };
   }
 
   setSource(stream: MediaStream) {
-    this.video.srcObject = stream;
+    if (stream.getVideoTracks().length === 0) return;
+
+    if (this.video.srcObject) {
+      const videoElement = this.builder.createVideoElement();
+      videoElement.srcObject = stream;
+
+      const onPlay = () => {
+        videoElement.onplaying = null;
+        this.videoContainer.replaceChild(videoElement, this.video);
+        this.video = videoElement;
+      };
+
+      videoElement.onplaying = onPlay;
+      videoElement.play();
+    } else {
+      this.video.srcObject = stream;
+    }
   }
 
   play() {
