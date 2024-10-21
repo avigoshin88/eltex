@@ -63,7 +63,7 @@ export class ArchiveControlService {
   constructor(emit: Emitter, supportConnect: () => void) {
     this.emit = emit;
     this.supportConnect = supportConnect;
-    this.logger.log("Сервис ArchiveControlService инициализирован.");
+    this.logger.log("info", "Сервис ArchiveControlService инициализирован.");
   }
 
   get currentFragment() {
@@ -86,18 +86,21 @@ export class ArchiveControlService {
 
   setRanges(ranges: RangeDto[]) {
     this.ranges = ranges;
-    this.logger.log("Установлены ranges:", ranges);
+    this.logger.log("info", "Установлены ranges:", ranges);
   }
 
   init() {
     this.initGenerator(this.currentFragment.start_time);
-    this.logger.log("Инициализация воспроизведения с начального фрагмента.");
+    this.logger.log(
+      "info",
+      "Инициализация воспроизведения с начального фрагмента."
+    );
     this.preloadRangeFragment(); // Отправляем первый фрагмент
     this.initSupportConnectInterval();
   }
 
   clear() {
-    this.logger.log("Очистка состояния ArchiveControlService.");
+    this.logger.log("info", "Очистка состояния ArchiveControlService.");
     this.fragmentIndex = 0;
     this.ranges = [];
     this.isFirstPreloadDone = false;
@@ -118,6 +121,7 @@ export class ArchiveControlService {
     this.fragmentIndex += 1;
     this.currentTimestamp = this.currentFragment.start_time;
     this.logger.log(
+      "info",
       "Переключение на следующий фрагмент с индексом",
       this.fragmentIndex
     );
@@ -129,7 +133,7 @@ export class ArchiveControlService {
   }
 
   pause(currentTimestamp: number) {
-    this.logger.log("Пауза дозагрузки фрагментов.");
+    this.logger.log("info", "Пауза дозагрузки фрагментов.");
 
     this.currentTimestamp = currentTimestamp;
     this.fragmentIndex = this.findRangeIndex(
@@ -143,7 +147,7 @@ export class ArchiveControlService {
   }
 
   resume() {
-    this.logger.log("Возобновление дозагрузки фрагментов.");
+    this.logger.log("info", "Возобновление дозагрузки фрагментов.");
 
     this.isPause = false;
 
@@ -163,6 +167,7 @@ export class ArchiveControlService {
     this.fragmentIndex -= 1;
     this.currentTimestamp = this.currentFragment.start_time;
     this.logger.log(
+      "info",
       "Переключение на предыдущий фрагмент с индексом",
       this.fragmentIndex
     );
@@ -177,13 +182,14 @@ export class ArchiveControlService {
   setCurrentRange(timestamp: number, range: RangeDto) {
     const rangeIndex = this.findRangeIndex(range.start_time, range.end_time);
     if (rangeIndex === -1) {
-      this.logger.error("Указанный range не найден в списке ranges.");
+      this.logger.error("info", "Указанный range не найден в списке ranges.");
       return;
     }
 
     this.fragmentIndex = rangeIndex;
     this.currentTimestamp = timestamp;
     this.logger.log(
+      "info",
       "Установлен текущий range с индексом",
       this.fragmentIndex,
       "и временем",
@@ -247,7 +253,7 @@ export class ArchiveControlService {
     // Первый фрагмент отправляется без продвижения генератора
     const rangeFragmentResult = this.rangeFragmentsGenerator.next();
     if (rangeFragmentResult.done) {
-      this.logger.log("Все фрагменты загружены.");
+      this.logger.log("info", "Все фрагменты загружены.");
       return;
     }
 
@@ -265,7 +271,7 @@ export class ArchiveControlService {
     if (this.isFirstPreloadDone) {
       const rangeFragmentResult = this.rangeFragmentsGenerator.next();
       if (rangeFragmentResult.done) {
-        this.logger.log("Все фрагменты загружены.");
+        this.logger.log("info", "Все фрагменты загружены.");
         return;
       }
 
@@ -277,13 +283,14 @@ export class ArchiveControlService {
       );
 
       this.logger.log(
+        "info",
         "Планируем дозагрузку фрагмента через",
         nextPreloadDelay,
         "мс."
       );
 
       this.preloadTimeoutId = setTimeout(() => {
-        this.logger.log("Выполняем дозагрузку фрагмента.");
+        this.logger.log("info", "Выполняем дозагрузку фрагмента.");
         this.emit(rangeFragment, true); // Дозагрузка фрагмента
         this.scheduleNextPreload();
       }, nextPreloadDelay);
@@ -293,13 +300,13 @@ export class ArchiveControlService {
   private clearPreloadTimeout() {
     if (this.preloadTimeoutId !== null) {
       clearTimeout(this.preloadTimeoutId);
-      this.logger.log("Очищен таймаут дозагрузки.");
+      this.logger.log("info", "Очищен таймаут дозагрузки.");
       this.preloadTimeoutId = null;
     }
   }
 
   private initSupportConnectInterval() {
-    this.logger.log("Запуск интервала поддержки подключения.");
+    this.logger.log("info", "Запуск интервала поддержки подключения.");
     this.connectionSupporterId = setInterval(() => {
       this.supportConnect();
     }, connectionSupportInterval);
@@ -308,7 +315,7 @@ export class ArchiveControlService {
   private clearSupportConnectInterval() {
     if (this.connectionSupporterId !== null) {
       clearInterval(this.connectionSupporterId);
-      this.logger.log("Очищен интервал поддержки подключения.");
+      this.logger.log("info", "Очищен интервал поддержки подключения.");
       this.connectionSupporterId = null;
     }
   }
@@ -323,12 +330,17 @@ export class ArchiveControlService {
         customStartTime >= range.start_time &&
         customEndTime <= range.end_time
       ) {
-        this.logger.log("Найден range с индексом", i, "для заданного времени.");
+        this.logger.log(
+          "info",
+          "Найден range с индексом",
+          i,
+          "для заданного времени."
+        );
         return i;
       }
     }
 
-    this.logger.warn("Range для заданного времени не найден.");
+    this.logger.warn("info", "Range для заданного времени не найден.");
     return -1;
   }
 }
