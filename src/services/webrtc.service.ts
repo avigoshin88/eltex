@@ -157,8 +157,6 @@ export class WebRTCService {
       throw Error("Peer connection отсутствует");
     }
 
-    console.log(this);
-
     if (this.peerConnection.remoteDescription) {
       return;
     }
@@ -182,8 +180,6 @@ export class WebRTCService {
     if (!this.peerConnection) {
       throw Error("Peer connection отсутствует");
     }
-
-    console.log("onRequestLocalDescription", this.peerConnection);
 
     if (this.peerConnection.localDescription) {
       return;
