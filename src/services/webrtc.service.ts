@@ -68,7 +68,7 @@ export class WebRTCService {
       this._onConnectionStateChange.bind(this);
 
     this.peerConnection.onicegatheringstatechange =
-      this.onIceatheringsStateChange.bind(this);
+      this.onIceatheringsStateChange;
 
     await this.prepareTransceivers();
 
@@ -88,10 +88,10 @@ export class WebRTCService {
   }
 
   private initListeners() {
-    CustomEvents.on("remote-description", this.onRemoteDescription.bind(this));
+    CustomEvents.on("remote-description", this.onRemoteDescription);
     CustomEvents.on(
       "request-local-description",
-      this.onRequestLocalDescription.bind(this)
+      this.onRequestLocalDescription
     );
 
     if (!this.peerConnection) {
@@ -111,6 +111,18 @@ export class WebRTCService {
         this.reset();
       }
     };
+  }
+
+  public resetListeners() {
+    this.peerConnection?.removeEventListener(
+      "iceconnectionstatechange",
+      this.onIceatheringsStateChange
+    );
+    CustomEvents.off("remote-description", this.onRemoteDescription);
+    CustomEvents.off(
+      "request-local-description",
+      this.onRequestLocalDescription
+    );
   }
 
   private async prepareTransceivers() {
@@ -140,9 +152,15 @@ export class WebRTCService {
     this.logger.log("info", "prepareTransceivers: Трансиверы добавлены");
   }
 
-  private onRemoteDescription(remoteOffer: GetSDPOfferResponse) {
+  private onRemoteDescription = (remoteOffer: GetSDPOfferResponse) => {
     if (!this.peerConnection) {
       throw Error("Peer connection отсутствует");
+    }
+
+    console.log(this);
+
+    if (this.peerConnection.remoteDescription) {
+      return;
     }
 
     this.logger.log("info", "Получен Remote Description: ", remoteOffer);
@@ -158,11 +176,17 @@ export class WebRTCService {
     this.peerConnection?.setRemoteDescription(remoteDescription).then(() => {
       this.logger.log("info", "Remote Description установлен");
     });
-  }
+  };
 
-  private async onRequestLocalDescription() {
+  private onRequestLocalDescription = async () => {
     if (!this.peerConnection) {
       throw Error("Peer connection отсутствует");
+    }
+
+    console.log("onRequestLocalDescription", this.peerConnection);
+
+    if (this.peerConnection.localDescription) {
+      return;
     }
 
     this.logger.log(
@@ -197,16 +221,16 @@ export class WebRTCService {
         error
       );
     }
-  }
+  };
 
-  private onIceatheringsStateChange() {
+  private onIceatheringsStateChange = () => {
     if (this.peerConnection?.iceGatheringState === "complete") {
       CustomEvents.emit(
         "local-description",
         this.peerConnection.localDescription?.sdp
       );
     }
-  }
+  };
 
   public get hasAccessToMicrophone() {
     return this.microphoneService?.hasAccessToMicrophone;
