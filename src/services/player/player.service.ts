@@ -32,6 +32,8 @@ export class VideoPlayerService {
         this.video = videoElement;
       };
 
+      videoElement.onloadeddata = this.video.onloadeddata;
+      videoElement.ontimeupdate = this.video.ontimeupdate;
       videoElement.onplaying = onPlay;
       videoElement.play();
     } else {

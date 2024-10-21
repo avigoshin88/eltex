@@ -95,7 +95,6 @@ export class ArchiveControlService {
       "info",
       "Инициализация воспроизведения с начального фрагмента."
     );
-    this.preloadRangeFragment(); // Отправляем первый фрагмент
     this.initSupportConnectInterval();
   }
 
@@ -179,7 +178,7 @@ export class ArchiveControlService {
     this.preloadRangeFragment(); // Переход на новый range
   }
 
-  setCurrentRange(timestamp: number, range: RangeDto) {
+  setCurrentRange(timestamp: number, range: RangeDto, emitEnable = true) {
     const rangeIndex = this.findRangeIndex(range.start_time, range.end_time);
     if (rangeIndex === -1) {
       this.logger.error("info", "Указанный range не найден в списке ranges.");
@@ -196,10 +195,12 @@ export class ArchiveControlService {
       this.currentTimestamp
     );
 
-    this.isPause = false;
+    if (emitEnable) {
+      this.isPause = false;
 
-    this.clearPreloadTimeout();
-    this.preloadRangeFragment(); // Переход на новый range
+      this.clearPreloadTimeout();
+      this.preloadRangeFragment(); // Переход на новый range
+    }
   }
 
   private initGenerator(startTimestamp: number) {
@@ -249,7 +250,7 @@ export class ArchiveControlService {
     }
   }
 
-  private preloadRangeFragment() {
+  public preloadRangeFragment() {
     // Первый фрагмент отправляется без продвижения генератора
     const rangeFragmentResult = this.rangeFragmentsGenerator.next();
     if (rangeFragmentResult.done) {
