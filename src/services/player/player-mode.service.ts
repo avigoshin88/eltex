@@ -115,6 +115,12 @@ export class PlayerModeService {
             click: this.toPrevFragment.bind(this),
           },
         },
+        [ControlName.STOP]: {
+          type: "button",
+          listeners: {
+            click: this.stop.bind(this),
+          },
+        },
         [ControlName.EXPORT]: {
           type: "button",
           listeners: {
@@ -272,7 +278,7 @@ export class PlayerModeService {
       this.modeConnection.play?.(true);
       this.player.play();
     } else {
-      this.modeConnection.stop?.();
+      this.modeConnection.pause?.();
       this.player.pause();
     }
 
@@ -280,6 +286,15 @@ export class PlayerModeService {
       [ControlName.PLAY]: this.player.isPlaying,
     });
     this.controlsDrawer.draw();
+  }
+
+  private stop() {
+    this.modeConnection.stop?.();
+    this.player.pause();
+
+    this.controlsDrawer.updateBinaryButtonsState({
+      [ControlName.PLAY]: false,
+    });
   }
 
   private switchVolumeState() {

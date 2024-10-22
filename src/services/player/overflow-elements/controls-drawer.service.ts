@@ -54,6 +54,7 @@ const BINARY_BUTTON_ICONS: Record<
 };
 
 const COMMON_BUTTON_ICONS: Record<CommonButtonControl, string> = {
+  [ControlName.STOP]: "./stop.svg",
   [ControlName.SNAPSHOT]: "/snapshot.svg",
   [ControlName.NEXT_FRAGMENT]: "/step-forward.svg",
   [ControlName.PREV_FRAGMENT]: "/step-backward.svg",
@@ -63,6 +64,7 @@ const CONTROLS_ORDER: ControlName[] = [
   ControlName.MODE,
   ControlName.PREV_FRAGMENT,
   ControlName.PLAY,
+  ControlName.STOP,
   ControlName.NEXT_FRAGMENT,
   ControlName.MICROPHONE,
   ControlName.VOLUME,

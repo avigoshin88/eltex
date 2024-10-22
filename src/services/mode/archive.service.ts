@@ -430,11 +430,27 @@ export class ArchiveVideoService implements ModeService {
     }
   }
 
-  stop() {
-    this.logger.log("info", DatachannelMessageType.STOP_STREAM);
+  pause() {
+    this.logger.log("info", "Пауза стрима");
     this.datachannelClient.send(DatachannelMessageType.STOP_STREAM);
 
     this.archiveControl.pause(this.timelineDrawer.getCurrentTimestamp());
+  }
+
+  stop() {
+    this.logger.log("info", "Остановка стрима");
+    this.datachannelClient.send(DatachannelMessageType.STOP_STREAM);
+
+    const startTime = this.ranges[0].start_time;
+
+    this.archiveControl.pause(startTime);
+
+    const currentTime = this.player.video.currentTime;
+
+    this.timelineDrawer.setCustomTrackTimestamp(startTime);
+
+    this.virtualTimeOffset = currentTime;
+    this.timelineDrawer.draw(this.getVirtualCurrentTime(currentTime));
   }
 
   setSource(stream: MediaStream) {

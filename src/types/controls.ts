@@ -3,6 +3,7 @@ export enum ControlName {
   PLAY = "play",
   VOLUME = "volume",
   MICROPHONE = "microphone",
+  STOP = 'stop',
   EXPORT = "export",
   SNAPSHOT = "snapshot",
   SPEED = "speed",
@@ -79,6 +80,7 @@ export type RangeControlOptions = Control & {
 export type ControlsOptions = {
   [ControlName.MODE]: BinaryButtonControlOptions;
   [ControlName.PLAY]: BinaryButtonControlOptions;
+  [ControlName.STOP]: ButtonControlOptions;
   [ControlName.VOLUME]: BinaryButtonControlOptions;
   [ControlName.MICROPHONE]: BinaryButtonControlOptions;
 
