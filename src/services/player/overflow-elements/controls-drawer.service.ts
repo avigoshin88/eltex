@@ -59,6 +59,20 @@ const COMMON_BUTTON_ICONS: Record<CommonButtonControl, string> = {
   [ControlName.PREV_FRAGMENT]: "/step-backward.svg",
 };
 
+const CONTROLS_ORDER: ControlName[] = [
+  ControlName.MODE,
+  ControlName.PREV_FRAGMENT,
+  ControlName.PLAY,
+  ControlName.NEXT_FRAGMENT,
+  ControlName.MICROPHONE,
+  ControlName.VOLUME,
+  ControlName.EXPORT,
+  ControlName.SNAPSHOT,
+  ControlName.STATS,
+  ControlName.SOUND,
+  ControlName.QUALITY,
+];
+
 export class ControlsOverflowDrawerService {
   private readonly container!: HTMLDivElement;
 
@@ -86,17 +100,17 @@ export class ControlsOverflowDrawerService {
       this.container.appendChild(this.controlsContainer);
     }
 
-    for (const controlName in this.options) {
-      if (this.hiddenButtons[controlName as ControlName]) {
+    for (const controlName of CONTROLS_ORDER) {
+      if (this.hiddenButtons[controlName]) {
         continue;
       }
 
-      if (!this.controls[controlName as ControlName]) {
-        const controlElement = this.makeControl(controlName as ControlName);
-        this.controls[controlName as ControlName] = controlElement;
+      if (!this.controls[controlName]) {
+        const controlElement = this.makeControl(controlName);
+        this.controls[controlName] = controlElement;
         this.controlsContainer.appendChild(controlElement);
       } else {
-        this.updateControl(controlName as ControlName);
+        this.updateControl(controlName);
       }
     }
   }
@@ -154,15 +168,27 @@ export class ControlsOverflowDrawerService {
 
     switch (config.type) {
       case "button":
-        this.updateButton(control as HTMLButtonElement, name as ButtonControl, config);
+        this.updateButton(
+          control as HTMLButtonElement,
+          name as ButtonControl,
+          config
+        );
         break;
 
       case "select":
-        this.updateSelect(control as HTMLSelectElement, name as ControlName, config);
+        this.updateSelect(
+          control as HTMLSelectElement,
+          name as ControlName,
+          config
+        );
         break;
 
       case "range":
-        this.updateRange(control as HTMLDivElement, name as ControlName, config);
+        this.updateRange(
+          control as HTMLDivElement,
+          name as ControlName,
+          config
+        );
         break;
     }
   }
@@ -192,7 +218,9 @@ export class ControlsOverflowDrawerService {
     if (config.binary) {
       const name = controlName as BinaryButtonControl;
       const enabled = Boolean(this.binaryButtonsState?.[name]);
-      image.src = enabled ? BINARY_BUTTON_ICONS[name].on : BINARY_BUTTON_ICONS[name].off;
+      image.src = enabled
+        ? BINARY_BUTTON_ICONS[name].on
+        : BINARY_BUTTON_ICONS[name].off;
     } else {
       image.src = COMMON_BUTTON_ICONS[controlName as CommonButtonControl];
     }
