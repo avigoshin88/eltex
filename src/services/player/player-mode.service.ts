@@ -149,24 +149,68 @@ export class PlayerModeService {
           value: this.speed,
           options: [
             {
-              label: "0.3",
-              value: "0.3",
-            },
-            {
-              label: "0.5",
-              value: "0.5",
-            },
-            {
-              label: "0.7",
-              value: "0.7",
-            },
-            {
-              label: "0.8",
-              value: "0.8",
-            },
-            {
-              label: "1.0",
+              label: "1x",
               value: "1.0",
+            },
+            {
+              label: "2x",
+              value: "2.0",
+            },
+            {
+              label: "3x",
+              value: "3.0",
+            },
+            {
+              label: "4x",
+              value: "4.0",
+            },
+            {
+              label: "5x",
+              value: "5.0",
+            },
+            {
+              label: "6x",
+              value: "6.0",
+            },
+            {
+              label: "7x",
+              value: "7.0",
+            },
+            {
+              label: "8x",
+              value: "8.0",
+            },
+            {
+              label: "9x",
+              value: "9.0",
+            },
+            {
+              label: "10x",
+              value: "10.0",
+            },
+            {
+              label: "11x",
+              value: "11.0",
+            },
+            {
+              label: "12x",
+              value: "12.0",
+            },
+            {
+              label: "13x",
+              value: "13.0",
+            },
+            {
+              label: "14x",
+              value: "14.0",
+            },
+            {
+              label: "15x",
+              value: "15.0",
+            },
+            {
+              label: "16x",
+              value: "16.0",
             },
           ],
         },
