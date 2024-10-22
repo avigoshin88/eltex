@@ -90,7 +90,8 @@ export class LiveVideoService implements ModeService {
       },
     };
 
-    await this.webRTCClient.setupPeerConnection(datachannelListeners);
+    this.webRTCClient.resetListeners();
+    await webRTCClient.setupPeerConnection(datachannelListeners);
   }
 
   public get mic() {

@@ -270,6 +270,7 @@ export class ControlsOverflowDrawerService {
 
     buttonContainer.className = "video-player__controls__button";
     buttonContainer.disabled = Boolean(this.disabledButtons[name]);
+    buttonContainer.type = 'button';
 
     image.src = icon;
 
