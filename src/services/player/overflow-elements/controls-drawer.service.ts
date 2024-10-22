@@ -159,7 +159,6 @@ export class ControlsOverflowDrawerService {
         return this.makeRange(name as ControlName, config);
     }
   }
-
   private updateControl(name: ControlName) {
     const control = this.controls[name];
     if (!control) return;
@@ -168,29 +167,97 @@ export class ControlsOverflowDrawerService {
 
     switch (config.type) {
       case "button":
-        this.updateButton(
-          control as HTMLButtonElement,
-          name as ButtonControl,
-          config
-        );
+        if (
+          this.shouldUpdateButton(
+            control as HTMLButtonElement,
+            name as ButtonControl,
+            config
+          )
+        ) {
+          this.updateButton(
+            control as HTMLButtonElement,
+            name as ButtonControl,
+            config
+          );
+        }
         break;
 
       case "select":
-        this.updateSelect(
-          control as HTMLSelectElement,
-          name as ControlName,
-          config
-        );
+        if (
+          this.shouldUpdateSelect(
+            control as HTMLSelectElement,
+            name as ControlName,
+            config
+          )
+        ) {
+          this.updateSelect(
+            control as HTMLSelectElement,
+            name as ControlName,
+            config
+          );
+        }
         break;
 
       case "range":
-        this.updateRange(
-          control as HTMLDivElement,
-          name as ControlName,
-          config
-        );
+        if (
+          this.shouldUpdateRange(
+            control as HTMLDivElement,
+            name as ControlName,
+            config
+          )
+        ) {
+          this.updateRange(
+            control as HTMLDivElement,
+            name as ControlName,
+            config
+          );
+        }
         break;
     }
+  }
+
+  private shouldUpdateButton(
+    button: HTMLButtonElement,
+    controlName: ButtonControl,
+    config: ButtonControlOptions
+  ): boolean {
+    const image = button.querySelector("img");
+    if (!image) return true;
+
+    if (config.binary) {
+      const name = controlName as BinaryButtonControl;
+      const enabled = Boolean(this.binaryButtonsState?.[name]);
+      const currentSrc = enabled
+        ? BINARY_BUTTON_ICONS[name].on
+        : BINARY_BUTTON_ICONS[name].off;
+      return image.src !== currentSrc;
+    } else {
+      return (
+        image.src !== COMMON_BUTTON_ICONS[controlName as CommonButtonControl]
+      );
+    }
+  }
+
+  private shouldUpdateSelect(
+    select: HTMLSelectElement,
+    name: ControlName,
+    config: SelectControlOptions
+  ): boolean {
+    const currentValue = this.controlValues[name] ?? config.value;
+    return select.value !== currentValue;
+  }
+
+  private shouldUpdateRange(
+    rangeContainer: HTMLDivElement,
+    name: ControlName,
+    config: RangeControlOptions
+  ): boolean {
+    const input = rangeContainer.querySelector("input[type='range']");
+    if (!input) return true;
+
+    const currentValue = this.controlValues[name] ?? config.value;
+    // @ts-ignore
+    return input.value !== currentValue;
   }
 
   private makeButton(
