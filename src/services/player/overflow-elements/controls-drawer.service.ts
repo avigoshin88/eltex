@@ -28,8 +28,8 @@ const BINARY_BUTTON_ICONS: Record<
   { on: string; off: string }
 > = {
   [ControlName.PLAY]: {
-    on: "/play.svg",
-    off: "/pause.svg",
+    on: "/pause.svg",
+    off: "/play.svg",
   },
   [ControlName.VOLUME]: {
     on: "/volume-on.svg",
@@ -70,6 +70,7 @@ const CONTROLS_ORDER: ControlName[] = [
   ControlName.SNAPSHOT,
   ControlName.STATS,
   ControlName.SOUND,
+  ControlName.SPEED,
   ControlName.QUALITY,
 ];
 
