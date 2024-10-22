@@ -51,7 +51,7 @@ export class PlayerModeService {
     this.options = { ...options };
     this.player = player;
 
-    EventBus.on("stats", this.onUpdateStats.bind(this));
+    this.setListeners();
 
     this.statsDrawer = new StatsOverflowDrawerService(
       this.player.videoContainer
@@ -270,6 +270,7 @@ export class PlayerModeService {
         this.controlsDrawer.setHidden({
           [ControlName.PLAY]: true,
           [ControlName.EXPORT]: true,
+          [ControlName.STOP]: true,
           [ControlName.NEXT_FRAGMENT]: true,
           [ControlName.PREV_FRAGMENT]: true,
           [ControlName.SPEED]: true,
@@ -308,6 +309,8 @@ export class PlayerModeService {
 
   async reset() {
     await this.modeConnection.reset();
+
+    this.clearListeners();
 
     this.isExport = false;
 
@@ -386,7 +389,7 @@ export class PlayerModeService {
     this.controlsDrawer.draw();
   }
 
-  private switchExportMode() {
+  private switchExportMode = () => {
     if (this.isExport === false) {
       this.modeConnection.export?.();
 
@@ -401,9 +404,18 @@ export class PlayerModeService {
       [ControlName.EXPORT]: this.isExport,
     });
     this.controlsDrawer.draw();
-  }
+  };
 
-  private onUpdateStats(stats: Stats) {
+  private resetExportMode = () => {
+    this.isExport = false;
+
+    this.controlsDrawer.updateBinaryButtonsState({
+      [ControlName.EXPORT]: this.isExport,
+    });
+    this.controlsDrawer.draw();
+  };
+
+  private onUpdateStats = (stats: Stats) => {
     if (!this.isShowStats) {
       return;
     }
@@ -423,7 +435,7 @@ export class PlayerModeService {
     });
 
     this.controlsDrawer.draw();
-  }
+  };
 
   private onChangeSpeed(event: Event) {
     const target = event.target as HTMLInputElement;
@@ -504,5 +516,15 @@ export class PlayerModeService {
       });
       this.controlsDrawer.draw();
     }
+  }
+
+  private setListeners() {
+    EventBus.on("stats", this.onUpdateStats);
+    EventBus.on("cancel-export", this.resetExportMode);
+  }
+
+  private clearListeners() {
+    EventBus.off("stats", this.onUpdateStats);
+    EventBus.off("cancel-export", this.resetExportMode);
   }
 }
