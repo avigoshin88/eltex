@@ -13,6 +13,12 @@ export class DatachannelClientService {
   private readonly datachannelTransportBuilder: DatachannelTransportBuilderService =
     new DatachannelTransportBuilderService();
 
+  onClose?: () => void | Promise<void>;
+
+  constructor(onClose?: () => void | Promise<void>) {
+    this.onClose = onClose;
+  }
+
   register(
     peerConnection: RTCPeerConnection,
     nativeListeners: DatachannelNativeEventListeners,
@@ -109,8 +115,10 @@ export class DatachannelClientService {
     }
   }
 
-  close() {
+  async close() {
     this.datachannel?.close();
+
+    await this.onClose?.();
   }
 
   private signalData(type: string, data: object) {

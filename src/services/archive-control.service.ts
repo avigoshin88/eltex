@@ -108,6 +108,11 @@ export class ArchiveControlService {
     this.clearPreloadTimeout();
   }
 
+  clearIntervals() {
+    this.clearSupportConnectInterval();
+    this.clearPreloadTimeout();
+  }
+
   toNextFragment() {
     if (!this.nextFragment) {
       this.logger.warn(
@@ -194,6 +199,8 @@ export class ArchiveControlService {
       "и временем",
       this.currentTimestamp
     );
+
+    this.initGenerator(this.currentTimestamp);
 
     if (emitEnable) {
       this.isPause = false;

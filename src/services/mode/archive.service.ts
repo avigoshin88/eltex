@@ -61,7 +61,9 @@ export class ArchiveVideoService implements ModeService {
     this.player.video.onloadeddata = this.onLoadedChange.bind(this);
     this.player.video.ontimeupdate = this.onTimeUpdate.bind(this);
 
-    this.datachannelClient = new DatachannelClientService();
+    this.datachannelClient = new DatachannelClientService(
+      this.clearListeners.bind(this)
+    );
 
     this.webRTCClient = new WebRTCService(
       Mode.ARCHIVE,
@@ -202,7 +204,7 @@ export class ArchiveVideoService implements ModeService {
   }
 
   async reset(fullReset = true): Promise<void> {
-    this.webRTCClient.reset();
+    await this.webRTCClient.reset();
     this.datachannelClient.close();
     this.metaDrawer.destroy();
 
@@ -274,6 +276,9 @@ export class ArchiveVideoService implements ModeService {
     this.archiveControl.preloadRangeFragment();
 
     this.timelineDrawer.setOptions(this.rangeMapper.calc(ranges));
+    this.timelineDrawer.draw(
+      this.getVirtualCurrentTime(this.player.video.currentTime)
+    );
   }
 
   private onLoadedChange() {
@@ -336,6 +341,10 @@ export class ArchiveVideoService implements ModeService {
     this.archiveControl.setCurrentRange(timestamp, range);
 
     this.virtualTimeOffset = this.player.video.currentTime;
+
+    this.timelineDrawer.draw(
+      this.getVirtualCurrentTime(this.player.video.currentTime)
+    );
   }
 
   private onDropComplete() {
@@ -405,6 +414,10 @@ export class ArchiveVideoService implements ModeService {
 
     this.player.play();
     this.nextProcessedRange = null;
+  }
+
+  private clearListeners() {
+    this.archiveControl.clearIntervals();
   }
 
   play(isContinue = false) {
