@@ -2,8 +2,17 @@ export class VideoPlayerBuilderService {
   createPlayer() {
     const container = this.createContainer();
     const videoContainer = this.createVideoContainer();
+    const video = this.createVideoElement();
 
+    videoContainer.appendChild(video);
+    container.appendChild(videoContainer);
+
+    return { container, videoContainer, video };
+  }
+
+  public createVideoElement() {
     const video = document.createElement("video");
+
     video.controls = false;
     video.autoplay = true;
     video.preload = "none";
@@ -11,10 +20,7 @@ export class VideoPlayerBuilderService {
     video.id = `video-player-${Math.random() * 100}`;
     video.style.width = "100%";
 
-    videoContainer.appendChild(video);
-    container.appendChild(videoContainer);
-
-    return { container, videoContainer, video };
+    return video;
   }
 
   private createVideoContainer() {

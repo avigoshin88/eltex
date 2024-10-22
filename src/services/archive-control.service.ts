@@ -94,7 +94,6 @@ export class ArchiveControlService {
     this.logger.log("Инициализация воспроизведения с начального фрагмента.");
     this.preloadRangeFragment(); // Отправляем первый фрагмент
     this.initSupportConnectInterval();
-    this.scheduleNextPreload(); // Начинаем дозагрузку
   }
 
   clear() {
@@ -110,6 +109,7 @@ export class ArchiveControlService {
   toNextFragment() {
     if (!this.nextFragment) {
       this.logger.warn(
+        "info",
         "Нельзя переключиться к следующему фрагменту: текущий фрагмент последний."
       );
       return;
@@ -126,7 +126,6 @@ export class ArchiveControlService {
     EventBus.emit("new-archive-fragment-started", this.currentFragment);
     this.clearPreloadTimeout();
     this.preloadRangeFragment(); // Переход на новый range
-    this.scheduleNextPreload(); // Начинаем дозагрузку
   }
 
   pause(currentTimestamp: number) {
@@ -150,12 +149,12 @@ export class ArchiveControlService {
 
     this.initGenerator(this.currentTimestamp);
     this.preloadRangeFragment();
-    this.scheduleNextPreload();
   }
 
   toPrevFragment() {
     if (!this.prevFragment) {
       this.logger.warn(
+        "info",
         "Нельзя переключиться к предыдущему фрагменту: текущий фрагмент первый."
       );
       return;
@@ -173,7 +172,6 @@ export class ArchiveControlService {
     EventBus.emit("new-archive-fragment-started", this.currentFragment);
     this.clearPreloadTimeout();
     this.preloadRangeFragment(); // Переход на новый range
-    this.scheduleNextPreload(); // Начинаем дозагрузку
   }
 
   setCurrentRange(timestamp: number, range: RangeDto) {
@@ -196,7 +194,6 @@ export class ArchiveControlService {
 
     this.clearPreloadTimeout();
     this.preloadRangeFragment(); // Переход на новый range
-    this.scheduleNextPreload(); // Начинаем дозагрузку
   }
 
   private initGenerator(startTimestamp: number) {
@@ -259,7 +256,7 @@ export class ArchiveControlService {
     this.isFirstPreloadDone = true; // Флаг того, что первый фрагмент отправлен
   }
 
-  private scheduleNextPreload() {
+  public scheduleNextPreload() {
     if (this.isPause) {
       return;
     }

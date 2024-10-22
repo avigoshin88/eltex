@@ -12,6 +12,13 @@ import { SnapshotService } from "../snapshot.service";
 import { ControlsOverflowDrawerService } from "./overflow-elements/controls-drawer.service";
 import { PlayerStatsService } from "./player-stats.service";
 import { VideoPlayerService } from "./player.service";
+import { CustomEvents } from "../custom-events.service";
+
+const quality = {
+  sd: { name: "SD", bitrate: 500 },
+  hd: { name: "HD", bitrate: 2000 },
+  fhd: { name: "FHD", bitrate: 0 },
+};
 
 export class PlayerModeService {
   private readonly logger = new Logger(PlayerModeService.name);
@@ -29,8 +36,13 @@ export class PlayerModeService {
 
   private soundLevel = "100";
   private speed = "1.0";
+  private quality: keyof typeof quality = "fhd";
 
-  constructor(options: ConnectionOptions, player: VideoPlayerService) {
+  constructor(
+    mode: Mode,
+    options: ConnectionOptions,
+    player: VideoPlayerService
+  ) {
     this.options = { ...options };
     this.player = player;
 
@@ -39,16 +51,14 @@ export class PlayerModeService {
       this.onUpdateStats.bind(this)
     );
 
-    this.enable(Mode.LIVE);
+    this.enable(mode);
   }
 
-  async switch() {
-    await this.reset();
-    if (this.currentMode === Mode.LIVE) {
-      this.enable(Mode.ARCHIVE);
-    } else {
-      this.enable(Mode.LIVE);
-    }
+  switch() {
+    CustomEvents.emit(
+      "mode-changed",
+      this.currentMode === Mode.LIVE ? Mode.ARCHIVE : Mode.LIVE
+    );
   }
 
   setupControlsDrawer() {
@@ -142,6 +152,20 @@ export class PlayerModeService {
           ],
         },
 
+        [ControlName.QUALITY]: {
+          type: "select",
+          listeners: {
+            change: this.onChangeQuality.bind(this),
+          },
+          value: this.quality,
+          options: (Object.keys(quality) as Array<keyof typeof quality>).map(
+            (item) => ({
+              label: quality[item].name,
+              value: item,
+            })
+          ),
+        },
+
         [ControlName.SOUND]: {
           type: "range",
           listeners: {
@@ -155,15 +179,30 @@ export class PlayerModeService {
   }
 
   async enable(newMode: Mode) {
-    this.logger.log("Включение режима: ", newMode);
+    this.modeConnection?.reset();
+    this.logger.log("info", "Включение режима: ", newMode);
 
     if (this.currentMode === newMode) {
-      this.logger.warn("Попытка включить включенный режим плеера", newMode);
+      this.logger.warn(
+        "info",
+        "Попытка включить включенный режим плеера",
+        newMode
+      );
     }
 
     switch (newMode) {
       case Mode.LIVE:
-        this.modeConnection = new LiveVideoService(this.options, this.player);
+        const options = {
+          ...this.options,
+        };
+
+        if (this.quality !== "fhd") {
+          options.constrains = {
+            maxBitrate: quality[this.quality].bitrate,
+          };
+        }
+
+        this.modeConnection = new LiveVideoService(options, this.player);
         this.setupControlsDrawer();
         this.controlsDrawer.setHidden({
           [ControlName.PLAY]: true,
@@ -292,6 +331,25 @@ export class PlayerModeService {
     this.controlsDrawer.draw();
 
     this.modeConnection.setSpeed?.(Number(this.speed));
+  }
+
+  private onChangeQuality(event: Event) {
+    const target = event.target as HTMLInputElement;
+
+    // @ts-ignore
+    this.quality = target.value;
+
+    this.controlsDrawer.updateControlValues({
+      [ControlName.QUALITY]: this.quality,
+    });
+    this.controlsDrawer.draw();
+
+    this.modeConnection.reinitWithNewOptions?.({
+      ...this.options,
+      constrains: {
+        maxBitrate: quality[target.value as keyof typeof quality].bitrate,
+      },
+    });
   }
 
   private onChangeSoundLevel(event: Event) {

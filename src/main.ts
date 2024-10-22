@@ -1,20 +1,22 @@
 import { ATTRIBUTE } from "./constants/attributes";
-import { API } from "./services/api.service";
-import { VideoPlayerBuilderService } from "./services/player/player-builder.service";
 import { VideoPlayerService } from "./services/player/player.service";
 
 import "./style.css";
 import { PlayerModeService } from "./services/player/player-mode.service";
+import { CustomEvents } from "./services/custom-events.service";
+import { Mode } from "./constants/mode";
 
 class VideoPlayerElement extends HTMLElement {
   constructor() {
     super();
   }
 
+  options: Partial<Record<(typeof ATTRIBUTE)[keyof typeof ATTRIBUTE], string>> =
+    {};
+
   container!: HTMLDivElement;
 
   player = new VideoPlayerService();
-  builder = new VideoPlayerBuilderService();
 
   modeService!: PlayerModeService;
 
@@ -28,9 +30,9 @@ class VideoPlayerElement extends HTMLElement {
 
   static get observedAttributes() {
     return [
-      ATTRIBUTE.API_URL,
-      ATTRIBUTE.APP,
-      ATTRIBUTE.STREAM,
+      ATTRIBUTE.ID,
+      ATTRIBUTE.CAMERA_NAME,
+      ATTRIBUTE.MODE,
       ATTRIBUTE.ICE_SERVERS,
     ];
   }
@@ -44,27 +46,29 @@ class VideoPlayerElement extends HTMLElement {
       return;
     }
 
+    this.options = { ...this.options, [name]: newValue };
+
     if (oldValue !== null) {
       this.clear();
     }
   }
 
   private initElement() {
-    const apiUrl = this.getAttribute(ATTRIBUTE.API_URL);
-    const app = this.getAttribute(ATTRIBUTE.APP);
-    const stream = this.getAttribute(ATTRIBUTE.STREAM);
-    const iceServersRaw = this.getAttribute(ATTRIBUTE.ICE_SERVERS);
+    const id = this.options[ATTRIBUTE.ID];
+    const mode = this.options[ATTRIBUTE.MODE];
+    const cameraName = this.options[ATTRIBUTE.CAMERA_NAME];
+    const iceServersRaw = this.options[ATTRIBUTE.ICE_SERVERS];
 
     if (
-      apiUrl == null ||
-      app == null ||
-      stream == null ||
+      id == null ||
+      mode == null ||
+      cameraName == null ||
       iceServersRaw == null
     ) {
       return;
     }
 
-    API.init(apiUrl);
+    CustomEvents.setId(id);
 
     const iceServers = iceServersRaw.split(";").map((urls) => ({
       urls,
@@ -74,19 +78,16 @@ class VideoPlayerElement extends HTMLElement {
       this.removeChild(this.container);
     }
 
-    const { container, videoContainer, video } = this.builder.createPlayer();
+    const { container } = this.player.init();
 
     this.container = container;
-
-    this.player.init(this.container, videoContainer, video);
 
     this.appendChild(this.container);
 
     // TODO: Вынести в отдельный метод
     this.modeService = new PlayerModeService(
+      mode as Mode,
       {
-        app,
-        stream,
         config: {
           iceServers,
         },
@@ -95,8 +96,8 @@ class VideoPlayerElement extends HTMLElement {
     );
   }
 
-  private clear() {
-    this.modeService.reset();
+  private async clear() {
+    await this.modeService.reset();
     this.player.destroy();
   }
 }
