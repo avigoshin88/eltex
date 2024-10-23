@@ -157,56 +157,12 @@ export class PlayerModeService {
               value: "2.0",
             },
             {
-              label: "3x",
-              value: "3.0",
-            },
-            {
               label: "4x",
               value: "4.0",
             },
             {
-              label: "5x",
-              value: "5.0",
-            },
-            {
-              label: "6x",
-              value: "6.0",
-            },
-            {
-              label: "7x",
-              value: "7.0",
-            },
-            {
               label: "8x",
               value: "8.0",
-            },
-            {
-              label: "9x",
-              value: "9.0",
-            },
-            {
-              label: "10x",
-              value: "10.0",
-            },
-            {
-              label: "11x",
-              value: "11.0",
-            },
-            {
-              label: "12x",
-              value: "12.0",
-            },
-            {
-              label: "13x",
-              value: "13.0",
-            },
-            {
-              label: "14x",
-              value: "14.0",
-            },
-            {
-              label: "15x",
-              value: "15.0",
             },
             {
               label: "16x",
