@@ -6,6 +6,7 @@ export interface ModeService {
   setSource(stream: MediaStream): void;
 
   play?(isContinue?: boolean): void;
+  pause?: () => void;
   stop?(): void;
 
   export?(): void;

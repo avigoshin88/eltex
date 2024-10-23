@@ -39,8 +39,6 @@
       let remoteOffer = null;
 
       window.addEventListener("mode-changed-1", (event) => {
-        console.log("mode-changed-1 - external", event.detail);
-
         document.getElementById("1").setAttribute("mode", event.detail);
       });
 
@@ -60,15 +58,9 @@
         });
 
         window.addEventListener("local-description-1", (event) => {
-          console.log("local-description-1123123", event.detail);
-
           localOffer = event.detail;
 
-          saveOffer(5080, app, stream, "p2p_play", event.detail).then(
-            (response) => {
-              console.log("saveOffer");
-            }
-          );
+          saveOffer(5080, app, stream, "p2p_play", event.detail);
         });
       }
 
@@ -125,8 +117,8 @@
       }
 
       // registerLiveP2P();
-      // registerLiveTurn();
-      registerArchiveEvents();
+      registerLiveTurn();
+      // registerArchiveEvents();
     </script>
   </head>
 

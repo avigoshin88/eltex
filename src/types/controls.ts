@@ -3,6 +3,7 @@ export enum ControlName {
   PLAY = "play",
   VOLUME = "volume",
   MICROPHONE = "microphone",
+  STOP = 'stop',
   EXPORT = "export",
   SNAPSHOT = "snapshot",
   SPEED = "speed",
@@ -10,6 +11,7 @@ export enum ControlName {
   // PREV_FRAME = "prev_frame",
   NEXT_FRAGMENT = "next_fragment",
   PREV_FRAGMENT = "prev_fragment",
+  STATS = "stats",
 
   SOUND = "sound",
   QUALITY = "quality",
@@ -78,6 +80,7 @@ export type RangeControlOptions = Control & {
 export type ControlsOptions = {
   [ControlName.MODE]: BinaryButtonControlOptions;
   [ControlName.PLAY]: BinaryButtonControlOptions;
+  [ControlName.STOP]: ButtonControlOptions;
   [ControlName.VOLUME]: BinaryButtonControlOptions;
   [ControlName.MICROPHONE]: BinaryButtonControlOptions;
 
@@ -91,5 +94,6 @@ export type ControlsOptions = {
 
   [ControlName.SOUND]: RangeControlOptions;
 
+  [ControlName.STATS]: BinaryButtonControlOptions;
   [ControlName.QUALITY]: SelectControlOptions;
 };

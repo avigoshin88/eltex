@@ -4,4 +4,6 @@ export type EventName =
   | "setup-peerconnection"
   | "setup-video"
   | "stats"
-  | "new-archive-fragment-started";
+  | "new-archive-fragment-started"
+  | "cancel-export"
+  | "play-enabled";

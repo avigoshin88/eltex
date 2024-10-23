@@ -98,7 +98,6 @@ class VideoPlayerElement extends HTMLElement {
 
   private async clear() {
     await this.modeService.reset();
-    this.player.destroy();
   }
 }
 

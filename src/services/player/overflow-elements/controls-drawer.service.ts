@@ -19,6 +19,7 @@ type CommonButtonControl = Exclude<
   | ControlName.VOLUME
   | ControlName.EXPORT
   | ControlName.MICROPHONE
+  | ControlName.STATS
 >;
 type BinaryButtonControl = Exclude<ButtonControl, CommonButtonControl>;
 
@@ -27,8 +28,8 @@ const BINARY_BUTTON_ICONS: Record<
   { on: string; off: string }
 > = {
   [ControlName.PLAY]: {
-    on: "/play.svg",
-    off: "/pause.svg",
+    on: "/pause.svg",
+    off: "/play.svg",
   },
   [ControlName.VOLUME]: {
     on: "/volume-on.svg",
@@ -46,16 +47,34 @@ const BINARY_BUTTON_ICONS: Record<
     on: "/mic-on.svg",
     off: "/mic-off.svg",
   },
+  [ControlName.STATS]: {
+    on: "/stats-on.svg",
+    off: "/stats-off.svg",
+  },
 };
 
 const COMMON_BUTTON_ICONS: Record<CommonButtonControl, string> = {
+  [ControlName.STOP]: "./stop.svg",
   [ControlName.SNAPSHOT]: "/snapshot.svg",
-  // [ControlName.NEXT_FRAME]: "/stop.svg",
-  // [ControlName.PREV_FRAME]: "/stop.svg",
   [ControlName.NEXT_FRAGMENT]: "/step-forward.svg",
   [ControlName.PREV_FRAGMENT]: "/step-backward.svg",
-  // [ControlName.INFO]: "/stop.svg",
 };
+
+const CONTROLS_ORDER: ControlName[] = [
+  ControlName.MODE,
+  ControlName.PREV_FRAGMENT,
+  ControlName.PLAY,
+  ControlName.STOP,
+  ControlName.NEXT_FRAGMENT,
+  ControlName.MICROPHONE,
+  ControlName.VOLUME,
+  ControlName.EXPORT,
+  ControlName.SNAPSHOT,
+  ControlName.STATS,
+  ControlName.SOUND,
+  ControlName.SPEED,
+  ControlName.QUALITY,
+];
 
 export class ControlsOverflowDrawerService {
   private readonly container!: HTMLDivElement;
@@ -70,6 +89,7 @@ export class ControlsOverflowDrawerService {
   private options!: ControlsOptions;
 
   private controlsContainer: Nullable<HTMLDivElement> = null;
+  private controls: Partial<Record<ControlName, HTMLElement>> = {};
 
   constructor(container: HTMLDivElement, options: ControlsOptions) {
     this.container = container;
@@ -77,51 +97,25 @@ export class ControlsOverflowDrawerService {
   }
 
   draw(): void {
-    const controlsContainer = document.createElement("div");
-    controlsContainer.className = "video-player__controls__container";
-
-    if (!this.hiddenButtons[ControlName.MODE]) {
-      controlsContainer.appendChild(this.makeControl(ControlName.MODE));
-    }
-    if (!this.hiddenButtons[ControlName.PREV_FRAGMENT]) {
-      controlsContainer.appendChild(
-        this.makeControl(ControlName.PREV_FRAGMENT)
-      );
-    }
-    if (!this.hiddenButtons[ControlName.PLAY]) {
-      controlsContainer.appendChild(this.makeControl(ControlName.PLAY));
-    }
-    if (!this.hiddenButtons[ControlName.VOLUME]) {
-      controlsContainer.appendChild(this.makeControl(ControlName.VOLUME));
-    }
-    if (!this.hiddenButtons[ControlName.MICROPHONE]) {
-      controlsContainer.appendChild(this.makeControl(ControlName.MICROPHONE));
-    }
-    if (!this.hiddenButtons[ControlName.NEXT_FRAGMENT]) {
-      controlsContainer.appendChild(
-        this.makeControl(ControlName.NEXT_FRAGMENT)
-      );
-    }
-    if (!this.hiddenButtons[ControlName.SNAPSHOT]) {
-      controlsContainer.appendChild(this.makeControl(ControlName.SNAPSHOT));
-    }
-    if (!this.hiddenButtons[ControlName.EXPORT]) {
-      controlsContainer.appendChild(this.makeControl(ControlName.EXPORT));
-    }
-    if (!this.hiddenButtons[ControlName.SPEED]) {
-      controlsContainer.appendChild(this.makeControl(ControlName.SPEED));
+    if (!this.controlsContainer) {
+      this.controlsContainer = document.createElement("div");
+      this.controlsContainer.className = "video-player__controls__container";
+      this.container.appendChild(this.controlsContainer);
     }
 
-    if (!this.hiddenButtons[ControlName.SOUND]) {
-      controlsContainer.appendChild(this.makeControl(ControlName.SOUND));
-    }
-    if (!this.hiddenButtons[ControlName.QUALITY]) {
-      controlsContainer.appendChild(this.makeControl(ControlName.QUALITY));
-    }
+    for (const controlName of CONTROLS_ORDER) {
+      if (this.hiddenButtons[controlName]) {
+        continue;
+      }
 
-    this.clear();
-    this.controlsContainer = controlsContainer;
-    this.container.appendChild(controlsContainer);
+      if (!this.controls[controlName]) {
+        const controlElement = this.makeControl(controlName);
+        this.controls[controlName] = controlElement;
+        this.controlsContainer.appendChild(controlElement);
+      } else {
+        this.updateControl(controlName);
+      }
+    }
   }
 
   setHidden(hiddenButtons: Partial<Record<ControlName, boolean>>) {
@@ -168,27 +162,146 @@ export class ControlsOverflowDrawerService {
         return this.makeRange(name as ControlName, config);
     }
   }
+  private updateControl(name: ControlName) {
+    const control = this.controls[name];
+    if (!control) return;
+
+    const config = this.options[name];
+
+    switch (config.type) {
+      case "button":
+        if (
+          this.shouldUpdateButton(
+            control as HTMLButtonElement,
+            name as ButtonControl,
+            config
+          )
+        ) {
+          this.updateButton(
+            control as HTMLButtonElement,
+            name as ButtonControl,
+            config
+          );
+        }
+        break;
+
+      case "select":
+        if (
+          this.shouldUpdateSelect(
+            control as HTMLSelectElement,
+            name as ControlName,
+            config
+          )
+        ) {
+          this.updateSelect(
+            control as HTMLSelectElement,
+            name as ControlName,
+            config
+          );
+        }
+        break;
+
+      case "range":
+        if (
+          this.shouldUpdateRange(
+            control as HTMLDivElement,
+            name as ControlName,
+            config
+          )
+        ) {
+          this.updateRange(
+            control as HTMLDivElement,
+            name as ControlName,
+            config
+          );
+        }
+        break;
+    }
+  }
+
+  private shouldUpdateButton(
+    button: HTMLButtonElement,
+    controlName: ButtonControl,
+    config: ButtonControlOptions
+  ): boolean {
+    const image = button.querySelector("img");
+    if (!image) return true;
+
+    if (config.binary) {
+      const name = controlName as BinaryButtonControl;
+      const enabled = Boolean(this.binaryButtonsState?.[name]);
+      const currentSrc = enabled
+        ? BINARY_BUTTON_ICONS[name].on
+        : BINARY_BUTTON_ICONS[name].off;
+      return image.src !== currentSrc;
+    } else {
+      return (
+        image.src !== COMMON_BUTTON_ICONS[controlName as CommonButtonControl]
+      );
+    }
+  }
+
+  private shouldUpdateSelect(
+    select: HTMLSelectElement,
+    name: ControlName,
+    config: SelectControlOptions
+  ): boolean {
+    const currentValue = this.controlValues[name] ?? config.value;
+    return select.value !== currentValue;
+  }
+
+  private shouldUpdateRange(
+    rangeContainer: HTMLDivElement,
+    name: ControlName,
+    config: RangeControlOptions
+  ): boolean {
+    const input = rangeContainer.querySelector("input[type='range']");
+    if (!input) return true;
+
+    const currentValue = this.controlValues[name] ?? config.value;
+    // @ts-ignore
+    return input.value !== currentValue;
+  }
 
   private makeButton(
     controlName: ButtonControl,
     config: ButtonControlOptions
   ): HTMLButtonElement {
+    const button = document.createElement("button");
+    this.updateButton(button, controlName, config);
+    return button;
+  }
+
+  private updateButton(
+    button: HTMLButtonElement,
+    controlName: ButtonControl,
+    config: ButtonControlOptions
+  ) {
+    button.className = "video-player__controls__button";
+    button.disabled = Boolean(this.disabledButtons[controlName]);
+
+    const image = button.querySelector("img") || document.createElement("img");
+    if (!button.contains(image)) {
+      button.appendChild(image);
+    }
+
     if (config.binary) {
       const name = controlName as BinaryButtonControl;
       const enabled = Boolean(this.binaryButtonsState?.[name]);
-
-      return this.makeBaseButton(
-        controlName,
-        enabled ? BINARY_BUTTON_ICONS[name].on : BINARY_BUTTON_ICONS[name].off,
-        config.listeners
-      );
+      image.src = enabled
+        ? BINARY_BUTTON_ICONS[name].on
+        : BINARY_BUTTON_ICONS[name].off;
+    } else {
+      image.src = COMMON_BUTTON_ICONS[controlName as CommonButtonControl];
     }
 
-    return this.makeBaseButton(
-      controlName,
-      COMMON_BUTTON_ICONS[controlName as CommonButtonControl],
-      config.listeners
-    );
+    for (const event in config.listeners) {
+      const eventName = event as keyof ButtonControlOptions["listeners"];
+      const listener = config.listeners[eventName];
+      if (listener) {
+        button.addEventListener(eventName, listener);
+      }
+    }
   }
 
   private makeSelect(
@@ -196,6 +309,16 @@ export class ControlsOverflowDrawerService {
     config: SelectControlOptions
   ): HTMLSelectElement {
     const select = document.createElement("select");
+    this.updateSelect(select, name, config);
+    return select;
+  }
+
+  private updateSelect(
+    select: HTMLSelectElement,
+    name: ControlName,
+    config: SelectControlOptions
+  ) {
+    select.innerHTML = "";
 
     const options: HTMLOptionElement[] = [];
 
@@ -214,16 +337,11 @@ export class ControlsOverflowDrawerService {
 
     for (const event in config.listeners) {
       const eventName = event as keyof SelectControlOptions["listeners"];
-
       const listener = config.listeners[eventName];
-      if (!listener) {
-        continue;
+      if (listener) {
+        select.addEventListener(eventName, listener);
       }
-
-      select.addEventListener(eventName, listener);
     }
-
-    return select;
   }
 
   private makeRange(
@@ -231,62 +349,34 @@ export class ControlsOverflowDrawerService {
     config: RangeControlOptions
   ): HTMLDivElement {
     const rangeContainer = document.createElement("div");
+    this.updateRange(rangeContainer, name, config);
+    return rangeContainer;
+  }
+
+  private updateRange(
+    rangeContainer: HTMLDivElement,
+    name: ControlName,
+    config: RangeControlOptions
+  ) {
+    rangeContainer.innerHTML = "";
 
     const input = document.createElement("input");
-
     input.type = "range";
-
     input.value = this.controlValues[name] ?? config.value;
 
     for (const event in config.listeners) {
       const eventName = event as keyof ButtonControlOptions["listeners"];
-
       const listener = config.listeners[eventName];
-      if (!listener) {
-        continue;
+      if (listener) {
+        input.addEventListener(eventName, listener);
       }
-
-      input.addEventListener(eventName, listener);
     }
 
     rangeContainer.appendChild(input);
 
     const label = document.createElement("label");
-
     label.innerText = config.getLabel();
-
     rangeContainer.appendChild(label);
-
-    return rangeContainer;
-  }
-
-  private makeBaseButton(
-    name: ButtonControl,
-    icon: string,
-    listeners: ButtonControlOptions["listeners"]
-  ) {
-    const buttonContainer = document.createElement("button");
-    const image = document.createElement("img");
-
-    buttonContainer.className = "video-player__controls__button";
-    buttonContainer.disabled = Boolean(this.disabledButtons[name]);
-
-    image.src = icon;
-
-    buttonContainer.appendChild(image);
-
-    for (const event in listeners) {
-      const eventName = event as keyof ButtonControlOptions["listeners"];
-
-      const listener = listeners[eventName];
-      if (!listener) {
-        continue;
-      }
-
-      buttonContainer.addEventListener(eventName, listener);
-    }
-
-    return buttonContainer;
   }
 
   public clear() {
@@ -295,5 +385,7 @@ export class ControlsOverflowDrawerService {
     }
 
     this.container.removeChild(this.controlsContainer);
+    this.controlsContainer = null;
+    this.controls = {};
   }
 }

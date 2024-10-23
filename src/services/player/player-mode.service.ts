@@ -2,17 +2,19 @@ import { Mode } from "../../constants/mode";
 import { ModeService } from "../../interfaces/mode";
 import { ControlName } from "../../types/controls";
 import { ConnectionOptions } from "../../types/connection-options";
-import { Nullable } from "../../types/global";
-import { VideoStats } from "../../types/video";
 import { ArchiveControlService } from "../archive-control.service";
 import { Logger } from "../logger/logger.service";
 import { ArchiveVideoService } from "../mode/archive.service";
 import { LiveVideoService } from "../mode/live.service";
 import { SnapshotService } from "../snapshot.service";
 import { ControlsOverflowDrawerService } from "./overflow-elements/controls-drawer.service";
-import { PlayerStatsService } from "./player-stats.service";
 import { VideoPlayerService } from "./player.service";
+import { Stats } from "../../types/video";
+import { EventBus } from "../event-bus.service";
+import { StatsOverflowDrawerService } from "./overflow-elements/stats-drawer.service";
+import { Nullable } from "../../types/global";
 import { CustomEvents } from "../custom-events.service";
+import { PlayerStatsService } from "./player-stats.service";
 
 const quality = {
   sd: { name: "SD", bitrate: 500 },
@@ -29,7 +31,10 @@ export class PlayerModeService {
   private player: VideoPlayerService;
   private archiveControl!: ArchiveControlService;
   private readonly snapshotManager = new SnapshotService();
-  private readonly playerStats!: PlayerStatsService;
+
+  private readonly playerStats = new PlayerStatsService();
+
+  private statsDrawer!: StatsOverflowDrawerService;
 
   private isExport = false;
   private controlsDrawer!: ControlsOverflowDrawerService;
@@ -37,6 +42,9 @@ export class PlayerModeService {
   private soundLevel = "100";
   private speed = "1.0";
   private quality: keyof typeof quality = "fhd";
+
+  private resolution: Nullable<Stats["resolution"]> = null;
+  private isShowStats = true;
 
   constructor(
     mode: Mode,
@@ -46,9 +54,14 @@ export class PlayerModeService {
     this.options = { ...options };
     this.player = player;
 
-    this.playerStats = new PlayerStatsService(
-      this.player.video,
-      this.onUpdateStats.bind(this)
+    this.playerStats.init();
+
+    EventBus.emit("setup-video", this.player.video);
+
+    this.setListeners();
+
+    this.statsDrawer = new StatsOverflowDrawerService(
+      this.player.videoContainer
     );
 
     this.enable(mode);
@@ -109,6 +122,12 @@ export class PlayerModeService {
             click: this.toPrevFragment.bind(this),
           },
         },
+        [ControlName.STOP]: {
+          type: "button",
+          listeners: {
+            click: this.stop.bind(this),
+          },
+        },
         [ControlName.EXPORT]: {
           type: "button",
           listeners: {
@@ -122,6 +141,13 @@ export class PlayerModeService {
             click: this.snap.bind(this),
           },
         },
+        [ControlName.STATS]: {
+          type: "button",
+          listeners: {
+            click: this.switchStats.bind(this),
+          },
+          binary: true,
+        },
         [ControlName.SPEED]: {
           type: "select",
           listeners: {
@@ -130,24 +156,24 @@ export class PlayerModeService {
           value: this.speed,
           options: [
             {
-              label: "0.3",
-              value: "0.3",
-            },
-            {
-              label: "0.5",
-              value: "0.5",
-            },
-            {
-              label: "0.7",
-              value: "0.7",
-            },
-            {
-              label: "0.8",
-              value: "0.8",
-            },
-            {
-              label: "1.0",
+              label: "1x",
               value: "1.0",
+            },
+            {
+              label: "2x",
+              value: "2.0",
+            },
+            {
+              label: "4x",
+              value: "4.0",
+            },
+            {
+              label: "8x",
+              value: "8.0",
+            },
+            {
+              label: "16x",
+              value: "16.0",
             },
           ],
         },
@@ -207,6 +233,7 @@ export class PlayerModeService {
         this.controlsDrawer.setHidden({
           [ControlName.PLAY]: true,
           [ControlName.EXPORT]: true,
+          [ControlName.STOP]: true,
           [ControlName.NEXT_FRAGMENT]: true,
           [ControlName.PREV_FRAGMENT]: true,
           [ControlName.SPEED]: true,
@@ -236,6 +263,7 @@ export class PlayerModeService {
       [ControlName.EXPORT]: this.isExport,
       [ControlName.MICROPHONE]: (this.modeConnection as LiveVideoService)?.mic
         ?.isMicEnabled,
+      [ControlName.STATS]: this.isShowStats,
     });
     this.controlsDrawer.draw();
 
@@ -243,12 +271,18 @@ export class PlayerModeService {
   }
 
   async reset() {
-    await this.modeConnection.reset();
+    this.playerStats.reset();
+
+    this.clearListeners();
 
     this.isExport = false;
 
     this.soundLevel = "100";
     this.speed = "1.0";
+
+    this.statsDrawer.clear();
+
+    await this.modeConnection.reset();
   }
 
   private switchPlayState() {
@@ -256,7 +290,7 @@ export class PlayerModeService {
       this.modeConnection.play?.(true);
       this.player.play();
     } else {
-      this.modeConnection.stop?.();
+      this.modeConnection.pause?.();
       this.player.pause();
     }
 
@@ -264,6 +298,29 @@ export class PlayerModeService {
       [ControlName.PLAY]: this.player.isPlaying,
     });
     this.controlsDrawer.draw();
+  }
+
+  private enablePlay = () => {
+    if (this.player.isPlaying) {
+      return;
+    }
+
+    this.modeConnection.play?.(true);
+    this.player.play();
+
+    this.controlsDrawer.updateBinaryButtonsState({
+      [ControlName.PLAY]: this.player.isPlaying,
+    });
+    this.controlsDrawer.draw();
+  };
+
+  private stop() {
+    this.modeConnection.stop?.();
+    this.player.pause();
+
+    this.controlsDrawer.updateBinaryButtonsState({
+      [ControlName.PLAY]: false,
+    });
   }
 
   private switchVolumeState() {
@@ -290,12 +347,26 @@ export class PlayerModeService {
   private snap() {
     this.snapshotManager.snap(
       this.player.video,
-      this.playerStats.stats?.width,
-      this.playerStats.stats?.height
+      this.resolution?.width,
+      this.resolution?.height
     );
   }
 
-  private switchExportMode() {
+  private switchStats() {
+    this.isShowStats = !this.isShowStats;
+
+    if (!this.isShowStats) {
+      this.statsDrawer.clear();
+    }
+
+    this.controlsDrawer.updateBinaryButtonsState({
+      [ControlName.STATS]: this.isShowStats,
+    });
+
+    this.controlsDrawer.draw();
+  }
+
+  private switchExportMode = () => {
     if (this.isExport === false) {
       this.modeConnection.export?.();
 
@@ -310,15 +381,38 @@ export class PlayerModeService {
       [ControlName.EXPORT]: this.isExport,
     });
     this.controlsDrawer.draw();
-  }
+  };
 
-  private onUpdateStats(stats: Nullable<VideoStats>) {
+  private resetExportMode = () => {
+    this.isExport = false;
+
+    this.controlsDrawer.updateBinaryButtonsState({
+      [ControlName.EXPORT]: this.isExport,
+    });
+    this.controlsDrawer.draw();
+  };
+
+  private onUpdateStats = (stats: Stats) => {
+    if (!this.isShowStats) {
+      return;
+    }
+
+    this.statsDrawer.draw(stats);
+
+    if (!stats.resolution.width || !stats.resolution.height) {
+      this.resolution = null;
+    } else {
+      this.resolution = {
+        ...stats.resolution,
+      };
+    }
+
     this.controlsDrawer.setDisabled({
-      [ControlName.SNAPSHOT]: stats === null,
+      [ControlName.SNAPSHOT]: this.resolution === null,
     });
 
     this.controlsDrawer.draw();
-  }
+  };
 
   private onChangeSpeed(event: Event) {
     const target = event.target as HTMLInputElement;
@@ -399,5 +493,17 @@ export class PlayerModeService {
       });
       this.controlsDrawer.draw();
     }
+  }
+
+  private setListeners() {
+    EventBus.on("stats", this.onUpdateStats);
+    EventBus.on("cancel-export", this.resetExportMode);
+    EventBus.on("play-enabled", this.enablePlay);
+  }
+
+  private clearListeners() {
+    EventBus.off("stats", this.onUpdateStats);
+    EventBus.off("cancel-export", this.resetExportMode);
+    EventBus.off("play-enabled", this.enablePlay);
   }
 }

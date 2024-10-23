@@ -14,6 +14,7 @@ export class VideoPlayerService {
 
     this.container = container;
     this.videoContainer = videoContainer;
+
     this.video = video;
 
     return { container };
@@ -32,6 +33,8 @@ export class VideoPlayerService {
         this.video = videoElement;
       };
 
+      videoElement.onloadeddata = this.video.onloadeddata;
+      videoElement.ontimeupdate = this.video.ontimeupdate;
       videoElement.onplaying = onPlay;
       videoElement.play();
     } else {
@@ -67,9 +70,5 @@ export class VideoPlayerService {
     if (volume > 1) this.video.volume = 1;
     else if (volume < 0) this.video.volume = 0;
     else this.video.volume = volume;
-  }
-
-  destroy() {
-    document.removeChild(this.container);
   }
 }
