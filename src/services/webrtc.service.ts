@@ -40,7 +40,7 @@ export class WebRTCService {
     this.microphoneService = new MicrophoneService();
     this.setSource = setSource;
 
-    CustomEvents.on("reinit-connection", this.reinitPeerConnection.bind(this));
+    CustomEvents.on("reinit-connection", this.reinitPeerConnection);
   }
 
   public async setupPeerConnection({
@@ -82,12 +82,12 @@ export class WebRTCService {
     );
   }
 
-  private async reinitPeerConnection() {
+  private reinitPeerConnection = async () => {
     await this.setupPeerConnection({
       nativeListeners: this.nativeListeners,
       listeners: this.listeners,
     });
-  }
+  };
 
   private initListeners() {
     CustomEvents.on("remote-description", this.onRemoteDescription);
@@ -312,6 +312,8 @@ export class WebRTCService {
     this._tracks = [];
     this.peerConnection = null;
     await this.datachannelClient.close();
+
+    CustomEvents.off("reinit-connection", this.reinitPeerConnection);
 
     this.logger.log("info", "Сервис очищен");
   }

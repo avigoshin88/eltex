@@ -71,8 +71,4 @@ export class VideoPlayerService {
     else if (volume < 0) this.video.volume = 0;
     else this.video.volume = volume;
   }
-
-  destroy() {
-    document.removeChild(this.container);
-  }
 }
