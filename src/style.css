@@ -103,7 +103,7 @@ video-player {
 .video-player__timeline__track {
   position: absolute;
 
-  width: 6px;
+  width: 2px;
   height: 100%;
 
   z-index: 1;
