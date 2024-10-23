@@ -5,4 +5,5 @@ export type EventName =
   | "setup-video"
   | "stats"
   | "new-archive-fragment-started"
-  | "cancel-export";
+  | "cancel-export"
+  | "play-enabled";

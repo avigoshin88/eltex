@@ -298,6 +298,20 @@ export class PlayerModeService {
     this.controlsDrawer.draw();
   }
 
+  private enablePlay = () => {
+    if (this.player.isPlaying) {
+      return;
+    }
+
+    this.modeConnection.play?.(true);
+    this.player.play();
+
+    this.controlsDrawer.updateBinaryButtonsState({
+      [ControlName.PLAY]: this.player.isPlaying,
+    });
+    this.controlsDrawer.draw();
+  };
+
   private stop() {
     this.modeConnection.stop?.();
     this.player.pause();
@@ -482,10 +496,12 @@ export class PlayerModeService {
   private setListeners() {
     EventBus.on("stats", this.onUpdateStats);
     EventBus.on("cancel-export", this.resetExportMode);
+    EventBus.on("play-enabled", this.enablePlay);
   }
 
   private clearListeners() {
     EventBus.off("stats", this.onUpdateStats);
     EventBus.off("cancel-export", this.resetExportMode);
+    EventBus.off("play-enabled", this.enablePlay);
   }
 }

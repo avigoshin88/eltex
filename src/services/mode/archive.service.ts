@@ -343,6 +343,8 @@ export class ArchiveVideoService implements ModeService {
 
     this.virtualTimeOffset = this.player.video.currentTime;
 
+    EventBus.emit("play-enabled");
+
     this.timelineDrawer.draw(
       this.getVirtualCurrentTime(this.player.video.currentTime)
     );
