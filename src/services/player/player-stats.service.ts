@@ -25,15 +25,15 @@ export class PlayerStatsService {
 
   constructor() {}
 
-  private setupPeerConnection(peerConnection: RTCPeerConnection) {
+  private setupPeerConnection = (peerConnection: RTCPeerConnection) => {
     this.peerConnection = peerConnection;
     this.tryStartTracking();
-  }
+  };
 
-  private setupVideo(video: HTMLVideoElement) {
+  private setupVideo = (video: HTMLVideoElement) => {
     this.videoElement = video;
     this.tryStartTracking();
-  }
+  };
 
   tryStartTracking() {
     if (!this.videoElement || !this.peerConnection) {
@@ -61,13 +61,16 @@ export class PlayerStatsService {
   }
 
   init() {
-    EventBus.on("setup-video", this.setupVideo.bind(this));
-    EventBus.on("setup-peerconnection", this.setupPeerConnection.bind(this));
+    EventBus.on("setup-video", this.setupVideo);
+    EventBus.on("setup-peerconnection", this.setupPeerConnection);
   }
 
   reset() {
-    EventBus.off("setup-video", this.setupVideo.bind(this));
-    EventBus.off("setup-peerconnection", this.setupPeerConnection.bind(this));
+    EventBus.off("setup-video", this.setupVideo);
+    EventBus.off("setup-peerconnection", this.setupPeerConnection);
+
+    this.peerConnection = null;
+    this.videoElement = null;
 
     if (this.trackingStatsInterval !== null) {
       clearInterval(this.trackingStatsInterval);

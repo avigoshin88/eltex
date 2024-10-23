@@ -271,7 +271,7 @@ export class PlayerModeService {
   }
 
   async reset() {
-    await this.modeConnection.reset();
+    this.playerStats.reset();
 
     this.clearListeners();
 
@@ -281,6 +281,8 @@ export class PlayerModeService {
     this.speed = "1.0";
 
     this.statsDrawer.clear();
+
+    await this.modeConnection.reset();
   }
 
   private switchPlayState() {
