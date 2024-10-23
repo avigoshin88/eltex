@@ -70,7 +70,7 @@ export class WebRTCService {
       this._onConnectionStateChange.bind(this);
 
     this.peerConnection.onicegatheringstatechange =
-      this.onIceatheringsStateChange;
+      this.onIcegatheringStateChange;
 
     await this.prepareTransceivers();
 
@@ -118,7 +118,7 @@ export class WebRTCService {
   public resetListeners() {
     this.peerConnection?.removeEventListener(
       "iceconnectionstatechange",
-      this.onIceatheringsStateChange
+      this.onIcegatheringStateChange
     );
     CustomEvents.off("remote-description", this.onRemoteDescription);
     CustomEvents.off(
@@ -221,7 +221,7 @@ export class WebRTCService {
     }
   };
 
-  private onIceatheringsStateChange = () => {
+  private onIcegatheringStateChange = () => {
     if (this.peerConnection?.iceGatheringState === "complete") {
       CustomEvents.emit(
         "local-description",
