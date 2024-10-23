@@ -31,7 +31,6 @@ export class PlayerStatsService {
   }
 
   private setupVideo(video: HTMLVideoElement) {
-    console.log("🚀 ~ PlayerStatsService ~ setupVideo ~ setupVideo:");
     this.videoElement = video;
     this.tryStartTracking();
   }
