@@ -7,6 +7,7 @@ import { Nullable } from "../types/global";
 import { GetSDPOfferResponse, Candidate } from "../dto/connection";
 import { CustomEvents } from "./custom-events.service";
 import { DatachannelClientService } from "./datachannel/data-channel.service";
+import { EventBus } from "./event-bus.service";
 import { Logger } from "./logger/logger.service";
 import { MicrophoneService } from "./microphone.service";
 import { Mode } from "../constants/mode";
@@ -39,7 +40,7 @@ export class WebRTCService {
     this.microphoneService = new MicrophoneService();
     this.setSource = setSource;
 
-    CustomEvents.on("reinit-connection", this.reinitPeerConnection.bind(this));
+    CustomEvents.on("reinit-connection", this.reinitPeerConnection);
   }
 
   public async setupPeerConnection({
@@ -53,6 +54,7 @@ export class WebRTCService {
     this.listeners = listeners;
 
     this.peerConnection = new RTCPeerConnection(this.options.config);
+    EventBus.emit("setup-peerconnection", this.peerConnection);
 
     this.datachannelClient.register(
       this.peerConnection,
@@ -80,12 +82,12 @@ export class WebRTCService {
     );
   }
 
-  private async reinitPeerConnection() {
+  private reinitPeerConnection = async () => {
     await this.setupPeerConnection({
       nativeListeners: this.nativeListeners,
       listeners: this.listeners,
     });
-  }
+  };
 
   private initListeners() {
     CustomEvents.on("remote-description", this.onRemoteDescription);
@@ -98,7 +100,7 @@ export class WebRTCService {
       return;
     }
 
-    this.peerConnection.onconnectionstatechange = () => {
+    this.peerConnection.onconnectionstatechange = async () => {
       CustomEvents.emit(
         "peerconnection-status",
         this.peerConnection?.connectionState
@@ -108,7 +110,7 @@ export class WebRTCService {
         this.peerConnection?.connectionState === "disconnected" ||
         this.peerConnection?.connectionState === "failed"
       ) {
-        this.reset();
+        await this.reset();
       }
     };
   }
@@ -116,7 +118,7 @@ export class WebRTCService {
   public resetListeners() {
     this.peerConnection?.removeEventListener(
       "iceconnectionstatechange",
-      this.onIceatheringsStateChange
+      this.onIcegatheringStateChange
     );
     CustomEvents.off("remote-description", this.onRemoteDescription);
     CustomEvents.off(
@@ -297,7 +299,7 @@ export class WebRTCService {
     return modifiedSDP;
   }
 
-  public reset() {
+  public async reset() {
     this.logger.log("info", "Начало очистки сервиса");
 
     this.peerConnection
@@ -309,7 +311,9 @@ export class WebRTCService {
     this.currentMode = null;
     this._tracks = [];
     this.peerConnection = null;
-    this.datachannelClient.close();
+    await this.datachannelClient.close();
+
+    CustomEvents.off("reinit-connection", this.reinitPeerConnection);
 
     this.logger.log("info", "Сервис очищен");
   }

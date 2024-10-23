@@ -61,7 +61,9 @@ export class ArchiveVideoService implements ModeService {
     this.player.video.onloadeddata = this.onLoadedChange.bind(this);
     this.player.video.ontimeupdate = this.onTimeUpdate.bind(this);
 
-    this.datachannelClient = new DatachannelClientService();
+    this.datachannelClient = new DatachannelClientService(
+      this.clearListeners.bind(this)
+    );
 
     this.webRTCClient = new WebRTCService(
       Mode.ARCHIVE,
@@ -202,7 +204,7 @@ export class ArchiveVideoService implements ModeService {
   }
 
   async reset(fullReset = true): Promise<void> {
-    this.webRTCClient.reset();
+    await this.webRTCClient.reset();
     this.datachannelClient.close();
     this.metaDrawer.destroy();
 
@@ -256,6 +258,7 @@ export class ArchiveVideoService implements ModeService {
       }
     );
     this.timelineDrawer.disableExportMode();
+    EventBus.emit("cancel-export");
   }
 
   private onExportFragment(data: ExportURLDto) {
@@ -274,6 +277,9 @@ export class ArchiveVideoService implements ModeService {
     this.archiveControl.preloadRangeFragment();
 
     this.timelineDrawer.setOptions(this.rangeMapper.calc(ranges));
+    this.timelineDrawer.draw(
+      this.getVirtualCurrentTime(this.player.video.currentTime)
+    );
   }
 
   private onLoadedChange() {
@@ -336,6 +342,12 @@ export class ArchiveVideoService implements ModeService {
     this.archiveControl.setCurrentRange(timestamp, range);
 
     this.virtualTimeOffset = this.player.video.currentTime;
+
+    EventBus.emit("play-enabled");
+
+    this.timelineDrawer.draw(
+      this.getVirtualCurrentTime(this.player.video.currentTime)
+    );
   }
 
   private onDropComplete() {
@@ -407,6 +419,10 @@ export class ArchiveVideoService implements ModeService {
     this.nextProcessedRange = null;
   }
 
+  private clearListeners() {
+    this.archiveControl.clearIntervals();
+  }
+
   play(isContinue = false) {
     this.logger.log("info", "Воспроизведение стрима");
 
@@ -417,11 +433,27 @@ export class ArchiveVideoService implements ModeService {
     }
   }
 
-  stop() {
-    this.logger.log("info", DatachannelMessageType.STOP_STREAM);
+  pause() {
+    this.logger.log("info", "Пауза стрима");
     this.datachannelClient.send(DatachannelMessageType.STOP_STREAM);
 
     this.archiveControl.pause(this.timelineDrawer.getCurrentTimestamp());
+  }
+
+  stop() {
+    this.logger.log("info", "Остановка стрима");
+    this.datachannelClient.send(DatachannelMessageType.STOP_STREAM);
+
+    const startTime = this.ranges[0].start_time;
+
+    this.archiveControl.pause(startTime);
+
+    const currentTime = this.player.video.currentTime;
+
+    this.timelineDrawer.setCustomTrackTimestamp(startTime);
+
+    this.virtualTimeOffset = currentTime;
+    this.timelineDrawer.draw(this.getVirtualCurrentTime(currentTime));
   }
 
   setSource(stream: MediaStream) {

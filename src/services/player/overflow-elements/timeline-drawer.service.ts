@@ -287,6 +287,8 @@ export class TimelineOverflowDrawer {
   disableExportMode(): void {
     this.exportMode = false;
     this.exportCallback = null;
+    this.exportStartTime = null;
+    this.exportEndTime = null;
 
     // Удаляем черты
     this.clearExportMarkers();

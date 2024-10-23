@@ -1,5 +1,7 @@
+import { Mode } from "../constants/mode";
 import { RangeDto } from "../dto/ranges";
 import { Nullable } from "../types/global";
+import { CustomEvents } from "./custom-events.service";
 import { EventBus } from "./event-bus.service";
 import { Logger } from "./logger/logger.service";
 
@@ -108,6 +110,11 @@ export class ArchiveControlService {
     this.clearPreloadTimeout();
   }
 
+  clearIntervals() {
+    this.clearSupportConnectInterval();
+    this.clearPreloadTimeout();
+  }
+
   toNextFragment() {
     if (!this.nextFragment) {
       this.logger.warn(
@@ -195,6 +202,8 @@ export class ArchiveControlService {
       this.currentTimestamp
     );
 
+    this.initGenerator(this.currentTimestamp);
+
     if (emitEnable) {
       this.isPause = false;
 
@@ -255,6 +264,7 @@ export class ArchiveControlService {
     const rangeFragmentResult = this.rangeFragmentsGenerator.next();
     if (rangeFragmentResult.done) {
       this.logger.log("info", "Все фрагменты загружены.");
+      CustomEvents.emit("mode-changed", Mode.LIVE);
       return;
     }
 
