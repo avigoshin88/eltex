@@ -3,7 +3,6 @@ import { VideoPlayerService } from "./services/player/player.service";
 
 import "./style.css";
 import { PlayerModeService } from "./services/player/player-mode.service";
-import { PlayerStatsService } from "./services/player/player-stats.service";
 import { CustomEvents } from "./services/custom-events.service";
 import { Mode } from "./constants/mode";
 
@@ -18,7 +17,6 @@ class VideoPlayerElement extends HTMLElement {
   container!: HTMLDivElement;
 
   player = new VideoPlayerService();
-  playerStats = new PlayerStatsService();
 
   modeService!: PlayerModeService;
 

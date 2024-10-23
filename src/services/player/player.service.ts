@@ -1,4 +1,3 @@
-import { EventBus } from "../event-bus.service";
 import { VideoPlayerBuilderService } from "./player-builder.service";
 
 export class VideoPlayerService {
@@ -15,8 +14,6 @@ export class VideoPlayerService {
 
     this.container = container;
     this.videoContainer = videoContainer;
-
-    EventBus.emit("setup-video", video);
 
     this.video = video;
 

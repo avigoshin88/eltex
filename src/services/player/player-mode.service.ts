@@ -14,6 +14,7 @@ import { EventBus } from "../event-bus.service";
 import { StatsOverflowDrawerService } from "./overflow-elements/stats-drawer.service";
 import { Nullable } from "../../types/global";
 import { CustomEvents } from "../custom-events.service";
+import { PlayerStatsService } from "./player-stats.service";
 
 const quality = {
   sd: { name: "SD", bitrate: 500 },
@@ -30,6 +31,8 @@ export class PlayerModeService {
   private player: VideoPlayerService;
   private archiveControl!: ArchiveControlService;
   private readonly snapshotManager = new SnapshotService();
+
+  private readonly playerStats = new PlayerStatsService();
 
   private statsDrawer!: StatsOverflowDrawerService;
 
@@ -50,6 +53,10 @@ export class PlayerModeService {
   ) {
     this.options = { ...options };
     this.player = player;
+
+    this.playerStats.init();
+
+    EventBus.emit("setup-video", this.player.video);
 
     this.setListeners();
 
@@ -332,9 +339,7 @@ export class PlayerModeService {
   private switchStats() {
     this.isShowStats = !this.isShowStats;
 
-    if (this.isShowStats) {
-      // включиться сам
-    } else {
+    if (!this.isShowStats) {
       this.statsDrawer.clear();
     }
 

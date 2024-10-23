@@ -23,9 +23,7 @@ export class PlayerStatsService {
 
   private trackingStatsInterval: Nullable<number> = null;
 
-  constructor() {
-    this.init();
-  }
+  constructor() {}
 
   private setupPeerConnection(peerConnection: RTCPeerConnection) {
     this.peerConnection = peerConnection;
@@ -33,6 +31,7 @@ export class PlayerStatsService {
   }
 
   private setupVideo(video: HTMLVideoElement) {
+    console.log("🚀 ~ PlayerStatsService ~ setupVideo ~ setupVideo:");
     this.videoElement = video;
     this.tryStartTracking();
   }
@@ -57,7 +56,7 @@ export class PlayerStatsService {
 
         EventBus.emit("stats", stats);
       } catch (error) {
-        this.logger.error("Ошибка получения статистики: ", error);
+        this.logger.error("info", "Ошибка получения статистики: ", error);
       }
     }, trackingStatsInterval);
   }
