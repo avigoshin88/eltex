@@ -1,7 +1,7 @@
 import { Mode } from "../constants/mode";
 import { RangeDto } from "../dto/ranges";
 import { Nullable } from "../types/global";
-import { CustomEvents } from "./custom-events.service";
+import { CustomEventsService } from "./custom-events.service";
 import { EventBus } from "./event-bus.service";
 import { Logger } from "./logger/logger.service";
 
@@ -49,6 +49,7 @@ type RangeFragment = RangeDto & {
 
 export class ArchiveControlService {
   private readonly logger = new Logger(ArchiveControlService.name);
+  private customEventsService = CustomEventsService.getInstance();
 
   private ranges: RangeDto[] = [];
   private fragmentIndex = 0;
@@ -264,7 +265,7 @@ export class ArchiveControlService {
     const rangeFragmentResult = this.rangeFragmentsGenerator.next();
     if (rangeFragmentResult.done) {
       this.logger.log("info", "Все фрагменты загружены.");
-      CustomEvents.emit("mode-changed", Mode.LIVE);
+      this.customEventsService.emit("mode-changed", Mode.LIVE);
       return;
     }
 

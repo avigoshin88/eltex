@@ -3,7 +3,7 @@ import { VideoPlayerService } from "./services/player/player.service";
 
 import "./style.css";
 import { PlayerModeService } from "./services/player/player-mode.service";
-import { CustomEvents } from "./services/custom-events.service";
+import { CustomEventsService } from "./services/custom-events.service";
 import { Mode } from "./constants/mode";
 
 class VideoPlayerElement extends HTMLElement {
@@ -19,6 +19,7 @@ class VideoPlayerElement extends HTMLElement {
   player = new VideoPlayerService();
 
   modeService!: PlayerModeService;
+  customEventsService = CustomEventsService.getInstance();
 
   connectedCallback() {}
 
@@ -67,7 +68,7 @@ class VideoPlayerElement extends HTMLElement {
       return;
     }
 
-    CustomEvents.setId(id);
+    this.customEventsService.setId(id);
 
     const iceServers = iceServersRaw.split(";").map((urls) => ({
       urls,

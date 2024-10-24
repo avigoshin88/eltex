@@ -13,7 +13,7 @@ import { Stats } from "../../types/video";
 import { EventBus } from "../event-bus.service";
 import { StatsOverflowDrawerService } from "./overflow-elements/stats-drawer.service";
 import { Nullable } from "../../types/global";
-import { CustomEvents } from "../custom-events.service";
+import { CustomEventsService } from "../custom-events.service";
 import { PlayerStatsService } from "./player-stats.service";
 
 const quality = {
@@ -24,6 +24,7 @@ const quality = {
 
 export class PlayerModeService {
   private readonly logger = new Logger(PlayerModeService.name);
+  private customEventsService = CustomEventsService.getInstance();
 
   private modeConnection!: ModeService;
   private options!: ConnectionOptions;
@@ -69,7 +70,7 @@ export class PlayerModeService {
   }
 
   switch() {
-    CustomEvents.emit(
+    this.customEventsService.emit(
       "mode-changed",
       this.currentMode === Mode.LIVE ? Mode.ARCHIVE : Mode.LIVE
     );
@@ -371,8 +372,8 @@ export class PlayerModeService {
   private snap() {
     this.snapshotManager.snap(
       this.player.video,
-      this.resolution?.width,
-      this.resolution?.height
+      this.resolution?.width || 0,
+      this.resolution?.height || 0
     );
   }
 

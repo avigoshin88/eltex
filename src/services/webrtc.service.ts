@@ -5,7 +5,7 @@ import {
 } from "../types/datachannel-listener";
 import { Nullable } from "../types/global";
 import { GetSDPOfferResponse, Candidate } from "../dto/connection";
-import { CustomEvents } from "./custom-events.service";
+import { CustomEventsService } from "./custom-events.service";
 import { DatachannelClientService } from "./datachannel/data-channel.service";
 import { EventBus } from "./event-bus.service";
 import { Logger } from "./logger/logger.service";
@@ -14,6 +14,7 @@ import { Mode } from "../constants/mode";
 
 export class WebRTCService {
   private logger = new Logger(WebRTCService.name);
+  customEventsService = CustomEventsService.getInstance();
 
   private peerConnection: Nullable<RTCPeerConnection> = null;
   private microphoneService: Nullable<MicrophoneService> = null;
@@ -40,7 +41,7 @@ export class WebRTCService {
     this.microphoneService = new MicrophoneService();
     this.setSource = setSource;
 
-    CustomEvents.on("reinit-connection", this.reinitPeerConnection);
+    this.customEventsService.on("reinit-connection", this.reinitPeerConnection);
   }
 
   public async setupPeerConnection({
@@ -76,7 +77,7 @@ export class WebRTCService {
 
     this.initListeners();
 
-    CustomEvents.emit(
+    this.customEventsService.emit(
       "peerconnection-status",
       this.peerConnection!.connectionState
     );
@@ -90,29 +91,11 @@ export class WebRTCService {
   };
 
   private initListeners() {
-    CustomEvents.on("remote-description", this.onRemoteDescription);
-    CustomEvents.on(
+    this.customEventsService.on("remote-description", this.onRemoteDescription);
+    this.customEventsService.on(
       "request-local-description",
       this.onRequestLocalDescription
     );
-
-    if (!this.peerConnection) {
-      return;
-    }
-
-    this.peerConnection.onconnectionstatechange = async () => {
-      CustomEvents.emit(
-        "peerconnection-status",
-        this.peerConnection?.connectionState
-      );
-
-      if (
-        this.peerConnection?.connectionState === "disconnected" ||
-        this.peerConnection?.connectionState === "failed"
-      ) {
-        await this.reset();
-      }
-    };
   }
 
   public resetListeners() {
@@ -120,8 +103,11 @@ export class WebRTCService {
       "iceconnectionstatechange",
       this.onIcegatheringStateChange
     );
-    CustomEvents.off("remote-description", this.onRemoteDescription);
-    CustomEvents.off(
+    this.customEventsService.off(
+      "remote-description",
+      this.onRemoteDescription
+    );
+    this.customEventsService.off(
       "request-local-description",
       this.onRequestLocalDescription
     );
@@ -223,7 +209,7 @@ export class WebRTCService {
 
   private onIcegatheringStateChange = () => {
     if (this.peerConnection?.iceGatheringState === "complete") {
-      CustomEvents.emit(
+      this.customEventsService.emit(
         "local-description",
         this.peerConnection.localDescription?.sdp
       );
@@ -313,7 +299,10 @@ export class WebRTCService {
     this.peerConnection = null;
     await this.datachannelClient.close();
 
-    CustomEvents.off("reinit-connection", this.reinitPeerConnection);
+    this.customEventsService.off(
+      "reinit-connection",
+      this.reinitPeerConnection
+    );
 
     this.logger.log("info", "Сервис очищен");
   }
@@ -329,7 +318,7 @@ export class WebRTCService {
       "Удаленный ICE candidate: \n " + event.candidate.candidate
     );
 
-    CustomEvents.emit(
+    this.customEventsService.emit(
       "ice-candidate",
       this.parseCandidate(event.candidate.candidate)
     );
@@ -372,7 +361,7 @@ export class WebRTCService {
     );
   }
 
-  private _onConnectionStateChange(event: Event) {
+  private async _onConnectionStateChange(event: Event) {
     this.logger.log(
       "info",
       "Статус подключения изменился, новый статус:",
@@ -380,6 +369,18 @@ export class WebRTCService {
       ", event:",
       event
     );
+
+    this.customEventsService.emit(
+      "peerconnection-status",
+      this.peerConnection?.connectionState
+    );
+
+    if (
+      this.peerConnection?.connectionState === "disconnected" ||
+      this.peerConnection?.connectionState === "failed"
+    ) {
+      await this.reset();
+    }
   }
 
   private parseCandidate(line: string) {
