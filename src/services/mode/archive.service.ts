@@ -22,6 +22,16 @@ import { FileDownloader } from "../file-downloader.service";
 import { EventBus } from "../event-bus.service";
 import { RangeData } from "../../types/range";
 import { Mode } from "../../constants/mode";
+import { EnvService } from "../env.service";
+import { ArchiveError } from "../../types/archive";
+
+const preloadAfterErrorFrameTimeout = EnvService.getENVAsNumber(
+  "VITE_PRELOAD_AFTER_ERROR_FRAME_TIMEOUT"
+);
+
+function isFragmentLoadError(error?: Nullable<string>) {
+  return error?.toUpperCase() === ArchiveError.NOT_FOUND;
+}
 
 export class ArchiveVideoService implements ModeService {
   private logger = new Logger("ArchiveVideoService");
@@ -346,10 +356,10 @@ export class ArchiveVideoService implements ModeService {
   ) {
     this.logger.log("info", "Изменение текущего времени", timestamp, range);
 
+    this.virtualTimeOffset = this.player.video.currentTime;
+
     this.player.pause();
     this.archiveControl.setCurrentRange(timestamp, range);
-
-    this.virtualTimeOffset = this.player.video.currentTime;
 
     EventBus.emit("play-enabled");
 
@@ -373,7 +383,21 @@ export class ArchiveVideoService implements ModeService {
     });
   }
 
-  private onKeyFragmentUpload() {
+  private onKeyFragmentUpload(
+    _: Nullable<undefined>,
+    error?: Nullable<string>
+  ) {
+    if (isFragmentLoadError(error)) {
+      this.logger.error("info", "Ошибка загрузки ключевого фрагмента");
+
+      this.archiveControl.setCurrentTime(
+        this.timelineDrawer.getCurrentTimestamp() +
+          preloadAfterErrorFrameTimeout,
+        false
+      );
+      return;
+    }
+
     if (!this.nextProcessedRange) {
       this.logger.warn(
         "info",
@@ -394,7 +418,21 @@ export class ArchiveVideoService implements ModeService {
     });
   }
 
-  private onSaveArchiveFragment() {
+  private onSaveArchiveFragment(
+    _: Nullable<undefined>,
+    error?: Nullable<string>
+  ) {
+    if (isFragmentLoadError(error)) {
+      this.logger.error("info", "Ошибка загрузки ключевого фрагмента");
+
+      this.archiveControl.setCurrentTime(
+        this.timelineDrawer.getCurrentTimestamp() +
+          preloadAfterErrorFrameTimeout,
+        true
+      );
+      return;
+    }
+
     if (this.isPreRequestRange) {
       this.isPreRequestRange = false;
 

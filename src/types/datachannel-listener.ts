@@ -1,3 +1,5 @@
+import { Nullable } from "./global";
+
 export enum DatachannelMessageType {
   META = "meta",
 
@@ -91,7 +93,10 @@ export enum DatachannelMessageType {
   ARCHIVE_CONNECT_SUPPORT = "archive_connect_support",
 }
 
-export type DatachannelEventListener = (data?: unknown) => void | Promise<void>;
+export type DatachannelEventListener<T = any> = (
+  data?: Nullable<T>,
+  error?: Nullable<string>
+) => void | Promise<void>;
 
 export type DatachannelEventListeners = Partial<
   Record<DatachannelMessageType, DatachannelEventListener>

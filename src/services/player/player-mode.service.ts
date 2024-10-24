@@ -316,7 +316,6 @@ export class PlayerModeService {
       return;
     }
 
-    this.modeConnection.play?.(true);
     this.player.play();
 
     this.controlsDrawer.updateBinaryButtonsState({
