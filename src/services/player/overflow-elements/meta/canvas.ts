@@ -12,6 +12,7 @@ export default class MetaOverflowDrawerService {
   private observer = new ResizeObserver(() => {
     this.resizeCanvas();
   });
+  private timeoutId?: number;
 
   constructor(container: HTMLDivElement) {
     this.container = container;
@@ -56,6 +57,7 @@ export default class MetaOverflowDrawerService {
     if (!context) return;
 
     this.clear();
+    if (this.timeoutId) clearTimeout(this.timeoutId);
 
     const canvasWidth = this.canvas.width;
     const canvasHeight = this.canvas.height;
@@ -124,5 +126,7 @@ export default class MetaOverflowDrawerService {
       context.font = `${fontSize}px Arial`;
       context.fillText(zone.name, x, y + fontMargin);
     });
+
+    this.timeoutId = setTimeout(this.clear, 300);
   };
 }
