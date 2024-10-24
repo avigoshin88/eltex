@@ -44,7 +44,8 @@ export class PlayerModeService {
   private quality: keyof typeof quality = "fhd";
 
   private resolution: Nullable<Stats["resolution"]> = null;
-  private isShowStats = true;
+  private isShowStats = false;
+  private metaEnabled = false;
 
   constructor(
     mode: Mode,
@@ -126,6 +127,13 @@ export class PlayerModeService {
           type: "button",
           listeners: {
             click: this.stop.bind(this),
+          },
+        },
+        [ControlName.META]: {
+          type: "button",
+          binary: true,
+          listeners: {
+            click: this.switchMetaState.bind(this),
           },
         },
         [ControlName.EXPORT]: {
@@ -264,10 +272,11 @@ export class PlayerModeService {
       [ControlName.MICROPHONE]: (this.modeConnection as LiveVideoService)?.mic
         ?.isMicEnabled,
       [ControlName.STATS]: this.isShowStats,
+      [ControlName.META]: this.metaEnabled,
     });
     this.controlsDrawer.draw();
 
-    await this.modeConnection.init();
+    await this.modeConnection.init(this.metaEnabled);
   }
 
   async reset() {
@@ -279,6 +288,8 @@ export class PlayerModeService {
 
     this.soundLevel = "100";
     this.speed = "1.0";
+
+    this.metaEnabled = true;
 
     this.statsDrawer.clear();
 
@@ -333,6 +344,19 @@ export class PlayerModeService {
     this.controlsDrawer.updateBinaryButtonsState({
       [ControlName.VOLUME]: this.player.isVolumeOn,
     });
+    this.controlsDrawer.draw();
+  }
+
+  private switchMetaState() {
+    const newState = !this.metaEnabled;
+
+    this.modeConnection.toggleMeta(newState);
+
+    this.controlsDrawer.updateBinaryButtonsState({
+      [ControlName.META]: newState,
+    });
+
+    this.metaEnabled = newState;
     this.controlsDrawer.draw();
   }
 
@@ -438,12 +462,15 @@ export class PlayerModeService {
     });
     this.controlsDrawer.draw();
 
-    this.modeConnection.reinitWithNewOptions?.({
-      ...this.options,
-      constrains: {
-        maxBitrate: quality[target.value as keyof typeof quality].bitrate,
+    this.modeConnection.reinitWithNewOptions?.(
+      {
+        ...this.options,
+        constrains: {
+          maxBitrate: quality[target.value as keyof typeof quality].bitrate,
+        },
       },
-    });
+      this.metaEnabled
+    );
   }
 
   private onChangeSoundLevel(event: Event) {

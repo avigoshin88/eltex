@@ -1,7 +1,7 @@
 import { ConnectionOptions } from "../types/connection-options";
 
 export interface ModeService {
-  init(): Promise<void>;
+  init(metaEnabled: boolean): Promise<void>;
   reset(): Promise<void>;
   setSource(stream: MediaStream): void;
 
@@ -13,5 +13,7 @@ export interface ModeService {
   cancelExport?(): void;
   setSpeed?(speed: number): void;
 
-  reinitWithNewOptions?(options: ConnectionOptions): void;
+  reinitWithNewOptions?(options: ConnectionOptions, metaEnabled: boolean): void;
+
+  toggleMeta(on: boolean): void;
 }

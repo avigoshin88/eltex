@@ -1,4 +1,7 @@
-import { DatachannelMessageType } from "./../../types/datachannel-listener";
+import {
+  DatachannelEventListener,
+  DatachannelMessageType,
+} from "./../../types/datachannel-listener";
 import { Logger } from "../logger/logger.service";
 import { WebRTCService } from "../webrtc.service";
 import { ConnectionOptions } from "../../types/connection-options";
@@ -34,7 +37,7 @@ export class LiveVideoService implements ModeService {
     this.metaDrawer.init();
   }
 
-  async init(): Promise<void> {
+  async init(metaEnabled: boolean): Promise<void> {
     const datachannelListeners: {
       nativeListeners: DatachannelNativeEventListeners;
       listeners: DatachannelEventListeners;
@@ -42,7 +45,9 @@ export class LiveVideoService implements ModeService {
       listeners: {
         // ругается на unknown
         // @ts-ignore
-        [DatachannelMessageType.META]: this.metaDrawer.draw,
+        [DatachannelMessageType.META]: metaEnabled
+          ? this.metaDrawer.draw
+          : undefined,
       },
       nativeListeners: {},
     };
@@ -50,7 +55,10 @@ export class LiveVideoService implements ModeService {
     await this.webRTCClient.setupPeerConnection(datachannelListeners);
   }
 
-  public async reinitWithNewOptions(options: ConnectionOptions) {
+  public async reinitWithNewOptions(
+    options: ConnectionOptions,
+    metaEnabled: boolean
+  ) {
     this.logger.log(
       "info",
       "Перезапускаем live соединение с новыми параметрами:",
@@ -77,7 +85,9 @@ export class LiveVideoService implements ModeService {
       listeners: {
         // ругается на unknown
         // @ts-ignore
-        [DatachannelMessageType.META]: metaDrawer.draw,
+        [DatachannelMessageType.META]: metaEnabled
+          ? metaDrawer.draw
+          : undefined,
       },
       nativeListeners: {
         open: async () => {
@@ -109,5 +119,12 @@ export class LiveVideoService implements ModeService {
   setSource(stream: MediaStream) {
     this.player.setSource(stream);
     this.player.play();
+  }
+
+  toggleMeta(on: boolean) {
+    this.datachannelClient.updateListener(
+      DatachannelMessageType.META,
+      on ? (this.metaDrawer.draw as DatachannelEventListener) : undefined
+    );
   }
 }
