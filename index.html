@@ -1,137 +1,135 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Eltex WebRTC Video Player Demo</title>
 
-    <style>
-      body {
-        width: 100vw;
-        min-height: 100vh;
-        margin: 0;
-      }
-    </style>
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Eltex WebRTC Video Player Demo</title>
 
-    <script type="module" src="./src/main.ts"></script>
+  <style>
+    body {
+      width: 100vw;
+      min-height: 100vh;
+      margin: 0;
+    }
+  </style>
 
-    <script>
-      const app = "live";
-      const stream = "test";
+  <script type="module" src="./src/main.ts"></script>
 
-      let localOffer = null;
+  <script>
+    const app = "live";
+    const stream = "test";
 
-      function getSDPOffer(port = 18083, app, stream) {
-        return fetch(
-          `https://evi-webrtc.eltex-co.ru:${port}/index/api/webrtc?app=${app}&stream=${stream}`,
-          { method: "GET" }
-        ).then((response) => response.json());
-      }
+    let localOffer = null;
 
-      function saveOffer(port = 18083, app, stream, type, offer) {
-        return fetch(
-          `https://evi-webrtc.eltex-co.ru:${port}/index/api/webrtc?app=${app}&stream=${stream}&type=${type}`,
-          { method: "POST", body: offer }
-        ).then((response) => response.json());
-      }
+    function getSDPOffer(port = 18083, app, stream) {
+      return fetch(
+        `https://evi-webrtc.eltex-co.ru:${port}/index/api/webrtc?app=${app}&stream=${stream}`,
+        { method: "GET" }
+      )
+        .then((response) => response.json())
+    }
 
-      let remoteOffer = null;
 
-      window.addEventListener("mode-changed-1", (event) => {
-        document.getElementById("1").setAttribute("mode", event.detail);
+    function saveOffer(port = 18083, app, stream, type, offer) {
+      return fetch(
+        `https://evi-webrtc.eltex-co.ru:${port}/index/api/webrtc?app=${app}&stream=${stream}&type=${type}`,
+        { method: "POST", body: offer }
+      )
+        .then((response) => response.json())
+    }
+
+    let remoteOffer = null;
+
+    window.addEventListener('mode-changed-1', (event) => {
+      document.getElementById('1').setAttribute('mode', event.detail);
+    });
+
+    function registerLiveP2P() {
+      window.addEventListener('peerconnection-status-1', (event) => {
+        if (event.detail === 'new') {
+          setTimeout(() => {
+            getSDPOffer(5080, app, stream).then((response) => {
+              const event = new CustomEvent("remote-description-1", {
+                detail: response,
+              });
+
+              window.dispatchEvent(event);
+            })
+          })
+        }
       });
 
-      function registerLiveP2P() {
-        window.addEventListener("peerconnection-status-1", (event) => {
-          if (event.detail === "new") {
-            setTimeout(() => {
-              getSDPOffer(5080, app, stream).then((response) => {
-                const event = new CustomEvent("remote-description-1", {
-                  detail: response,
-                });
+      window.addEventListener('local-description-1', (event) => {
 
-                window.dispatchEvent(event);
-              });
-            });
-          }
-        });
+        localOffer = event.detail;
 
-        window.addEventListener("local-description-1", (event) => {
-          localOffer = event.detail;
+        saveOffer(5080, app, stream, 'p2p_play', event.detail);
+      });
+    }
 
-          saveOffer(5080, app, stream, "p2p_play", event.detail);
-        });
-      }
+    function registerLiveTurn() {
+      window.addEventListener('peerconnection-status-1', (event) => {
+        if (event.detail === 'new') {
+          setTimeout(() => {
+            const event = new CustomEvent("request-local-description-1");
 
-      function registerLiveTurn() {
-        window.addEventListener("peerconnection-status-1", (event) => {
-          if (event.detail === "new") {
-            setTimeout(() => {
-              const event = new CustomEvent("request-local-description-1");
+            window.dispatchEvent(event);
+          })
+        }
+      });
 
-              window.dispatchEvent(event);
-            });
-          }
-        });
+      window.addEventListener('local-description-1', (event) => {
+        localOffer = event.detail;
 
-        window.addEventListener("local-description-1", (event) => {
-          localOffer = event.detail;
+        saveOffer(undefined, app, stream, 'play_analytic', localOffer).then((response) => {
+          const event = new CustomEvent("remote-description-1", {
+            detail: response,
+          });
 
-          saveOffer(undefined, app, stream, "play_analytic", localOffer).then(
-            (response) => {
-              const event = new CustomEvent("remote-description-1", {
-                detail: response,
-              });
+          window.dispatchEvent(event);
+        })
+      });
+    }
 
-              window.dispatchEvent(event);
-            }
-          );
-        });
-      }
 
-      function registerArchiveEvents() {
-        window.addEventListener("peerconnection-status-1", (event) => {
-          if (event.detail === "new") {
-            setTimeout(() => {
-              const event = new CustomEvent("request-local-description-1");
+    function registerArchiveEvents() {
+      window.addEventListener('peerconnection-status-1', (event) => {
 
-              window.dispatchEvent(event);
-            });
-          }
-        });
+        if (event.detail === 'new') {
+          setTimeout(() => {
+            const event = new CustomEvent("request-local-description-1");
 
-        window.addEventListener("local-description-1", (event) => {
-          localOffer = event.detail;
+            window.dispatchEvent(event);
+          })
+        }
+      });
 
-          saveOffer(undefined, app, stream, "archive", localOffer).then(
-            (response) => {
-              const event = new CustomEvent("remote-description-1", {
-                detail: response,
-              });
+      window.addEventListener('local-description-1', (event) => {
+        localOffer = event.detail;
 
-              window.dispatchEvent(event);
-            }
-          );
-        });
-      }
+        saveOffer(undefined, app, stream, 'archive', localOffer).then((response) => {
+          const event = new CustomEvent("remote-description-1", {
+            detail: response,
+          });
 
-      // registerLiveP2P();
-      registerLiveTurn();
-      // registerArchiveEvents();
-    </script>
-  </head>
+          window.dispatchEvent(event);
+        })
+      });
+    }
 
-  <body>
-    <div id="app" style="width: 100%; display: grid">
-      <video-player
-        id="1"
-        mode="live"
-        camera_name="camera_name"
-        ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
-      >
-      </video-player>
-      <!-- <video-player
+    // registerLiveP2P();
+    registerLiveTurn();
+    // registerArchiveEvents();
+  </script>
+</head>
+
+<body>
+  <div id="app" style="width: 100%; display: grid;">
+    <video-player id="1" mode="live" camera_name="camera_name" ice_servers="stun:evi-webrtc.eltex-co.ru:3478">
+    </video-player>
+    <!-- <video-player
         id="2"
         mode="live"
         camera_name="camera_name"
@@ -221,6 +219,7 @@
         camera_name="camera_name"
         ice_servers="stun:evi-webrtc.eltex-co.ru:3478"
       ></video-player> -->
-    </div>
-  </body>
+  </div>
+</body>
+
 </html>

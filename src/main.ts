@@ -20,9 +20,7 @@ class VideoPlayerElement extends HTMLElement {
 
   modeService!: PlayerModeService;
 
-  connectedCallback() {
-    this.initElement();
-  }
+  connectedCallback() {}
 
   disconnectedCallback() {
     this.clear();
@@ -51,6 +49,7 @@ class VideoPlayerElement extends HTMLElement {
     if (oldValue !== null) {
       this.clear();
     }
+    this.initElement();
   }
 
   private initElement() {
