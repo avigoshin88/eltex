@@ -331,6 +331,7 @@ export class PlayerModeService {
     this.controlsDrawer.updateBinaryButtonsState({
       [ControlName.PLAY]: false,
     });
+    this.controlsDrawer.draw();
   }
 
   private switchVolumeState() {
