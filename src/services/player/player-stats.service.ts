@@ -1,19 +1,12 @@
 import { Nullable } from "../../types/global";
 import { Stats } from "../../types/video";
+import { EnvService } from "../env.service";
 import { EventBus } from "../event-bus.service";
 import { Logger } from "../logger/logger.service";
 
-const trackingStatsInterval = Number(
-  import.meta.env.VITE_TRACKING_STATS_INTERVAL
+const trackingStatsInterval = EnvService.getENVAsNumber(
+  "VITE_TRACKING_STATS_INTERVAL"
 );
-
-if (isNaN(trackingStatsInterval)) {
-  throw new Error(
-    `VITE_TRACKING_STATS_INTERVAL must be a number. Currently is ${
-      import.meta.env.VITE_TRACKING_STATS_INTERVAL
-    } `
-  );
-}
 
 export class PlayerStatsService {
   private readonly logger = new Logger("PlayerStatsService");

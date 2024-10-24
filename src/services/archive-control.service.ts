@@ -2,42 +2,21 @@ import { Mode } from "../constants/mode";
 import { RangeDto } from "../dto/ranges";
 import { Nullable } from "../types/global";
 import { CustomEvents } from "./custom-events.service";
+import { EnvService } from "./env.service";
 import { EventBus } from "./event-bus.service";
 import { Logger } from "./logger/logger.service";
 
-const connectionSupportInterval = Number(
-  import.meta.env.VITE_ARCHIVE_CONNECT_SUPPORT_INTERVAL
+const connectionSupportInterval = EnvService.getENVAsNumber(
+  "VITE_ARCHIVE_CONNECT_SUPPORT_INTERVAL"
 );
 
-const preloadRangeFragmentTimeout = Number(
-  import.meta.env.VITE_PRELOAD_RANGE_FRAGMENT_TIMEOUT
+const preloadRangeFragmentTimeout = EnvService.getENVAsNumber(
+  "VITE_PRELOAD_RANGE_FRAGMENT_TIMEOUT"
 );
 
-const preloadInterval = Number(import.meta.env.VITE_ARCHIVE_PRELOAD_INTERVAL);
-
-if (isNaN(connectionSupportInterval)) {
-  throw new Error(
-    `VITE_ARCHIVE_CONNECT_SUPPORT_INTERVAL должно быть числом. Текущее значение: ${
-      import.meta.env.VITE_ARCHIVE_CONNECT_SUPPORT_INTERVAL
-    } `
-  );
-}
-
-if (isNaN(preloadInterval)) {
-  throw new Error(
-    `VITE_ARCHIVE_PRELOAD_INTERVAL должно быть числом. Текущее значение: ${
-      import.meta.env.VITE_ARCHIVE_PRELOAD_INTERVAL
-    } `
-  );
-}
-
-if (isNaN(preloadRangeFragmentTimeout)) {
-  throw new Error(
-    `VITE_PRELOAD_RANGE_FRAGMENT_TIMEOUT должно быть числом. Текущее значение: ${
-      import.meta.env.VITE_PRELOAD_RANGE_FRAGMENT_TIMEOUT
-    } `
-  );
-}
+const preloadInterval = EnvService.getENVAsNumber(
+  "VITE_ARCHIVE_PRELOAD_INTERVAL"
+);
 
 type Emitter = (fragment: RangeDto, isPreload: boolean) => void;
 
