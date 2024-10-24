@@ -20,6 +20,7 @@ type CommonButtonControl = Exclude<
   | ControlName.EXPORT
   | ControlName.MICROPHONE
   | ControlName.STATS
+  | ControlName.META
 >;
 type BinaryButtonControl = Exclude<ButtonControl, CommonButtonControl>;
 
@@ -51,6 +52,10 @@ const BINARY_BUTTON_ICONS: Record<
     on: "/stats-on.svg",
     off: "/stats-off.svg",
   },
+  [ControlName.META]: {
+    on: "/meta-on.svg",
+    off: "/meta-off.svg",
+  },
 };
 
 const COMMON_BUTTON_ICONS: Record<CommonButtonControl, string> = {
@@ -68,6 +73,7 @@ const CONTROLS_ORDER: ControlName[] = [
   ControlName.NEXT_FRAGMENT,
   ControlName.MICROPHONE,
   ControlName.VOLUME,
+  ControlName.META,
   ControlName.EXPORT,
   ControlName.SNAPSHOT,
   ControlName.STATS,

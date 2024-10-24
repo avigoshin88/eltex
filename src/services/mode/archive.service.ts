@@ -4,6 +4,7 @@ import { ConnectionOptions } from "../../types/connection-options";
 import { ModeService } from "../../interfaces/mode";
 import { DatachannelClientService } from "../datachannel/data-channel.service";
 import {
+  DatachannelEventListener,
   DatachannelEventListeners,
   DatachannelMessageType,
   DatachannelNativeEventListeners,
@@ -93,7 +94,7 @@ export class ArchiveVideoService implements ModeService {
     this.setControl(this.archiveControl);
   }
 
-  async init(): Promise<void> {
+  async init(metaEnabled: boolean): Promise<void> {
     await this.webRTCClient.setupPeerConnection({
       nativeListeners: {
         open: this.onOpenDatachannel.bind(this),
@@ -111,14 +112,19 @@ export class ArchiveVideoService implements ModeService {
         [DatachannelMessageType.URL]: this.onExportFragment.bind(this),
         // ругается на unknown
         // @ts-ignore
-        [DatachannelMessageType.META]: this.metaDrawer.draw,
+        [DatachannelMessageType.META]: metaEnabled
+          ? this.metaDrawer.draw
+          : undefined,
       },
     });
 
     this.metaDrawer.init();
   }
 
-  public async reinitWithNewOptions(options: ConnectionOptions) {
+  public async reinitWithNewOptions(
+    options: ConnectionOptions,
+    metaEnabled: boolean
+  ) {
     this.renewStartTime = this.timelineDrawer.getCurrentTimestamp();
     this.renewFragment = {
       ...this.archiveControl.currentFragment,
@@ -160,7 +166,9 @@ export class ArchiveVideoService implements ModeService {
         [DatachannelMessageType.URL]: this.onExportFragment.bind(this),
         // ругается на unknown
         // @ts-ignore
-        [DatachannelMessageType.META]: metaDrawer.draw,
+        [DatachannelMessageType.META]: metaEnabled
+          ? metaDrawer.draw
+          : undefined,
       },
       nativeListeners: {
         open: async () => {
@@ -459,5 +467,12 @@ export class ArchiveVideoService implements ModeService {
   setSource(stream: MediaStream) {
     this.player.setSource(stream);
     this.player.play();
+  }
+
+  toggleMeta(on: boolean) {
+    this.datachannelClient.updateListener(
+      DatachannelMessageType.META,
+      on ? (this.metaDrawer.draw as DatachannelEventListener) : undefined
+    );
   }
 }

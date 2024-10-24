@@ -3,7 +3,7 @@ export enum ControlName {
   PLAY = "play",
   VOLUME = "volume",
   MICROPHONE = "microphone",
-  STOP = 'stop',
+  STOP = "stop",
   EXPORT = "export",
   SNAPSHOT = "snapshot",
   SPEED = "speed",
@@ -15,6 +15,7 @@ export enum ControlName {
 
   SOUND = "sound",
   QUALITY = "quality",
+  META = "meta",
 }
 
 export type ControlType = "button" | "select" | "range";
@@ -96,4 +97,5 @@ export type ControlsOptions = {
 
   [ControlName.STATS]: BinaryButtonControlOptions;
   [ControlName.QUALITY]: SelectControlOptions;
+  [ControlName.META]: BinaryButtonControlOptions;
 };
