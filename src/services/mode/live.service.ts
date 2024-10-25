@@ -24,11 +24,16 @@ export class LiveVideoService implements ModeService {
 
   private metaDrawer: MetaOverflowDrawerService;
 
-  constructor(options: ConnectionOptions, player: VideoPlayerService) {
+  constructor(
+    private id: string,
+    options: ConnectionOptions,
+    player: VideoPlayerService
+  ) {
     this.player = player;
     this.metaDrawer = new MetaOverflowDrawerService(this.player.videoContainer);
-    this.datachannelClient = new DatachannelClientService();
+    this.datachannelClient = new DatachannelClientService(this.id);
     this.webRTCClient = new WebRTCService(
+      this.id,
       Mode.LIVE,
       options,
       this.datachannelClient,
@@ -68,8 +73,9 @@ export class LiveVideoService implements ModeService {
     const metaDrawer = new MetaOverflowDrawerService(
       this.player.videoContainer
     );
-    const datachannelClient = new DatachannelClientService();
+    const datachannelClient = new DatachannelClientService(this.id);
     const webRTCClient = new WebRTCService(
+      this.id,
       Mode.LIVE,
       options,
       datachannelClient,

@@ -4,12 +4,13 @@ import {
   DatachannelMessageType,
   DatachannelNativeEventListeners,
 } from "../../types/datachannel-listener";
-import { CustomEvents } from "../custom-events.service";
+import { CustomEventsService } from "../custom-events.service";
 import { Logger } from "../logger/logger.service";
 import { DatachannelTransportBuilderService } from "./data-channel-transport-builder.service";
 
 export class DatachannelClientService {
   private readonly logger = new Logger(DatachannelClientService.name);
+  private customEventsService: CustomEventsService;
   private datachannel!: RTCDataChannel;
   private readonly datachannelTransportBuilder: DatachannelTransportBuilderService =
     new DatachannelTransportBuilderService();
@@ -17,7 +18,8 @@ export class DatachannelClientService {
 
   onClose?: () => void | Promise<void>;
 
-  constructor(onClose?: () => void | Promise<void>) {
+  constructor(private id: string, onClose?: () => void | Promise<void>) {
+    this.customEventsService = CustomEventsService.getInstance(this.id);
     this.onClose = onClose;
   }
 
@@ -132,7 +134,7 @@ export class DatachannelClientService {
   private signalData(type: string, data: object) {
     switch (type) {
       case DatachannelMessageType.META:
-        CustomEvents.emit("meta", data);
+        this.customEventsService.emit("meta", data);
         break;
     }
   }

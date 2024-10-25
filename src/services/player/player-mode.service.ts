@@ -13,7 +13,7 @@ import { Stats } from "../../types/video";
 import { EventBus } from "../event-bus.service";
 import { StatsOverflowDrawerService } from "./overflow-elements/stats-drawer.service";
 import { Nullable } from "../../types/global";
-import { CustomEvents } from "../custom-events.service";
+import { CustomEventsService } from "../custom-events.service";
 import { PlayerStatsService } from "./player-stats.service";
 
 const quality = {
@@ -24,6 +24,8 @@ const quality = {
 
 export class PlayerModeService {
   private readonly logger = new Logger(PlayerModeService.name);
+  private customEventsService: CustomEventsService;
+  private eventBus: EventBus;
 
   private modeConnection!: ModeService;
   private options!: ConnectionOptions;
@@ -32,7 +34,7 @@ export class PlayerModeService {
   private archiveControl!: ArchiveControlService;
   private readonly snapshotManager = new SnapshotService();
 
-  private readonly playerStats = new PlayerStatsService();
+  private readonly playerStats: PlayerStatsService;
 
   private statsDrawer!: StatsOverflowDrawerService;
 
@@ -48,16 +50,20 @@ export class PlayerModeService {
   private metaEnabled = false;
 
   constructor(
+    private id: string,
     mode: Mode,
     options: ConnectionOptions,
     player: VideoPlayerService
   ) {
     this.options = { ...options };
     this.player = player;
+    this.customEventsService = CustomEventsService.getInstance(this.id);
+    this.eventBus = EventBus.getInstance(this.id);
+    this.playerStats = new PlayerStatsService(this.id);
 
     this.playerStats.init();
 
-    EventBus.emit("setup-video", this.player.video);
+    this.eventBus.emit("setup-video", this.player.video);
 
     this.setListeners();
 
@@ -69,7 +75,7 @@ export class PlayerModeService {
   }
 
   switch() {
-    CustomEvents.emit(
+    this.customEventsService.emit(
       "mode-changed",
       this.currentMode === Mode.LIVE ? Mode.ARCHIVE : Mode.LIVE
     );
@@ -236,7 +242,11 @@ export class PlayerModeService {
           };
         }
 
-        this.modeConnection = new LiveVideoService(options, this.player);
+        this.modeConnection = new LiveVideoService(
+          this.id,
+          options,
+          this.player
+        );
         this.setupControlsDrawer();
         this.controlsDrawer.setHidden({
           [ControlName.PLAY]: true,
@@ -250,6 +260,7 @@ export class PlayerModeService {
         break;
       case Mode.ARCHIVE:
         this.modeConnection = new ArchiveVideoService(
+          this.id,
           this.options,
           this.player,
           (archiveControl) => (this.archiveControl = archiveControl)
@@ -371,8 +382,8 @@ export class PlayerModeService {
   private snap() {
     this.snapshotManager.snap(
       this.player.video,
-      this.resolution?.width,
-      this.resolution?.height
+      this.resolution?.width || 0,
+      this.resolution?.height || 0
     );
   }
 
@@ -523,14 +534,14 @@ export class PlayerModeService {
   }
 
   private setListeners() {
-    EventBus.on("stats", this.onUpdateStats);
-    EventBus.on("cancel-export", this.resetExportMode);
-    EventBus.on("play-enabled", this.enablePlay);
+    this.eventBus.on("stats", this.onUpdateStats);
+    this.eventBus.on("cancel-export", this.resetExportMode);
+    this.eventBus.on("play-enabled", this.enablePlay);
   }
 
   private clearListeners() {
-    EventBus.off("stats", this.onUpdateStats);
-    EventBus.off("cancel-export", this.resetExportMode);
-    EventBus.off("play-enabled", this.enablePlay);
+    this.eventBus.off("stats", this.onUpdateStats);
+    this.eventBus.off("cancel-export", this.resetExportMode);
+    this.eventBus.off("play-enabled", this.enablePlay);
   }
 }

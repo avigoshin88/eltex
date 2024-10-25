@@ -35,6 +35,7 @@ function isFragmentLoadError(error?: Nullable<string>) {
 
 export class ArchiveVideoService implements ModeService {
   private logger = new Logger("ArchiveVideoService");
+  private eventBus: EventBus;
 
   private webRTCClient!: WebRTCService;
   private datachannelClient: DatachannelClientService;
@@ -63,20 +64,24 @@ export class ArchiveVideoService implements ModeService {
   private ranges: RangeDto[] = [];
 
   constructor(
+    private id: string,
     options: ConnectionOptions,
     player: VideoPlayerService,
     setControl: (control: ArchiveControlService) => void
   ) {
     this.player = player;
+    this.eventBus = EventBus.getInstance(this.id);
 
     this.player.video.onloadeddata = this.onLoadedChange.bind(this);
     this.player.video.ontimeupdate = this.onTimeUpdate.bind(this);
 
     this.datachannelClient = new DatachannelClientService(
+      this.id,
       this.clearListeners.bind(this)
     );
 
     this.webRTCClient = new WebRTCService(
+      this.id,
       Mode.ARCHIVE,
       options,
       this.datachannelClient,
@@ -84,6 +89,7 @@ export class ArchiveVideoService implements ModeService {
     );
 
     this.archiveControl = new ArchiveControlService(
+      this.id,
       this.emitStartNewFragment.bind(this),
       this.supportConnect.bind(this)
     );
@@ -94,7 +100,7 @@ export class ArchiveVideoService implements ModeService {
     );
     this.metaDrawer = new MetaOverflowDrawerService(this.player.videoContainer);
 
-    EventBus.on(
+    this.eventBus.on(
       "new-archive-fragment-started",
       this.onNewArchiveFragmentStarted.bind(this)
     );
@@ -150,8 +156,9 @@ export class ArchiveVideoService implements ModeService {
     const metaDrawer = new MetaOverflowDrawerService(
       this.player.videoContainer
     );
-    const datachannelClient = new DatachannelClientService();
+    const datachannelClient = new DatachannelClientService(this.id);
     const webRTCClient = new WebRTCService(
+      this.id,
       Mode.ARCHIVE,
       options,
       datachannelClient,
@@ -189,6 +196,7 @@ export class ArchiveVideoService implements ModeService {
           this.webRTCClient = webRTCClient;
 
           const archiveControl = new ArchiveControlService(
+            this.id,
             this.emitStartNewFragment.bind(this),
             this.supportConnect.bind(this)
           );
@@ -276,7 +284,7 @@ export class ArchiveVideoService implements ModeService {
       }
     );
     this.timelineDrawer.disableExportMode();
-    EventBus.emit("cancel-export");
+    this.eventBus.emit("cancel-export");
   }
 
   private onExportFragment(data: ExportURLDto) {
@@ -361,7 +369,7 @@ export class ArchiveVideoService implements ModeService {
     this.player.pause();
     this.archiveControl.setCurrentRange(timestamp, range);
 
-    EventBus.emit("play-enabled");
+    this.eventBus.emit("play-enabled");
 
     this.timelineDrawer.draw(
       this.getVirtualCurrentTime(this.player.video.currentTime)

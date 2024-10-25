@@ -15,6 +15,15 @@ export type CustomEventEmitName =
 export type CustomEventCallback<T = any> = (data: T) => void;
 
 class CustomEventsService {
+  static instances: Record<string, CustomEventsService> = {};
+  static getInstance(id: string): CustomEventsService {
+    if (!CustomEventsService.instances[id]) {
+      CustomEventsService.instances[id] = new CustomEventsService();
+      CustomEventsService.instances[id].setId(id);
+    }
+    return CustomEventsService.instances[id];
+  }
+
   private id: Nullable<string> = null;
 
   private eventListeners: Map<string, Map<CustomEventCallback, EventListener>> =
@@ -98,6 +107,4 @@ class CustomEventsService {
   }
 }
 
-const customEvents = new CustomEventsService();
-
-export { customEvents as CustomEvents };
+export { CustomEventsService };

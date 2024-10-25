@@ -1,7 +1,7 @@
 import { Mode } from "../constants/mode";
 import { RangeDto } from "../dto/ranges";
 import { Nullable } from "../types/global";
-import { CustomEvents } from "./custom-events.service";
+import { CustomEventsService } from "./custom-events.service";
 import { EnvService } from "./env.service";
 import { EventBus } from "./event-bus.service";
 import { Logger } from "./logger/logger.service";
@@ -28,6 +28,8 @@ type RangeFragment = RangeDto & {
 
 export class ArchiveControlService {
   private readonly logger = new Logger(ArchiveControlService.name);
+  private customEventsService: CustomEventsService;
+  private eventBus: EventBus;
 
   private ranges: RangeDto[] = [];
   private fragmentIndex = 0;
@@ -41,7 +43,9 @@ export class ArchiveControlService {
   private isFirstPreloadDone = false; // Флаг для отслеживания первой дозагрузки
   private isPause = false;
 
-  constructor(emit: Emitter, supportConnect: () => void) {
+  constructor(private id: string, emit: Emitter, supportConnect: () => void) {
+    this.eventBus = EventBus.getInstance(this.id);
+    this.customEventsService = CustomEventsService.getInstance(this.id);
     this.emit = emit;
     this.supportConnect = supportConnect;
     this.logger.log("info", "Сервис ArchiveControlService инициализирован.");
@@ -112,7 +116,7 @@ export class ArchiveControlService {
     );
     this.isPause = false;
 
-    EventBus.emit("new-archive-fragment-started", this.currentFragment);
+    this.eventBus.emit("new-archive-fragment-started", this.currentFragment);
     this.clearPreloadTimeout();
     this.preloadRangeFragment(); // Переход на новый range
   }
@@ -159,7 +163,7 @@ export class ArchiveControlService {
 
     this.isPause = false;
 
-    EventBus.emit("new-archive-fragment-started", this.currentFragment);
+    this.eventBus.emit("new-archive-fragment-started", this.currentFragment);
     this.clearPreloadTimeout();
     this.preloadRangeFragment(); // Переход на новый range
   }
@@ -272,7 +276,7 @@ export class ArchiveControlService {
     const rangeFragmentResult = this.rangeFragmentsGenerator.next();
     if (rangeFragmentResult.done) {
       this.logger.log("info", "Все фрагменты загружены.");
-      CustomEvents.emit("mode-changed", Mode.LIVE);
+      this.customEventsService.emit("mode-changed", Mode.LIVE);
       return;
     }
 

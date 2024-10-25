@@ -1,6 +1,14 @@
 import { EventCallback, EventName } from "../types/event-bus";
 
 class EventBus {
+  static instances: Record<string, EventBus> = {};
+  static getInstance(id: string): EventBus {
+    if (!EventBus.instances[id]) {
+      EventBus.instances[id] = new EventBus();
+    }
+    return EventBus.instances[id];
+  }
+
   private listeners: Map<EventName, EventCallback[]> = new Map();
 
   on(event: EventName, callback: EventCallback): void {
@@ -36,6 +44,4 @@ class EventBus {
   }
 }
 
-const eventBus = new EventBus();
-
-export { eventBus as EventBus };
+export { EventBus };
