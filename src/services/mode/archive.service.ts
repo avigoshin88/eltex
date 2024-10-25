@@ -25,6 +25,7 @@ import { Mode } from "../../constants/mode";
 
 export class ArchiveVideoService implements ModeService {
   private logger = new Logger("ArchiveVideoService");
+  private eventBus: EventBus;
 
   private webRTCClient!: WebRTCService;
   private datachannelClient: DatachannelClientService;
@@ -59,6 +60,7 @@ export class ArchiveVideoService implements ModeService {
     setControl: (control: ArchiveControlService) => void
   ) {
     this.player = player;
+    this.eventBus = EventBus.getInstance(this.id);
 
     this.player.video.onloadeddata = this.onLoadedChange.bind(this);
     this.player.video.ontimeupdate = this.onTimeUpdate.bind(this);
@@ -88,7 +90,7 @@ export class ArchiveVideoService implements ModeService {
     );
     this.metaDrawer = new MetaOverflowDrawerService(this.player.videoContainer);
 
-    EventBus.on(
+    this.eventBus.on(
       "new-archive-fragment-started",
       this.onNewArchiveFragmentStarted.bind(this)
     );
@@ -272,7 +274,7 @@ export class ArchiveVideoService implements ModeService {
       }
     );
     this.timelineDrawer.disableExportMode();
-    EventBus.emit("cancel-export");
+    this.eventBus.emit("cancel-export");
   }
 
   private onExportFragment(data: ExportURLDto) {
@@ -357,7 +359,7 @@ export class ArchiveVideoService implements ModeService {
 
     this.virtualTimeOffset = this.player.video.currentTime;
 
-    EventBus.emit("play-enabled");
+    this.eventBus.emit("play-enabled");
 
     this.timelineDrawer.draw(
       this.getVirtualCurrentTime(this.player.video.currentTime)

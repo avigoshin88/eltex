@@ -50,6 +50,7 @@ type RangeFragment = RangeDto & {
 export class ArchiveControlService {
   private readonly logger = new Logger(ArchiveControlService.name);
   private customEventsService: CustomEventsService;
+  private eventBus: EventBus;
 
   private ranges: RangeDto[] = [];
   private fragmentIndex = 0;
@@ -64,6 +65,7 @@ export class ArchiveControlService {
   private isPause = false;
 
   constructor(private id: string, emit: Emitter, supportConnect: () => void) {
+    this.eventBus = EventBus.getInstance(this.id);
     this.customEventsService = CustomEventsService.getInstance(this.id);
     this.emit = emit;
     this.supportConnect = supportConnect;
@@ -135,7 +137,7 @@ export class ArchiveControlService {
     );
     this.isPause = false;
 
-    EventBus.emit("new-archive-fragment-started", this.currentFragment);
+    this.eventBus.emit("new-archive-fragment-started", this.currentFragment);
     this.clearPreloadTimeout();
     this.preloadRangeFragment(); // Переход на новый range
   }
@@ -182,7 +184,7 @@ export class ArchiveControlService {
 
     this.isPause = false;
 
-    EventBus.emit("new-archive-fragment-started", this.currentFragment);
+    this.eventBus.emit("new-archive-fragment-started", this.currentFragment);
     this.clearPreloadTimeout();
     this.preloadRangeFragment(); // Переход на новый range
   }

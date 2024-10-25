@@ -17,13 +17,16 @@ if (isNaN(trackingStatsInterval)) {
 
 export class PlayerStatsService {
   private readonly logger = new Logger("PlayerStatsService");
+  private eventBus: EventBus;
 
   private peerConnection: Nullable<RTCPeerConnection> = null;
   private videoElement: Nullable<HTMLVideoElement> = null;
 
   private trackingStatsInterval: Nullable<number> = null;
 
-  constructor() {}
+  constructor(private id: string) {
+    this.eventBus = EventBus.getInstance(this.id);
+  }
 
   private setupPeerConnection = (peerConnection: RTCPeerConnection) => {
     this.peerConnection = peerConnection;
@@ -53,7 +56,7 @@ export class PlayerStatsService {
       try {
         const stats = await trackWebRTCStats();
 
-        EventBus.emit("stats", stats);
+        this.eventBus.emit("stats", stats);
       } catch (error) {
         this.logger.error("info", "Ошибка получения статистики: ", error);
       }
@@ -61,13 +64,13 @@ export class PlayerStatsService {
   }
 
   init() {
-    EventBus.on("setup-video", this.setupVideo);
-    EventBus.on("setup-peerconnection", this.setupPeerConnection);
+    this.eventBus.on("setup-video", this.setupVideo);
+    this.eventBus.on("setup-peerconnection", this.setupPeerConnection);
   }
 
   reset() {
-    EventBus.off("setup-video", this.setupVideo);
-    EventBus.off("setup-peerconnection", this.setupPeerConnection);
+    this.eventBus.off("setup-video", this.setupVideo);
+    this.eventBus.off("setup-peerconnection", this.setupPeerConnection);
 
     this.peerConnection = null;
     this.videoElement = null;

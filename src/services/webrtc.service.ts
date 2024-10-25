@@ -14,7 +14,8 @@ import { Mode } from "../constants/mode";
 
 export class WebRTCService {
   private logger = new Logger(WebRTCService.name);
-  customEventsService: CustomEventsService | undefined;
+  private customEventsService: CustomEventsService | undefined;
+  private eventBus: EventBus;
 
   private peerConnection: Nullable<RTCPeerConnection> = null;
   private microphoneService: Nullable<MicrophoneService> = null;
@@ -43,6 +44,7 @@ export class WebRTCService {
     this.setSource = setSource;
 
     this.customEventsService = CustomEventsService.getInstance(id);
+    this.eventBus = EventBus.getInstance(id);
 
     this.customEventsService.on("reinit-connection", this.reinitPeerConnection);
   }
@@ -58,7 +60,7 @@ export class WebRTCService {
     this.listeners = listeners;
 
     this.peerConnection = new RTCPeerConnection(this.options.config);
-    EventBus.emit("setup-peerconnection", this.peerConnection);
+    this.eventBus.emit("setup-peerconnection", this.peerConnection);
 
     this.datachannelClient.register(
       this.peerConnection,

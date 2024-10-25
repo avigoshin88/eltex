@@ -20,16 +20,17 @@
   <body>
     <div
       id="app"
-      style="width: 100%; display: grid; grid-template-columns: repeat(3, 1fr)"
+      style="width: 100%; display: grid; grid-template-columns: repeat(1, 1fr)"
     ></div>
   </body>
 
   <script>
-    const players_count = 2;
+    const players_count = 1;
     const app = "live";
     const stream = "ce03f8bc-87a8-4a0b-8874-c5d9ce571a2d"; // стрим с реальной метой
     // const stream = "test4";
-    const mode = "live";
+    const mode = "archive";
+    // const mode = "live";
     const ice_servers = "stun:evi-webrtc.eltex-co.ru:3478";
 
     function getSDPOffer(port = 18083, app, stream) {
@@ -145,8 +146,8 @@
       document.getElementById("app").appendChild(videoPlayer);
 
       // registerLiveP2P(id);
-      registerLiveTurn(id);
-      // registerArchiveEvents(id);
+      // registerLiveTurn(id);
+      registerArchiveEvents(id);
     });
   </script>
 </html>

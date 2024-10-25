@@ -25,6 +25,7 @@ const quality = {
 export class PlayerModeService {
   private readonly logger = new Logger(PlayerModeService.name);
   private customEventsService: CustomEventsService;
+  private eventBus: EventBus;
 
   private modeConnection!: ModeService;
   private options!: ConnectionOptions;
@@ -33,7 +34,7 @@ export class PlayerModeService {
   private archiveControl!: ArchiveControlService;
   private readonly snapshotManager = new SnapshotService();
 
-  private readonly playerStats = new PlayerStatsService();
+  private readonly playerStats: PlayerStatsService;
 
   private statsDrawer!: StatsOverflowDrawerService;
 
@@ -57,10 +58,12 @@ export class PlayerModeService {
     this.options = { ...options };
     this.player = player;
     this.customEventsService = CustomEventsService.getInstance(this.id);
+    this.eventBus = EventBus.getInstance(this.id);
+    this.playerStats = new PlayerStatsService(this.id);
 
     this.playerStats.init();
 
-    EventBus.emit("setup-video", this.player.video);
+    this.eventBus.emit("setup-video", this.player.video);
 
     this.setListeners();
 
@@ -531,14 +534,14 @@ export class PlayerModeService {
   }
 
   private setListeners() {
-    EventBus.on("stats", this.onUpdateStats);
-    EventBus.on("cancel-export", this.resetExportMode);
-    EventBus.on("play-enabled", this.enablePlay);
+    this.eventBus.on("stats", this.onUpdateStats);
+    this.eventBus.on("cancel-export", this.resetExportMode);
+    this.eventBus.on("play-enabled", this.enablePlay);
   }
 
   private clearListeners() {
-    EventBus.off("stats", this.onUpdateStats);
-    EventBus.off("cancel-export", this.resetExportMode);
-    EventBus.off("play-enabled", this.enablePlay);
+    this.eventBus.off("stats", this.onUpdateStats);
+    this.eventBus.off("cancel-export", this.resetExportMode);
+    this.eventBus.off("play-enabled", this.enablePlay);
   }
 }
