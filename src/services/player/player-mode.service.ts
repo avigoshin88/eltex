@@ -327,7 +327,6 @@ export class PlayerModeService {
       return;
     }
 
-    this.modeConnection.play?.(true);
     this.player.play();
 
     this.controlsDrawer.updateBinaryButtonsState({
@@ -343,6 +342,7 @@ export class PlayerModeService {
     this.controlsDrawer.updateBinaryButtonsState({
       [ControlName.PLAY]: false,
     });
+    this.controlsDrawer.draw();
   }
 
   private switchVolumeState() {

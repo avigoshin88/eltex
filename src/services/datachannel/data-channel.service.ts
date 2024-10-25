@@ -96,7 +96,7 @@ export class DatachannelClientService {
         throw new Error(`Тип ответа datachannel не объект: ${result}`);
       }
 
-      const { type, data } = result;
+      const { type, data, error } = result;
 
       this.signalData(type, data);
 
@@ -113,7 +113,7 @@ export class DatachannelClientService {
         return;
       }
 
-      this.listeners[listener]?.(data);
+      this.listeners[listener]?.(data, error);
     } catch (error) {
       this.logger.error(
         "info",

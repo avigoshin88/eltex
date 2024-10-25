@@ -63,11 +63,11 @@ video-player {
   z-index: 0;
 }
 
-.video-player__timeline__range[data-type="data"] {
+.video-player__timeline__range[data-range-type="data"] {
   background: var(--timeline_range_background);
 }
 
-.video-player__timeline__range[data-type="break"] {
+.video-player__timeline__range[data-range-type="break"] {
   background: var(--timeline_range_break_background);
 }
 
