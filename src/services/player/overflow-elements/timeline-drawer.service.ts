@@ -14,7 +14,12 @@ const steps = [
   { scale: 0.002, step: 10 * 1000, amplifier: 0.00002, label: "10 секунд" }, // 10 секунд
   { scale: 0.001, step: 20 * 1000, amplifier: 0.00001, label: "20 секунд" }, // 20 секунд
   { scale: 0.0005, step: 30 * 1000, amplifier: 0.000005, label: "30 секунд" }, // 30 секунд
-  { scale: 0.0002, step: 1 * 60 * 1000, amplifier: 0.000002, label: "1 минута" }, // 1 минута
+  {
+    scale: 0.0002,
+    step: 1 * 60 * 1000,
+    amplifier: 0.000002,
+    label: "1 минута",
+  }, // 1 минута
   {
     scale: 0.0001,
     step: 2 * 60 * 1000,
@@ -802,11 +807,6 @@ export class TimelineOverflowDrawer {
       // Ограничим максимальные изменения при каждом событии скролла
       // const scaleChange = Math.sign(event.deltaY) *  0.000002;
       const scaleChange = Math.sign(event.deltaY) * this.getStep().amplifier; // Более мелкий шаг для плавности
-      console.log(
-        "🚀 ~ TimelineOverflowDrawer ~ wheelEventListener ~ scaleChange:",
-        scaleChange,
-        this.getStep()
-      );
 
       const totalTimeRange =
         this.ranges[this.ranges.length - 1].end_time -
@@ -821,13 +821,6 @@ export class TimelineOverflowDrawer {
       const previousScale = this.scale;
 
       // Ограничиваем масштаб значениями от minScale до maxScale
-
-      const step = this.getStep();
-      console.log(step.label);
-
-      // const logScaleChange =
-      //   scaleChange * Math.log10(Math.abs(this.scale)) * step.amplifier;
-
       this.scale = Math.min(
         maxScale,
         Math.max(minScale, this.scale + scaleChange)
