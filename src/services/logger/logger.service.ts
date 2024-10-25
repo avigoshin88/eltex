@@ -1,8 +1,10 @@
+import { EnvService } from "../env.service";
+
 type LogMessage = unknown;
 type LogLevel = "info" | "debug" | "trace";
 
 const LOGGER_LEVEL: LogLevel = import.meta.env.DEV
-  ? (import.meta.env.VITE_LOGGER_LEVEL as LogLevel)
+  ? (EnvService.getENV("VITE_LOGGER_LEVEL") as LogLevel)
   : "info";
 
 class LoggerService {

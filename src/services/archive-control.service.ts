@@ -2,42 +2,21 @@ import { Mode } from "../constants/mode";
 import { RangeDto } from "../dto/ranges";
 import { Nullable } from "../types/global";
 import { CustomEvents } from "./custom-events.service";
+import { EnvService } from "./env.service";
 import { EventBus } from "./event-bus.service";
 import { Logger } from "./logger/logger.service";
 
-const connectionSupportInterval = Number(
-  import.meta.env.VITE_ARCHIVE_CONNECT_SUPPORT_INTERVAL
+const connectionSupportInterval = EnvService.getENVAsNumber(
+  "VITE_ARCHIVE_CONNECT_SUPPORT_INTERVAL"
 );
 
-const preloadRangeFragmentTimeout = Number(
-  import.meta.env.VITE_PRELOAD_RANGE_FRAGMENT_TIMEOUT
+const preloadRangeFragmentTimeout = EnvService.getENVAsNumber(
+  "VITE_PRELOAD_RANGE_FRAGMENT_TIMEOUT"
 );
 
-const preloadInterval = Number(import.meta.env.VITE_ARCHIVE_PRELOAD_INTERVAL);
-
-if (isNaN(connectionSupportInterval)) {
-  throw new Error(
-    `VITE_ARCHIVE_CONNECT_SUPPORT_INTERVAL должно быть числом. Текущее значение: ${
-      import.meta.env.VITE_ARCHIVE_CONNECT_SUPPORT_INTERVAL
-    } `
-  );
-}
-
-if (isNaN(preloadInterval)) {
-  throw new Error(
-    `VITE_ARCHIVE_PRELOAD_INTERVAL должно быть числом. Текущее значение: ${
-      import.meta.env.VITE_ARCHIVE_PRELOAD_INTERVAL
-    } `
-  );
-}
-
-if (isNaN(preloadRangeFragmentTimeout)) {
-  throw new Error(
-    `VITE_PRELOAD_RANGE_FRAGMENT_TIMEOUT должно быть числом. Текущее значение: ${
-      import.meta.env.VITE_PRELOAD_RANGE_FRAGMENT_TIMEOUT
-    } `
-  );
-}
+const preloadInterval = EnvService.getENVAsNumber(
+  "VITE_ARCHIVE_PRELOAD_INTERVAL"
+);
 
 type Emitter = (fragment: RangeDto, isPreload: boolean) => void;
 
@@ -212,6 +191,35 @@ export class ArchiveControlService {
     }
   }
 
+  setCurrentTime(timestamp: number, isPreload = false) {
+    const rangeIndex = this.findRangeIndex(timestamp, timestamp);
+    if (rangeIndex === -1) {
+      this.logger.error("info", "Указанный range не найден в списке ranges.");
+      return;
+    }
+
+    if (!isPreload) {
+      this.setCurrentRange(timestamp, this.ranges[rangeIndex], false);
+    } else {
+      this.currentTimestamp = timestamp;
+      this.fragmentIndex = rangeIndex;
+
+      this.logger.log(
+        "info",
+        "Установлен текущий range с индексом",
+        this.fragmentIndex,
+        "и временем",
+        this.currentTimestamp
+      );
+
+      this.isPause = false;
+
+      this.clearPreloadTimeout();
+      this.initGenerator(this.currentTimestamp);
+      this.preloadRangeFragment(true);
+    }
+  }
+
   private initGenerator(startTimestamp: number) {
     this.rangeFragmentsGenerator =
       this.splitRangeIntoFragmentsLazy(startTimestamp);
@@ -259,7 +267,7 @@ export class ArchiveControlService {
     }
   }
 
-  public preloadRangeFragment() {
+  public preloadRangeFragment(preload = false) {
     // Первый фрагмент отправляется без продвижения генератора
     const rangeFragmentResult = this.rangeFragmentsGenerator.next();
     if (rangeFragmentResult.done) {
@@ -269,7 +277,7 @@ export class ArchiveControlService {
     }
 
     const rangeFragment = rangeFragmentResult.value;
-    this.emit(rangeFragment, false); // Первый фрагмент
+    this.emit(rangeFragment, preload); // Первый фрагмент
     this.isFirstPreloadDone = true; // Флаг того, что первый фрагмент отправлен
   }
 
@@ -308,7 +316,7 @@ export class ArchiveControlService {
     }
   }
 
-  private clearPreloadTimeout() {
+  public clearPreloadTimeout() {
     if (this.preloadTimeoutId !== null) {
       clearTimeout(this.preloadTimeoutId);
       this.logger.log("info", "Очищен таймаут дозагрузки.");
