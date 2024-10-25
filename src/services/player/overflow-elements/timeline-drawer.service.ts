@@ -5,41 +5,168 @@ import {
   TimelineClickCallback,
 } from "../../../types/timeline";
 import { format } from "date-fns";
+import { TimelineElementsFactoryService } from "./timeline/timeline-elements-factory.service";
+import { TimelineElementsService } from "./timeline/timeline-elements.service";
 
-const divisionSteps = [
-  { scale: 0.004, step: 5 * 1000 }, // 5 секунд
-  { scale: 0.002, step: 10 * 1000 }, // 10 секунд
-  { scale: 0.001, step: 20 * 1000 }, // 20 секунд
-  { scale: 0.0005, step: 30 * 1000 }, // 30 секунд
-  { scale: 0.0002, step: 1 * 60 * 1000 }, // 1 минута
-  { scale: 0.0001, step: 2 * 60 * 1000 }, // 2 минуты
-  { scale: 0.00005, step: 5 * 60 * 1000 }, // 5 минут
-  { scale: 0.00002, step: 10 * 60 * 1000 }, // 10 минут
-  { scale: 0.00001, step: 15 * 60 * 1000 }, // 15 минут
-  { scale: 0.000005, step: 30 * 60 * 1000 }, // 30 минут
-  { scale: 0.000002, step: 1 * 60 * 60 * 1000 }, // 1 час
-  { scale: 0.000001, step: 2 * 60 * 60 * 1000 }, // 2 часа
-  { scale: 0.0000005, step: 6 * 60 * 60 * 1000 }, // 6 часов
-  { scale: 0.0000002, step: 12 * 60 * 60 * 1000 }, // 12 часов
-  { scale: 0.0000001, step: 1 * 24 * 60 * 60 * 1000 }, // 1 день
-  { scale: 0.00000005, step: 2 * 24 * 60 * 60 * 1000 }, // 2 дня
-  { scale: 0.00000002, step: 7 * 24 * 60 * 60 * 1000 }, // 1 неделя
-  { scale: 0.00000001, step: 14 * 24 * 60 * 60 * 1000 }, // 2 недели
-  { scale: 0.000000005, step: 1 * 30 * 24 * 60 * 60 * 1000 }, // 1 месяц
-  { scale: 0.000000002, step: 3 * 30 * 24 * 60 * 60 * 1000 }, // 1 квартал
-  { scale: 0.000000001, step: 6 * 30 * 24 * 60 * 60 * 1000 }, // полгода
-  { scale: 0.0000000005, step: 1 * 365 * 24 * 60 * 60 * 1000 }, // 1 год
-  { scale: 0.0000000002, step: 2 * 365 * 24 * 60 * 60 * 1000 }, // 2 года
-  { scale: 0.0000000001, step: 5 * 365 * 24 * 60 * 60 * 1000 }, // 5 лет
-  { scale: 0.00000000005, step: 10 * 365 * 24 * 60 * 60 * 1000 }, // 10 лет (добавлено соответствующее значение scale)
+const steps = [
+  { scale: 0.02, step: 1000, amplifier: 0.0001, label: "1 секунда" }, // 1 секунда
+  { scale: 0.004, step: 5 * 1000, amplifier: 0.00005, label: "5 секунд" }, // 5 секунд
+  { scale: 0.002, step: 10 * 1000, amplifier: 0.00002, label: "10 секунд" }, // 10 секунд
+  { scale: 0.001, step: 20 * 1000, amplifier: 0.00001, label: "20 секунд" }, // 20 секунд
+  { scale: 0.0005, step: 30 * 1000, amplifier: 0.000005, label: "30 секунд" }, // 30 секунд
+  {
+    scale: 0.0002,
+    step: 1 * 60 * 1000,
+    amplifier: 0.000002,
+    label: "1 минута",
+  }, // 1 минута
+  {
+    scale: 0.0001,
+    step: 2 * 60 * 1000,
+    amplifier: 0.000001,
+    label: "2 минуты",
+  }, // 2 минуты
+  {
+    scale: 0.00005,
+    step: 5 * 60 * 1000,
+    amplifier: 0.0000005,
+    label: "5 минут",
+  }, // 5 минут
+  {
+    scale: 0.00002,
+    step: 10 * 60 * 1000,
+    amplifier: 0.0000002,
+    label: "10 минут",
+  }, // 10 минут
+  {
+    scale: 0.00001,
+    step: 15 * 60 * 1000,
+    amplifier: 0.0000001,
+    label: "15 минут",
+  }, // 15 минут
+  {
+    scale: 0.000005,
+    step: 30 * 60 * 1000,
+    amplifier: 0.00000005,
+    label: "30 минут",
+  }, // 30 минут
+  {
+    scale: 0.000002,
+    step: 1 * 60 * 60 * 1000,
+    amplifier: 0.00000002,
+    label: "1 час",
+  }, // 1 час
+  {
+    scale: 0.000001,
+    step: 6 * 60 * 60 * 1000,
+    amplifier: 0.00000001,
+    label: "6 часов",
+  }, // 6 часов
+  {
+    scale: 0.0000005,
+    step: 12 * 60 * 60 * 1000,
+    amplifier: 0.000000005,
+    label: "12 часов",
+  }, // 12 часов
+  {
+    scale: 0.0000002,
+    step: 1 * 24 * 60 * 60 * 1000,
+    amplifier: 0.000000002,
+    label: "1 день",
+  }, // 1 день
+  {
+    scale: 0.0000001,
+    step: 2 * 24 * 60 * 60 * 1000,
+    amplifier: 0.000000001,
+    label: "2 дня",
+  }, // 2 дня
+  {
+    scale: 0.00000005,
+    step: 7 * 24 * 60 * 60 * 1000,
+    amplifier: 0.0000000005,
+    label: "1 неделя",
+  }, // 1 неделя
+  {
+    scale: 0.00000002,
+    step: 14 * 24 * 60 * 60 * 1000,
+    amplifier: 0.0000000002,
+    label: "2 недели",
+  }, // 2 недели
+  {
+    scale: 0.00000001,
+    step: 1 * 30 * 24 * 60 * 60 * 1000,
+    amplifier: 0.0000000001,
+    label: "1 месяц",
+  }, // 1 месяц
+  {
+    scale: 0.000000005,
+    step: 3 * 30 * 24 * 60 * 60 * 1000,
+    amplifier: 0.00000000005,
+    label: "1 квартал",
+  }, // 1 квартал
+  {
+    scale: 0.000000002,
+    step: 6 * 30 * 24 * 60 * 60 * 1000,
+    amplifier: 0.00000000002,
+    label: "полгода",
+  }, // полгода
+  {
+    scale: 0.000000001,
+    step: 1 * 365 * 24 * 60 * 60 * 1000,
+    amplifier: 0.00000000001,
+    label: "1 год",
+  }, // 1 год
+  {
+    scale: 0.0000000005,
+    step: 2 * 365 * 24 * 60 * 60 * 1000,
+    amplifier: 0.000000000005,
+    label: "2 года",
+  }, // 2 года
+  {
+    scale: 0.0000000002,
+    step: 5 * 365 * 24 * 60 * 60 * 1000,
+    amplifier: 0.000000000002,
+    label: "5 лет",
+  }, // 5 лет
+  {
+    scale: 0.0000000001,
+    step: 10 * 365 * 24 * 60 * 60 * 1000,
+    amplifier: 0.000000000001,
+    label: "10 лет",
+  }, // 10 лет
 ];
+
+// Add more steps for smoother transitions
+for (let i = 1; i < steps.length; i++) {
+  const prevStep = steps[i - 1];
+  const nextStep = steps[i];
+  const numIntermediateSteps = 1024 / steps.length;
+
+  for (let j = 1; j < numIntermediateSteps; j++) {
+    const scale =
+      prevStep.scale +
+      ((nextStep.scale - prevStep.scale) / numIntermediateSteps) * j;
+    const amplifier =
+      prevStep.amplifier +
+      ((nextStep.amplifier - prevStep.amplifier) / numIntermediateSteps) * j;
+    steps.splice(i, 0, {
+      scale,
+      step: prevStep.step,
+      amplifier,
+      label: `${prevStep.label} - ${nextStep.label}`,
+    });
+    i++;
+  }
+}
 
 export class TimelineOverflowDrawer {
   private ranges: RangeData[] = [];
   private readonly container: HTMLDivElement;
-  private scrollContainer: Nullable<HTMLDivElement> = null;
-  private timelineContainer: Nullable<HTMLDivElement> = null;
 
+  private readonly timelineElements: TimelineElementsService;
+  private timelineElementsFactory = new TimelineElementsFactoryService();
+
+  private currentTime = 0;
   private scale: number = 1; // Начальный масштаб
   private currentStartTime: number = 0; // Текущее начало времени
   private isReady: boolean = false; // Флаг, указывающий готовность к отрисовке
@@ -64,46 +191,47 @@ export class TimelineOverflowDrawer {
     container: HTMLDivElement,
     clickCallback?: TimelineClickCallback
   ) {
+    this.clickCallback = clickCallback ?? (() => {});
     this.container = container;
-    this.scrollContainer = document.createElement("div");
 
-    this.timelineContainer = document.createElement("div");
-    this.clickCallback = clickCallback || (() => {}); // Используем переданную функцию или пустой callback
+    this.timelineElements = new TimelineElementsService(
+      this.timelineElementsFactory.makeScrollContainer(),
+      this.timelineElementsFactory.makeTimelineContainer(),
+      this.timelineElementsFactory.makeTrack()
+    );
 
-    // Устанавливаем CSS класс для timelineContainer
-    this.timelineContainer.classList.add("video-player__timeline");
-
-    // Изначально скролл отключен
-    this.timelineContainer.style.overflowX = "hidden";
-    this.timelineContainer.style.whiteSpace = "nowrap";
-
-    this.scrollContainer.appendChild(this.timelineContainer);
-
-    this.scrollContainer.style.width = "100%";
-    this.scrollContainer.style.overflowX = "auto";
-
-    this.container.appendChild(this.scrollContainer);
+    this.timelineElements.timelineContainer!.appendChild(
+      this.timelineElements.track!
+    );
+    this.timelineElements.scrollContainer!.appendChild(
+      this.timelineElements.timelineContainer!
+    );
+    this.container.appendChild(this.timelineElements.scrollContainer!);
 
     this.trackObserver = new IntersectionObserver(
       this.onTrackObserve.bind(this),
       {
-        root: this.scrollContainer,
+        root: this.timelineElements.scrollContainer,
       }
     );
+
+    this.trackObserver.observe(this.timelineElements.track!);
 
     this.registerListeners();
   }
 
   draw(currentTime: number): void {
-    if (!this.isReady || !this.timelineContainer || this.ranges.length === 0)
+    if (
+      !this.isReady ||
+      !this.timelineElements.timelineContainer ||
+      this.ranges.length === 0
+    ) {
       return;
-
-    const oldTrack = document.getElementById("track");
-    if (oldTrack) {
-      this.trackObserver?.unobserve(oldTrack);
     }
 
-    this.timelineContainer.innerHTML = ""; // Очистка контейнера перед отрисовкой
+    this.currentTime = currentTime;
+
+    this.timelineElements.clearTimeline();
 
     const startTime = this.ranges[0]?.start_time || 0;
     const endTime = this.ranges[this.ranges.length - 1]?.end_time || 0;
@@ -116,13 +244,15 @@ export class TimelineOverflowDrawer {
 
     // Если ширина всех диапазонов больше ширины контейнера, включаем скролл
     if (totalRangeWidth > containerWidth) {
-      this.timelineContainer.style.width = `${totalRangeWidth}px`; // Задаем большую ширину таймлайна
+      this.timelineElements.timelineContainer.style.width = `${totalRangeWidth}px`; // Задаем большую ширину таймлайна
     } else {
-      this.timelineContainer.style.width = `${containerWidth}px`; // Устанавливаем стандартную ширину
+      this.timelineElements.timelineContainer.style.width = `${containerWidth}px`; // Устанавливаем стандартную ширину
     }
 
     // Виртуализация делений
     this.drawVirtualizedDivisions(startTime, totalTimeRange, totalRangeWidth);
+
+    const rangeBlocks: HTMLDivElement[] = [];
 
     // Отрисовка самих диапазонов (ranges) с учётом масштаба
     this.ranges.forEach((range) => {
@@ -130,15 +260,17 @@ export class TimelineOverflowDrawer {
         ((range.start_time - startTime) / totalTimeRange) * totalRangeWidth;
       const rangeWidth = (range.duration / totalTimeRange) * totalRangeWidth;
 
-      const rangeBlock = document.createElement("div");
-      rangeBlock.classList.add("video-player__timeline__range");
-      rangeBlock.style.left = `${rangeStartPosition}px`;
-      rangeBlock.style.width = `${rangeWidth}px`;
+      const rangeBlock = this.timelineElementsFactory.makeRange(
+        rangeStartPosition,
+        rangeWidth,
+        range.type
+      );
 
-      rangeBlock.setAttribute("data-type", range.type);
-
-      this.timelineContainer!.appendChild(rangeBlock);
+      rangeBlocks.push(rangeBlock);
     });
+
+    this.timelineElements.timelineContainer!.append(...rangeBlocks);
+    this.timelineElements.setRanges(rangeBlocks);
 
     // Обновление трека и маркеров экспорта
     this.updateTrackAndExportMarkers(
@@ -184,20 +316,8 @@ export class TimelineOverflowDrawer {
       ((validTimestamp - startTime) / totalTimeRange) * totalRangeWidth +
       breakLengthPx;
 
-    let track = document.getElementById("track");
-    // Проверяем, существует ли трек, если да — обновляем его, если нет — создаем
-    if (!track) {
-      track = document.createElement("div");
-      track.id = "track";
-      track.classList.add("video-player__timeline__track");
-      this.timelineContainer!.appendChild(track);
-    }
-
     // Обновляем позицию трека
-    track!.style.left = `${trackPosition}px`;
-
-    // Следим за треком (если используется IntersectionObserver)
-    this.trackObserver?.observe(track);
+    this.timelineElements.track!.style.left = `${trackPosition}px`;
 
     // Если включен режим экспорта, обновляем маркеры экспорта
     if (this.exportMode) {
@@ -295,7 +415,7 @@ export class TimelineOverflowDrawer {
   }
 
   private clearExportMarkers(): void {
-    const markers = this.timelineContainer!.querySelectorAll(
+    const markers = this.timelineElements.timelineContainer!.querySelectorAll(
       ".video-player__timeline__export-marker"
     );
     markers.forEach((marker) => marker.remove());
@@ -314,7 +434,7 @@ export class TimelineOverflowDrawer {
 
     marker.style.left = `${position}px`;
 
-    this.timelineContainer!.appendChild(marker);
+    this.timelineElements.timelineContainer!.appendChild(marker);
   }
 
   private updateExportMarkers(
@@ -358,35 +478,33 @@ export class TimelineOverflowDrawer {
   }
 
   public scrollToTrackRightEdge(): void {
-    if (!this.scrollContainer || !this.timelineContainer) return;
+    if (
+      !this.timelineElements.scrollContainer ||
+      !this.timelineElements.timelineContainer
+    )
+      return;
 
-    // Находим элемент трека
-    const track = this.timelineContainer.querySelector(
-      ".video-player__timeline__track"
-    ) as HTMLElement;
-
-    if (!track) return; // Трек не найден
-
-    // Получаем позицию трека относительно timelineContainer
-    const trackLeft = track.offsetLeft;
-    const trackWidth = track.offsetWidth;
+    // Получаем позицию трека относительно timelineElements.timelineContainer
+    const trackLeft = this.timelineElements.track!.offsetLeft;
+    const trackWidth = this.timelineElements.track!.offsetWidth;
 
     // Рассчитываем необходимый scrollLeft
-    const scrollContainerWidth = this.scrollContainer.offsetWidth;
+    const scrollContainerWidth =
+      this.timelineElements.scrollContainer.offsetWidth;
 
     // Устанавливаем scrollLeft так, чтобы трек был на правом краю
     let newScrollLeft = trackLeft + trackWidth - scrollContainerWidth;
 
     // Ограничиваем scrollLeft допустимыми значениями
     const maxScrollLeft =
-      this.scrollContainer.scrollWidth - scrollContainerWidth;
+      this.timelineElements.scrollContainer.scrollWidth - scrollContainerWidth;
     newScrollLeft = Math.max(0, Math.min(newScrollLeft, maxScrollLeft));
 
     // Устанавливаем флаг программной прокрутки
     this.isProgrammaticScroll = true;
 
     // Используем плавную прокрутку
-    this.scrollContainer.scrollTo({
+    this.timelineElements.scrollContainer.scrollTo({
       left: newScrollLeft,
       behavior: "smooth",
     });
@@ -413,11 +531,11 @@ export class TimelineOverflowDrawer {
     totalTimeRange: number,
     totalRangeWidth: number
   ): void {
-    const divisionStep = this.getDivisionStep(); // Шаг делений
+    const divisionStep = this.getStep().step; // Шаг делений
 
     // Границы видимой области
-    const scrollLeft = this.scrollContainer!.scrollLeft;
-    const containerWidth = this.scrollContainer!.offsetWidth;
+    const scrollLeft = this.timelineElements.scrollContainer!.scrollLeft;
+    const containerWidth = this.timelineElements.scrollContainer!.offsetWidth;
 
     const visibleStartTime =
       startTime + (scrollLeft / totalRangeWidth) * totalTimeRange;
@@ -432,12 +550,6 @@ export class TimelineOverflowDrawer {
       (visibleEndTime - startTime) / divisionStep
     );
 
-    // Удаляем старые деления
-    const oldDivisions = this.timelineContainer!.querySelectorAll(
-      ".video-player__timeline__period"
-    );
-    oldDivisions.forEach((division) => division.remove());
-
     // Расчет ширины одного деления в пикселях
     const divisionWidth = divisionStep * this.scale;
 
@@ -445,11 +557,9 @@ export class TimelineOverflowDrawer {
     const sampleTime = startTime + firstVisibleDivision * divisionStep;
     const sampleLabelText = this.formatTime(sampleTime);
 
-    const tempLabel = document.createElement("span");
-    tempLabel.classList.add("video-player__timeline__period__text");
-    tempLabel.style.visibility = "hidden"; // Скрываем элемент
-    tempLabel.style.position = "absolute"; // Убираем из потока
-    tempLabel.innerText = sampleLabelText;
+    const tempLabel =
+      this.timelineElementsFactory.makeTempLabel(sampleLabelText);
+
     document.body.appendChild(tempLabel);
     const labelWidth = tempLabel.offsetWidth;
     document.body.removeChild(tempLabel);
@@ -460,37 +570,24 @@ export class TimelineOverflowDrawer {
       labelInterval = Math.ceil((labelWidth + 5) / divisionWidth);
     }
 
+    const divisions: HTMLDivElement[] = [];
+
     // Отрисовка видимых делений
     for (let i = firstVisibleDivision; i <= lastVisibleDivision; i++) {
       const divisionTime = startTime + i * divisionStep;
       const position =
         ((divisionTime - startTime) / totalTimeRange) * totalRangeWidth;
 
-      const division = document.createElement("div");
-      division.classList.add("video-player__timeline__period");
-      division.style.left = `${position}px`;
+      const division = this.timelineElementsFactory.makeDivision(
+        position,
+        i % labelInterval === 0 ? this.formatTime(divisionTime) : undefined
+      );
 
-      // Отображение меток в зависимости от интервала
-      if (i % labelInterval === 0) {
-        const timeLabel = document.createElement("span");
-        timeLabel.classList.add("video-player__timeline__period__text");
-        timeLabel.innerText = this.formatTime(divisionTime);
-        division.classList.add("video-player__timeline__period_with_text");
-        division.appendChild(timeLabel);
-      }
-
-      // Добавляем деление в контейнер
-      this.timelineContainer!.appendChild(division);
+      divisions.push(division);
     }
-  }
 
-  private updateVirtualizedDivisions() {
-    const startTime = this.ranges[0]?.start_time || 0;
-    const endTime = this.ranges[this.ranges.length - 1]?.end_time || 0;
-    const totalTimeRange = endTime - startTime;
-    const totalRangeWidth = totalTimeRange * this.scale;
-
-    this.drawVirtualizedDivisions(startTime, totalTimeRange, totalRangeWidth);
+    this.timelineElements.setDivisions(divisions);
+    this.timelineElements.timelineContainer!.append(...divisions);
   }
 
   private findRangeByTimestamp(timestamp: number): RangeData | null {
@@ -519,17 +616,19 @@ export class TimelineOverflowDrawer {
   }
 
   clear(): void {
-    if (!this.scrollContainer) {
+    if (!this.timelineElements.scrollContainer) {
       return;
     }
+
+    this.currentTime = 0;
 
     this.clearListeners();
 
     this.trackObserver?.disconnect();
 
-    this.container.removeChild(this.scrollContainer!);
-    this.scrollContainer = null;
-    this.timelineContainer = null;
+    this.container.removeChild(this.timelineElements.scrollContainer!);
+    this.timelineElements.scrollContainer = null;
+    this.timelineElements.timelineContainer = null;
 
     this.isReady = false;
   }
@@ -556,12 +655,12 @@ export class TimelineOverflowDrawer {
     }
   }
 
-  private getDivisionStep(): number {
+  private getStep() {
     const scaleFactor = this.scale;
 
-    const stepInfo = divisionSteps.find((step) => scaleFactor > step.scale);
+    const stepInfo = steps.find((step) => scaleFactor > step.scale);
 
-    return stepInfo?.step ?? divisionSteps[divisionSteps.length - 1].step;
+    return stepInfo ?? steps[steps.length - 1];
   }
 
   private clickEventListener(event: MouseEvent): void {
@@ -574,8 +673,9 @@ export class TimelineOverflowDrawer {
     const clickX = event.clientX - containerRect.left;
 
     // Получаем текущую ширину видимого контейнера и всю ширину таймлайна
-    const scrollLeft = this.scrollContainer?.scrollLeft || 0;
-    const totalTimelineWidth = this.timelineContainer?.offsetWidth || 0;
+    const scrollLeft = this.timelineElements.scrollContainer?.scrollLeft || 0;
+    const totalTimelineWidth =
+      this.timelineElements.timelineContainer?.offsetWidth || 0;
 
     // Рассчитываем позицию клика с учётом прокрутки и масштаба
     const totalClickPosition = (clickX + scrollLeft) / totalTimelineWidth;
@@ -622,7 +722,7 @@ export class TimelineOverflowDrawer {
       this.updateExportMarkers(
         startTime,
         totalTimeRange,
-        this.timelineContainer!.offsetWidth
+        this.timelineElements.timelineContainer!.offsetWidth
       );
     } else {
       // Пользовательское время для трека
@@ -665,7 +765,20 @@ export class TimelineOverflowDrawer {
       this.isUserScrolling = false;
     }, rangesDuration);
 
-    this.updateVirtualizedDivisions();
+    const startTime = this.ranges[0]?.start_time || 0;
+    const endTime = this.ranges[this.ranges.length - 1]?.end_time || 0;
+    const totalTimeRange = endTime - startTime;
+    const totalRangeWidth = totalTimeRange * this.scale;
+
+    this.timelineElements.clearDivisions();
+
+    this.drawVirtualizedDivisions(startTime, totalTimeRange, totalRangeWidth);
+    this.updateTrackAndExportMarkers(
+      this.currentTime,
+      this.currentStartTime,
+      totalTimeRange,
+      totalRangeWidth
+    );
   }
 
   private wheelEventListener(event: WheelEvent) {
@@ -692,7 +805,8 @@ export class TimelineOverflowDrawer {
       }, 2000);
 
       // Ограничим максимальные изменения при каждом событии скролла
-      const scaleChange = Math.sign(event.deltaY) * 0.000002; // Более мелкий шаг для плавности
+      // const scaleChange = Math.sign(event.deltaY) *  0.000002;
+      const scaleChange = Math.sign(event.deltaY) * this.getStep().amplifier; // Более мелкий шаг для плавности
 
       const totalTimeRange =
         this.ranges[this.ranges.length - 1].end_time -
@@ -714,14 +828,15 @@ export class TimelineOverflowDrawer {
 
       if (this.isReady) {
         // Рассчитаем позицию трека относительно предыдущего масштаба
-        const track = document.getElementById("track");
+        const track = this.timelineElements.track;
         if (track) {
           const trackLeft = track.offsetLeft; // Позиция трека до масштабирования
-          const visibleWidth = this.scrollContainer!.offsetWidth; // Ширина видимой области
+          const visibleWidth =
+            this.timelineElements.scrollContainer!.offsetWidth; // Ширина видимой области
 
           // Сохраним смещение относительно центра или границы
           let trackOffsetFromLeft =
-            trackLeft - this.scrollContainer!.scrollLeft;
+            trackLeft - this.timelineElements.scrollContainer!.scrollLeft;
 
           if (trackOffsetFromLeft > visibleWidth / 2) {
             trackOffsetFromLeft = visibleWidth / 2; // Центрируем трек, если он далеко справа
@@ -730,18 +845,18 @@ export class TimelineOverflowDrawer {
           }
 
           // Обновляем отрисовку
-          this.draw(this.currentStartTime);
+          this.draw(this.currentTime);
 
           // После перерисовки восстанавливаем позицию трека
           const newTrackLeft = (trackLeft / previousScale) * this.scale;
           const newScrollLeft = Math.max(0, newTrackLeft - trackOffsetFromLeft);
-          this.scrollContainer!.scrollTo({
+          this.timelineElements.scrollContainer!.scrollTo({
             left: newScrollLeft,
             behavior: "auto",
           });
         } else {
           // Если трека нет, просто обновляем таймлайн
-          this.draw(this.currentStartTime);
+          this.draw(this.currentTime);
         }
 
         // Обновляем маркеры экспорта при изменении масштаба
@@ -755,30 +870,30 @@ export class TimelineOverflowDrawer {
   }
 
   private registerListeners() {
-    this.scrollContainer?.addEventListener(
+    this.timelineElements.scrollContainer?.addEventListener(
       "scroll",
       this.scrollEventListener.bind(this)
     );
-    this.timelineContainer?.addEventListener(
+    this.timelineElements.timelineContainer?.addEventListener(
       "wheel",
       this.wheelEventListener.bind(this)
     );
-    this.timelineContainer?.addEventListener(
+    this.timelineElements.timelineContainer?.addEventListener(
       "click",
       this.clickEventListener.bind(this)
     );
   }
 
   private clearListeners() {
-    this.scrollContainer?.removeEventListener(
+    this.timelineElements.scrollContainer?.removeEventListener(
       "scroll",
       this.scrollEventListener
     );
-    this.timelineContainer?.removeEventListener(
+    this.timelineElements.timelineContainer?.removeEventListener(
       "wheel",
       this.wheelEventListener
     );
-    this.timelineContainer?.removeEventListener(
+    this.timelineElements.timelineContainer?.removeEventListener(
       "click",
       this.clickEventListener
     );
