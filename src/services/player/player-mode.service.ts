@@ -24,7 +24,7 @@ const quality = {
 
 export class PlayerModeService {
   private readonly logger = new Logger(PlayerModeService.name);
-  private customEventsService = CustomEventsService.getInstance();
+  private customEventsService: CustomEventsService;
 
   private modeConnection!: ModeService;
   private options!: ConnectionOptions;
@@ -49,12 +49,14 @@ export class PlayerModeService {
   private metaEnabled = false;
 
   constructor(
+    private id: string,
     mode: Mode,
     options: ConnectionOptions,
     player: VideoPlayerService
   ) {
     this.options = { ...options };
     this.player = player;
+    this.customEventsService = CustomEventsService.getInstance(this.id);
 
     this.playerStats.init();
 
@@ -237,7 +239,11 @@ export class PlayerModeService {
           };
         }
 
-        this.modeConnection = new LiveVideoService(options, this.player);
+        this.modeConnection = new LiveVideoService(
+          this.id,
+          options,
+          this.player
+        );
         this.setupControlsDrawer();
         this.controlsDrawer.setHidden({
           [ControlName.PLAY]: true,
@@ -251,6 +257,7 @@ export class PlayerModeService {
         break;
       case Mode.ARCHIVE:
         this.modeConnection = new ArchiveVideoService(
+          this.id,
           this.options,
           this.player,
           (archiveControl) => (this.archiveControl = archiveControl)

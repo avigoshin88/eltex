@@ -15,12 +15,13 @@ export type CustomEventEmitName =
 export type CustomEventCallback<T = any> = (data: T) => void;
 
 class CustomEventsService {
-  static instance: CustomEventsService;
-  static getInstance(): CustomEventsService {
-    if (!CustomEventsService.instance) {
-      CustomEventsService.instance = new CustomEventsService();
+  static instances: Record<string, CustomEventsService> = {};
+  static getInstance(id: string): CustomEventsService {
+    if (!CustomEventsService.instances[id]) {
+      CustomEventsService.instances[id] = new CustomEventsService();
+      CustomEventsService.instances[id].setId(id);
     }
-    return CustomEventsService.instance;
+    return CustomEventsService.instances[id];
   }
 
   private id: Nullable<string> = null;
@@ -35,7 +36,6 @@ class CustomEventsService {
   }
 
   on<T = any>(name: CustomEventEmitName, callback: CustomEventCallback<T>) {
-    console.log("==== on", this.id, name);
     const eventName = this.getEventNameWithId(name);
 
     const eventListener = (event: CustomEvent) => {

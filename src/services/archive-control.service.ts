@@ -49,7 +49,7 @@ type RangeFragment = RangeDto & {
 
 export class ArchiveControlService {
   private readonly logger = new Logger(ArchiveControlService.name);
-  private customEventsService = CustomEventsService.getInstance();
+  private customEventsService: CustomEventsService;
 
   private ranges: RangeDto[] = [];
   private fragmentIndex = 0;
@@ -63,7 +63,8 @@ export class ArchiveControlService {
   private isFirstPreloadDone = false; // Флаг для отслеживания первой дозагрузки
   private isPause = false;
 
-  constructor(emit: Emitter, supportConnect: () => void) {
+  constructor(private id: string, emit: Emitter, supportConnect: () => void) {
+    this.customEventsService = CustomEventsService.getInstance(this.id);
     this.emit = emit;
     this.supportConnect = supportConnect;
     this.logger.log("info", "Сервис ArchiveControlService инициализирован.");

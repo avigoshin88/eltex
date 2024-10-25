@@ -14,7 +14,7 @@ import { Mode } from "../constants/mode";
 
 export class WebRTCService {
   private logger = new Logger(WebRTCService.name);
-  customEventsService = CustomEventsService.getInstance();
+  customEventsService: CustomEventsService | undefined;
 
   private peerConnection: Nullable<RTCPeerConnection> = null;
   private microphoneService: Nullable<MicrophoneService> = null;
@@ -29,6 +29,7 @@ export class WebRTCService {
   private _tracks: MediaStreamTrack[] = [];
 
   constructor(
+    id: string,
     mode: Mode,
     options: ConnectionOptions,
     datachannel: DatachannelClientService,
@@ -40,6 +41,8 @@ export class WebRTCService {
     this.datachannelClient = datachannel;
     this.microphoneService = new MicrophoneService();
     this.setSource = setSource;
+
+    this.customEventsService = CustomEventsService.getInstance(id);
 
     this.customEventsService.on("reinit-connection", this.reinitPeerConnection);
   }
@@ -77,7 +80,7 @@ export class WebRTCService {
 
     this.initListeners();
 
-    this.customEventsService.emit(
+    this.customEventsService?.emit(
       "peerconnection-status",
       this.peerConnection!.connectionState
     );
@@ -91,8 +94,11 @@ export class WebRTCService {
   };
 
   private initListeners() {
-    this.customEventsService.on("remote-description", this.onRemoteDescription);
-    this.customEventsService.on(
+    this.customEventsService?.on(
+      "remote-description",
+      this.onRemoteDescription
+    );
+    this.customEventsService?.on(
       "request-local-description",
       this.onRequestLocalDescription
     );
@@ -103,11 +109,11 @@ export class WebRTCService {
       "iceconnectionstatechange",
       this.onIcegatheringStateChange
     );
-    this.customEventsService.off(
+    this.customEventsService?.off(
       "remote-description",
       this.onRemoteDescription
     );
-    this.customEventsService.off(
+    this.customEventsService?.off(
       "request-local-description",
       this.onRequestLocalDescription
     );
@@ -209,7 +215,7 @@ export class WebRTCService {
 
   private onIcegatheringStateChange = () => {
     if (this.peerConnection?.iceGatheringState === "complete") {
-      this.customEventsService.emit(
+      this.customEventsService?.emit(
         "local-description",
         this.peerConnection.localDescription?.sdp
       );
@@ -299,7 +305,7 @@ export class WebRTCService {
     this.peerConnection = null;
     await this.datachannelClient.close();
 
-    this.customEventsService.off(
+    this.customEventsService?.off(
       "reinit-connection",
       this.reinitPeerConnection
     );
@@ -318,7 +324,7 @@ export class WebRTCService {
       "Удаленный ICE candidate: \n " + event.candidate.candidate
     );
 
-    this.customEventsService.emit(
+    this.customEventsService?.emit(
       "ice-candidate",
       this.parseCandidate(event.candidate.candidate)
     );
@@ -370,7 +376,7 @@ export class WebRTCService {
       event
     );
 
-    this.customEventsService.emit(
+    this.customEventsService?.emit(
       "peerconnection-status",
       this.peerConnection?.connectionState
     );

@@ -53,6 +53,7 @@ export class ArchiveVideoService implements ModeService {
   private ranges: RangeDto[] = [];
 
   constructor(
+    private id: string,
     options: ConnectionOptions,
     player: VideoPlayerService,
     setControl: (control: ArchiveControlService) => void
@@ -63,10 +64,12 @@ export class ArchiveVideoService implements ModeService {
     this.player.video.ontimeupdate = this.onTimeUpdate.bind(this);
 
     this.datachannelClient = new DatachannelClientService(
+      this.id,
       this.clearListeners.bind(this)
     );
 
     this.webRTCClient = new WebRTCService(
+      this.id,
       Mode.ARCHIVE,
       options,
       this.datachannelClient,
@@ -74,6 +77,7 @@ export class ArchiveVideoService implements ModeService {
     );
 
     this.archiveControl = new ArchiveControlService(
+      this.id,
       this.emitStartNewFragment.bind(this),
       this.supportConnect.bind(this)
     );
@@ -140,8 +144,9 @@ export class ArchiveVideoService implements ModeService {
     const metaDrawer = new MetaOverflowDrawerService(
       this.player.videoContainer
     );
-    const datachannelClient = new DatachannelClientService();
+    const datachannelClient = new DatachannelClientService(this.id);
     const webRTCClient = new WebRTCService(
+      this.id,
       Mode.ARCHIVE,
       options,
       datachannelClient,
@@ -179,6 +184,7 @@ export class ArchiveVideoService implements ModeService {
           this.webRTCClient = webRTCClient;
 
           const archiveControl = new ArchiveControlService(
+            this.id,
             this.emitStartNewFragment.bind(this),
             this.supportConnect.bind(this)
           );

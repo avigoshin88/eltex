@@ -15,8 +15,8 @@ export class SnapshotService {
 
   snap(
     video: HTMLVideoElement,
-    width?: number,
-    height?: number,
+    width: number,
+    height: number,
     {
       download = defaultSnapConfig.download,
       title = defaultSnapConfig.title,
@@ -31,7 +31,7 @@ export class SnapshotService {
 
     const context = canvas.getContext("2d");
     if (!context) {
-      this.logger.warn("info", "Скриншот невозможен: контекст неопределен");
+      this.logger.warn("info", "Скриншот невозможен: контекст не определен");
       return;
     }
 
