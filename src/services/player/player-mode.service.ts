@@ -380,10 +380,13 @@ export class PlayerModeService {
   }
 
   private snap() {
+    const metaLayer = this.player.container.getElementsByTagName("canvas")[0];
+
     this.snapshotManager.snap(
-      this.player.video,
       this.resolution?.width || 0,
-      this.resolution?.height || 0
+      this.resolution?.height || 0,
+      this.player.video,
+      metaLayer
     );
   }
 
@@ -428,12 +431,6 @@ export class PlayerModeService {
   };
 
   private onUpdateStats = (stats: Stats) => {
-    if (!this.isShowStats) {
-      return;
-    }
-
-    this.statsDrawer.draw(stats);
-
     if (!stats.resolution.width || !stats.resolution.height) {
       this.resolution = null;
     } else {
@@ -441,6 +438,12 @@ export class PlayerModeService {
         ...stats.resolution,
       };
     }
+
+    if (!this.isShowStats) {
+      return;
+    }
+
+    this.statsDrawer.draw(stats);
 
     this.controlsDrawer.setDisabled({
       [ControlName.SNAPSHOT]: this.resolution === null,
