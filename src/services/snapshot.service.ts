@@ -14,17 +14,15 @@ export class SnapshotService {
   private readonly logger = new Logger(SnapshotService.name);
 
   snap(
+    snapWidth: number,
+    snapHeight: number,
     video: HTMLVideoElement,
-    width: number,
-    height: number,
+    meta?: HTMLCanvasElement,
     {
       download = defaultSnapConfig.download,
       title = defaultSnapConfig.title,
     }: SnapConfig = defaultSnapConfig
   ) {
-    const snapWidth = width ?? video.videoWidth;
-    const snapHeight = height ?? video.videoHeight;
-
     const canvas = window.document.createElement("canvas");
     canvas.width = snapWidth;
     canvas.height = snapHeight;
@@ -37,6 +35,7 @@ export class SnapshotService {
 
     context.fillRect(0, 0, snapWidth, snapHeight);
     context.drawImage(video, 0, 0, snapWidth, snapHeight);
+    meta && context.drawImage(meta, 0, 0, snapWidth, snapHeight);
 
     let dataURI = canvas.toDataURL("image/jpeg");
 
