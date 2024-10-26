@@ -314,6 +314,19 @@ export class ArchiveVideoService implements ModeService {
 
   setSpeed(speed: number) {
     this.datachannelClient.send(DatachannelMessageType.SET_SPEED, { speed });
+
+    this.player.pause();
+
+    this.archiveControl.setSpeed(speed);
+    this.archiveControl.setCurrentTime(
+      this.timelineDrawer.getCurrentTimestamp()
+    );
+
+    this.eventBus.emit("play-enabled");
+
+    this.timelineDrawer.draw(
+      this.getVirtualCurrentTime(this.player.video.currentTime)
+    );
   }
 
   private onTimeUpdate = (event: Event) => {
@@ -467,6 +480,7 @@ export class ArchiveVideoService implements ModeService {
       );
     }
 
+    this.archiveControl.clearPreloadTimeout();
     this.archiveControl.scheduleNextPreload();
 
     this.player.play();
@@ -478,7 +492,7 @@ export class ArchiveVideoService implements ModeService {
   }
 
   play(isContinue = false) {
-    this.logger.log("info", "Воспроизведение стрима");
+    this.logger.log("info", "Воспроизведение стрима", { isContinue });
 
     if (!isContinue) {
       this.datachannelClient.send(DatachannelMessageType.PLAY_STREAM);
