@@ -46,18 +46,18 @@ export class StatsOverflowDrawerService {
 
     statsContainer.classList.add("video-player__stats__container");
 
-    const [bitrateRow, bitrateLabel, bitrateValues] = this.makeRow("Bitrate", [
+    const { row: bitrateRow, values: bitrateValues } = this.makeRow("Bitrate", [
       String(stats.bitrate),
     ]);
-    const [resolutionRow, resolutionLabel, resolutionValues] = this.makeRow(
+    const { row: resolutionRow, values: resolutionValues } = this.makeRow(
       "Resolution",
       [String(stats.resolution.width), String(stats.resolution.height)]
     );
-    const [codecsRow, codecsLabel, codecsValues] = this.makeRow("Codecs", [
+    const { row: codecsRow, values: codecsValues } = this.makeRow("Codecs", [
       stats.videoCodec,
       stats.audioCodec,
     ]);
-    const [frameRateRow, frameRateLabel, frameRateValues] = this.makeRow(
+    const { row: frameRateRow, values: frameRateValues } = this.makeRow(
       "Frame rate",
       [String(stats.frameRate)]
     );
@@ -87,9 +87,12 @@ export class StatsOverflowDrawerService {
 
   private makeRow(
     label: string,
-    values: string[],
-    valueSeparator = " / "
-  ): [row: HTMLDivElement, label: HTMLSpanElement, values: HTMLSpanElement[]] {
+    values: string[]
+  ): {
+    row: HTMLDivElement;
+    label: HTMLSpanElement;
+    values: HTMLSpanElement[];
+  } {
     const row = document.createElement("div");
 
     row.classList.add("video-player__stats__row");
@@ -122,6 +125,6 @@ export class StatsOverflowDrawerService {
 
     row.append(labelElement, valuesContainer);
 
-    return [row, labelElement, valueElements];
+    return { row, label: labelElement, values: valueElements };
   }
 }

@@ -174,9 +174,9 @@ export class TimelineOverflowDrawer {
 
   private isUserScrolling: boolean = false;
   private isProgrammaticScroll: boolean = false;
-  private userScrollTimeout: Nullable<number> = null;
-  private programmaticScrollTimeout: Nullable<number> = null;
-  private scrollEndTimeout: Nullable<number> = null;
+  private userScrollTimeout: Nullable<NodeJS.Timeout> = null;
+  private programmaticScrollTimeout: Nullable<NodeJS.Timeout> = null;
+  private scrollEndTimeout: Nullable<NodeJS.Timeout> = null;
   private trackObserver: Nullable<IntersectionObserver> = null;
 
   private customTrackTimestamp: Nullable<number> = null; // Пользовательское время для трека

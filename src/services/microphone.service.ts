@@ -9,7 +9,7 @@ export class MicrophoneService {
   private currentDeviceId: string | null = null;
   private isMicOn = false;
   private isPushToTalk = false;
-  private pressTimer: number | null = null;
+  private pressTimer: NodeJS.Timeout | null = null;
   private PRESS_THRESHOLD = 500; // Время в мс для определения "долгого нажатия"
 
   constructor() {}
