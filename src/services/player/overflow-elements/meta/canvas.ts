@@ -12,7 +12,7 @@ export default class MetaOverflowDrawerService {
   private observer = new ResizeObserver(() => {
     this.resizeCanvas();
   });
-  private timeoutId?: number;
+  private timeoutId?: NodeJS.Timeout;
 
   constructor(container: HTMLDivElement) {
     this.container = container;

@@ -9,7 +9,10 @@ import { Nullable } from "../../../types/global";
 
 type ButtonControl = Exclude<
   ControlName,
-  ControlName.SPEED | ControlName.SOUND | ControlName.QUALITY
+  | ControlName.SPEED
+  | ControlName.SOUND
+  | ControlName.QUALITY
+  | ControlName.SCALE
 >;
 
 type CommonButtonControl = Exclude<
@@ -80,6 +83,7 @@ const CONTROLS_ORDER: ControlName[] = [
   ControlName.SOUND,
   ControlName.SPEED,
   ControlName.QUALITY,
+  ControlName.SCALE,
 ];
 
 export class ControlsOverflowDrawerService {
@@ -137,6 +141,20 @@ export class ControlsOverflowDrawerService {
       ...this.controlValues,
       ...values,
     };
+  }
+
+  updateSelectOptions(
+    controlName: ControlName,
+    options: SelectControlOptions["options"]
+  ) {
+    const control = this.controls[controlName];
+    if (!control) return;
+
+    if (control instanceof HTMLSelectElement) {
+      const config = this.options[controlName] as SelectControlOptions;
+      config.options = options;
+      this.updateSelect(control, controlName, config);
+    }
   }
 
   setBinaryButtonsState(
@@ -208,19 +226,11 @@ export class ControlsOverflowDrawerService {
         break;
 
       case "range":
-        if (
-          this.shouldUpdateRange(
-            control as HTMLDivElement,
-            name as ControlName,
-            config
-          )
-        ) {
-          this.updateRange(
-            control as HTMLDivElement,
-            name as ControlName,
-            config
-          );
-        }
+        this.updateRange(
+          control as HTMLDivElement,
+          name as ControlName,
+          config
+        );
         break;
     }
   }
@@ -254,19 +264,6 @@ export class ControlsOverflowDrawerService {
   ): boolean {
     const currentValue = this.controlValues[name] ?? config.value;
     return select.value !== currentValue;
-  }
-
-  private shouldUpdateRange(
-    rangeContainer: HTMLDivElement,
-    name: ControlName,
-    config: RangeControlOptions
-  ): boolean {
-    const input = rangeContainer.querySelector("input[type='range']");
-    if (!input) return true;
-
-    const currentValue = this.controlValues[name] ?? config.value;
-    // @ts-ignore
-    return input.value !== currentValue;
   }
 
   private makeButton(

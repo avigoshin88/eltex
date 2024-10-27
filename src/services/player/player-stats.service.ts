@@ -15,7 +15,7 @@ export class PlayerStatsService {
   private peerConnection: Nullable<RTCPeerConnection> = null;
   private videoElement: Nullable<HTMLVideoElement> = null;
 
-  private trackingStatsInterval: Nullable<number> = null;
+  private trackingStatsInterval: Nullable<NodeJS.Timeout> = null;
 
   constructor(private id: string) {
     this.eventBus = EventBus.getInstance(this.id);

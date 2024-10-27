@@ -4,160 +4,14 @@ import {
   ExportRangeCallback,
   TimelineClickCallback,
 } from "../../../types/timeline";
-import { format } from "date-fns";
 import { TimelineElementsFactoryService } from "./timeline/timeline-elements-factory.service";
 import { TimelineElementsService } from "./timeline/timeline-elements.service";
-
-const steps = [
-  { scale: 0.02, step: 1000, amplifier: 0.0001, label: "1 секунда" }, // 1 секунда
-  { scale: 0.004, step: 5 * 1000, amplifier: 0.00005, label: "5 секунд" }, // 5 секунд
-  { scale: 0.002, step: 10 * 1000, amplifier: 0.00002, label: "10 секунд" }, // 10 секунд
-  { scale: 0.001, step: 20 * 1000, amplifier: 0.00001, label: "20 секунд" }, // 20 секунд
-  { scale: 0.0005, step: 30 * 1000, amplifier: 0.000005, label: "30 секунд" }, // 30 секунд
-  {
-    scale: 0.0002,
-    step: 1 * 60 * 1000,
-    amplifier: 0.000002,
-    label: "1 минута",
-  }, // 1 минута
-  {
-    scale: 0.0001,
-    step: 2 * 60 * 1000,
-    amplifier: 0.000001,
-    label: "2 минуты",
-  }, // 2 минуты
-  {
-    scale: 0.00005,
-    step: 5 * 60 * 1000,
-    amplifier: 0.0000005,
-    label: "5 минут",
-  }, // 5 минут
-  {
-    scale: 0.00002,
-    step: 10 * 60 * 1000,
-    amplifier: 0.0000002,
-    label: "10 минут",
-  }, // 10 минут
-  {
-    scale: 0.00001,
-    step: 15 * 60 * 1000,
-    amplifier: 0.0000001,
-    label: "15 минут",
-  }, // 15 минут
-  {
-    scale: 0.000005,
-    step: 30 * 60 * 1000,
-    amplifier: 0.00000005,
-    label: "30 минут",
-  }, // 30 минут
-  {
-    scale: 0.000002,
-    step: 1 * 60 * 60 * 1000,
-    amplifier: 0.00000002,
-    label: "1 час",
-  }, // 1 час
-  {
-    scale: 0.000001,
-    step: 6 * 60 * 60 * 1000,
-    amplifier: 0.00000001,
-    label: "6 часов",
-  }, // 6 часов
-  {
-    scale: 0.0000005,
-    step: 12 * 60 * 60 * 1000,
-    amplifier: 0.000000005,
-    label: "12 часов",
-  }, // 12 часов
-  {
-    scale: 0.0000002,
-    step: 1 * 24 * 60 * 60 * 1000,
-    amplifier: 0.000000002,
-    label: "1 день",
-  }, // 1 день
-  {
-    scale: 0.0000001,
-    step: 2 * 24 * 60 * 60 * 1000,
-    amplifier: 0.000000001,
-    label: "2 дня",
-  }, // 2 дня
-  {
-    scale: 0.00000005,
-    step: 7 * 24 * 60 * 60 * 1000,
-    amplifier: 0.0000000005,
-    label: "1 неделя",
-  }, // 1 неделя
-  {
-    scale: 0.00000002,
-    step: 14 * 24 * 60 * 60 * 1000,
-    amplifier: 0.0000000002,
-    label: "2 недели",
-  }, // 2 недели
-  {
-    scale: 0.00000001,
-    step: 1 * 30 * 24 * 60 * 60 * 1000,
-    amplifier: 0.0000000001,
-    label: "1 месяц",
-  }, // 1 месяц
-  {
-    scale: 0.000000005,
-    step: 3 * 30 * 24 * 60 * 60 * 1000,
-    amplifier: 0.00000000005,
-    label: "1 квартал",
-  }, // 1 квартал
-  {
-    scale: 0.000000002,
-    step: 6 * 30 * 24 * 60 * 60 * 1000,
-    amplifier: 0.00000000002,
-    label: "полгода",
-  }, // полгода
-  {
-    scale: 0.000000001,
-    step: 1 * 365 * 24 * 60 * 60 * 1000,
-    amplifier: 0.00000000001,
-    label: "1 год",
-  }, // 1 год
-  {
-    scale: 0.0000000005,
-    step: 2 * 365 * 24 * 60 * 60 * 1000,
-    amplifier: 0.000000000005,
-    label: "2 года",
-  }, // 2 года
-  {
-    scale: 0.0000000002,
-    step: 5 * 365 * 24 * 60 * 60 * 1000,
-    amplifier: 0.000000000002,
-    label: "5 лет",
-  }, // 5 лет
-  {
-    scale: 0.0000000001,
-    step: 10 * 365 * 24 * 60 * 60 * 1000,
-    amplifier: 0.000000000001,
-    label: "10 лет",
-  }, // 10 лет
-];
-
-// Add more steps for smoother transitions
-for (let i = 1; i < steps.length; i++) {
-  const prevStep = steps[i - 1];
-  const nextStep = steps[i];
-  const numIntermediateSteps = 1024 / steps.length;
-
-  for (let j = 1; j < numIntermediateSteps; j++) {
-    const scale =
-      prevStep.scale +
-      ((nextStep.scale - prevStep.scale) / numIntermediateSteps) * j;
-    const amplifier =
-      prevStep.amplifier +
-      ((nextStep.amplifier - prevStep.amplifier) / numIntermediateSteps) * j;
-    steps.splice(i, 0, {
-      scale,
-      step: prevStep.step,
-      amplifier,
-      label: `${prevStep.label} - ${nextStep.label}`,
-    });
-    i++;
-  }
-}
+import { formatTime } from "../../../helpers/format.helper";
+import {
+  TIMELINE_DIVISION_STEPS,
+  TIMELINE_STEPS_OPTIONS,
+} from "../../../constants/timeline-steps";
+import { EventBus } from "../../event-bus.service";
 
 export class TimelineOverflowDrawer {
   private ranges: RangeData[] = [];
@@ -172,11 +26,12 @@ export class TimelineOverflowDrawer {
   private isReady: boolean = false; // Флаг, указывающий готовность к отрисовке
   private clickCallback: TimelineClickCallback; // Callback для кликов
 
+  private scrollTimeout: Nullable<NodeJS.Timeout> = null;
   private isUserScrolling: boolean = false;
   private isProgrammaticScroll: boolean = false;
-  private userScrollTimeout: Nullable<number> = null;
-  private programmaticScrollTimeout: Nullable<number> = null;
-  private scrollEndTimeout: Nullable<number> = null;
+  private userScrollTimeout: Nullable<NodeJS.Timeout> = null;
+  private programmaticScrollTimeout: Nullable<NodeJS.Timeout> = null;
+  private scrollEndTimeout: Nullable<NodeJS.Timeout> = null;
   private trackObserver: Nullable<IntersectionObserver> = null;
 
   private customTrackTimestamp: Nullable<number> = null; // Пользовательское время для трека
@@ -187,10 +42,15 @@ export class TimelineOverflowDrawer {
   private exportEndTime: Nullable<number> = null; // Время конца выбранного диапазона
   private exportCallback: Nullable<ExportRangeCallback> = null; // Callback для экспорта
 
+  private eventBus: EventBus;
+
   constructor(
+    private id: string,
     container: HTMLDivElement,
     clickCallback?: TimelineClickCallback
   ) {
+    this.eventBus = EventBus.getInstance(this.id);
+
     this.clickCallback = clickCallback ?? (() => {});
     this.container = container;
 
@@ -218,6 +78,7 @@ export class TimelineOverflowDrawer {
     this.trackObserver.observe(this.timelineElements.track!);
 
     this.registerListeners();
+    this.setupEvents();
   }
 
   draw(currentTime: number): void {
@@ -466,7 +327,6 @@ export class TimelineOverflowDrawer {
     }
 
     if (trackEntry.isIntersecting) {
-      this.isUserScrolling = false;
       return;
     }
 
@@ -474,7 +334,55 @@ export class TimelineOverflowDrawer {
       return;
     }
 
-    this.scrollToTrackRightEdge();
+    this.scrollTrackToAlign(this.timelineElements.track!, "right");
+  }
+
+  public scrollTrackToAlign(
+    track: HTMLElement,
+    align: "center" | "left" | "right",
+    offset = 0
+  ) {
+    if (
+      !this.timelineElements.scrollContainer ||
+      !this.timelineElements.timelineContainer
+    )
+      return;
+
+    // Получаем позицию трека относительно timelineElements.timelineContainer
+    const trackLeft = track.offsetLeft;
+    const trackRight = track.offsetLeft;
+    const trackWidth = track.offsetWidth;
+
+    // Рассчитываем необходимый scrollLeft
+    const scrollContainerWidth =
+      this.timelineElements.scrollContainer.offsetWidth;
+
+    let newScroll = 0;
+    if (align === "right") {
+      newScroll = trackLeft + trackWidth - scrollContainerWidth + offset;
+    } else if (align === "left") {
+      newScroll = trackRight - offset;
+    } else {
+      newScroll =
+        trackLeft - scrollContainerWidth / 2 + trackWidth / 2 + offset;
+    }
+
+    // Ограничиваем scrollLeft допустимыми значениями
+    const maxScrollLeft =
+      this.timelineElements.scrollContainer.scrollWidth - scrollContainerWidth;
+    newScroll = Math.max(0, Math.min(newScroll, maxScrollLeft));
+
+    // Устанавливаем флаг программной прокрутки
+    this.isProgrammaticScroll = true;
+
+    // Используем плавную прокрутку
+    this.timelineElements.scrollContainer.scrollTo({
+      left: newScroll,
+      behavior: "smooth",
+    });
+
+    // Начинаем отслеживать завершение прокрутки
+    this.monitorProgrammaticScrollEnd();
   }
 
   public scrollToTrackRightEdge(): void {
@@ -600,19 +508,31 @@ export class TimelineOverflowDrawer {
     return null; // Если не найден диапазон
   }
 
-  setOptions(ranges: RangeData[]): void {
+  setOptions(ranges: RangeData[], updateScale = true): void {
     this.ranges = ranges;
     this.currentStartTime = this.ranges[0]?.start_time || 0;
     this.isReady = true;
 
-    const totalTimeRange =
-      ranges[ranges.length - 1].end_time - ranges[0].start_time;
-    const containerWidth = this.container.offsetWidth;
+    if (updateScale) {
+      const totalTimeRange =
+        ranges[ranges.length - 1].end_time - ranges[0].start_time;
+      const containerWidth = this.container.offsetWidth;
 
-    // Устанавливаем начальный масштаб так, чтобы диапазоны занимали всю ширину контейнера
-    this.scale = containerWidth / totalTimeRange;
+      const options = TIMELINE_STEPS_OPTIONS.filter(
+        (step) => Number(step.value) <= totalTimeRange
+      ).sort((a, b) => Number(a.value) - Number(b.value));
 
-    this.draw(this.currentStartTime); // Отрисовка шкалы после установки диапазонов
+      options.push({ label: "Max", value: String(totalTimeRange) });
+
+      this.eventBus.emit("set-timeline-scale-options", [
+        options[options.length - 1].value,
+        options,
+      ]);
+
+      // Устанавливаем начальный масштаб так, чтобы диапазоны занимали всю ширину контейнера
+      this.scale = containerWidth / totalTimeRange;
+      this.draw(this.currentStartTime); // Отрисовка шкалы после установки диапазонов
+    }
   }
 
   clear(): void {
@@ -622,6 +542,7 @@ export class TimelineOverflowDrawer {
 
     this.currentTime = 0;
 
+    this.clearEvents();
     this.clearListeners();
 
     this.trackObserver?.disconnect();
@@ -638,30 +559,30 @@ export class TimelineOverflowDrawer {
   }
 
   private formatTime(time: number): string {
-    const date = new Date(time);
-
-    if (this.scale >= 0.00001) {
-      // Малый масштаб: часы, минуты, секунды
-      return format(date, "HH:mm:ss");
-    } else if (this.scale >= 0.000001) {
-      // Средний масштаб: день, месяц, часы, минуты
-      return format(date, "dd.MM HH:mm");
-    } else if (this.scale >= 0.00000001) {
-      // Большой масштаб: день, месяц
-      return format(date, "dd.MM");
-    } else {
-      // Очень большой масштаб: год
-      return format(date, "yyyy");
-    }
+    return formatTime(time, this.scale);
   }
 
   private getStep() {
     const scaleFactor = this.scale;
 
-    const stepInfo = steps.find((step) => scaleFactor > step.scale);
+    const stepInfo = TIMELINE_DIVISION_STEPS.find(
+      (step) => scaleFactor > step.scale
+    );
 
-    return stepInfo ?? steps[steps.length - 1];
+    return (
+      stepInfo ?? TIMELINE_DIVISION_STEPS[TIMELINE_DIVISION_STEPS.length - 1]
+    );
   }
+
+  private setScale = (value: number) => {
+    const containerWidth = this.container.offsetWidth;
+
+    this.scale = containerWidth / value;
+
+    this.draw(this.currentTime);
+
+    this.scrollTrackToAlign(this.timelineElements.track!, "center");
+  };
 
   private clickEventListener(event: MouseEvent): void {
     event.preventDefault();
@@ -733,6 +654,7 @@ export class TimelineOverflowDrawer {
 
   private scrollEventListener() {
     // Очищаем предыдущий таймер завершения прокрутки
+
     if (this.scrollEndTimeout) {
       clearTimeout(this.scrollEndTimeout);
     }
@@ -757,13 +679,29 @@ export class TimelineOverflowDrawer {
       clearTimeout(this.userScrollTimeout);
     }
 
-    const rangesDuration =
-      this.ranges[this.ranges.length - 1].end_time - this.ranges[0].start_time;
-
     // Устанавливаем таймер для сброса флага пользовательской прокрутки
     this.userScrollTimeout = setTimeout(() => {
       this.isUserScrolling = false;
-    }, rangesDuration);
+
+      if (this.isProgrammaticScroll) {
+        this.isProgrammaticScroll = false;
+      }
+    }, 1000);
+
+    if (this.scrollTimeout) {
+      clearTimeout(this.scrollTimeout);
+    }
+
+    const trackScroll = this.timelineElements.track!.offsetLeft;
+
+    this.scrollTimeout = setTimeout(() => {
+      const newTrackScroll = this.timelineElements.track!.offsetLeft;
+      this.scrollTrackToAlign(
+        this.timelineElements.track!,
+        "center",
+        newTrackScroll - trackScroll
+      );
+    }, 2000);
 
     const startTime = this.ranges[0]?.start_time || 0;
     const endTime = this.ranges[this.ranges.length - 1]?.end_time || 0;
@@ -781,103 +719,103 @@ export class TimelineOverflowDrawer {
     );
   }
 
-  private wheelEventListener(event: WheelEvent) {
-    event.preventDefault();
+  // private wheelEventListener(event: WheelEvent) {
+  //   event.preventDefault();
 
-    if (event.shiftKey) {
-      // Если зажата клавиша Shift — горизонтальная прокрутка
-      this.container.scrollLeft += event.deltaY;
-    } else {
-      // Иначе — изменение масштаба
+  //   if (event.shiftKey) {
+  //     // Если зажата клавиша Shift — горизонтальная прокрутка
+  //     this.container.scrollLeft += event.deltaY;
+  //   } else {
+  //     // Иначе — изменение масштаба
 
-      // Устанавливаем флаг пользовательского взаимодействия
-      this.isUserScrolling = true;
+  //     // Устанавливаем флаг пользовательского взаимодействия
+  //     this.isUserScrolling = true;
 
-      // Очищаем предыдущий таймер, если он был установлен
-      if (this.userScrollTimeout) {
-        clearTimeout(this.userScrollTimeout);
-      }
+  //     // Очищаем предыдущий таймер, если он был установлен
+  //     if (this.userScrollTimeout) {
+  //       clearTimeout(this.userScrollTimeout);
+  //     }
 
-      // Устанавливаем таймер для сброса флага пользовательского взаимодействия
-      // Например, через 2 секунды после последнего масштабирования
-      this.userScrollTimeout = setTimeout(() => {
-        this.isUserScrolling = false;
-      }, 2000);
+  //     // Устанавливаем таймер для сброса флага пользовательского взаимодействия
+  //     // Например, через 2 секунды после последнего масштабирования
+  //     this.userScrollTimeout = setTimeout(() => {
+  //       this.isUserScrolling = false;
+  //     }, 2000);
 
-      // Ограничим максимальные изменения при каждом событии скролла
-      // const scaleChange = Math.sign(event.deltaY) *  0.000002;
-      const scaleChange = Math.sign(event.deltaY) * this.getStep().amplifier; // Более мелкий шаг для плавности
+  //     // Ограничим максимальные изменения при каждом событии скролла
+  //     // const scaleChange = Math.sign(event.deltaY) *  0.000002;
+  //     const scaleChange = Math.sign(event.deltaY) * this.getStep().amplifier; // Более мелкий шаг для плавности
 
-      const totalTimeRange =
-        this.ranges[this.ranges.length - 1].end_time -
-        this.ranges[0].start_time;
-      const containerWidth = this.container.offsetWidth;
+  //     const totalTimeRange =
+  //       this.ranges[this.ranges.length - 1].end_time -
+  //       this.ranges[0].start_time;
+  //     const containerWidth = this.container.offsetWidth;
 
-      // Рассчитаем максимальный масштаб так, чтобы диапазоны не могли выходить за пределы контейнера
-      const maxScale = 1; // Масштабирование не должно превышать единичный масштаб
-      const minScale = containerWidth / totalTimeRange; // Минимальный масштаб, при котором диапазоны занимают контейнер
+  //     // Рассчитаем максимальный масштаб так, чтобы диапазоны не могли выходить за пределы контейнера
+  //     const maxScale = 1; // Масштабирование не должно превышать единичный масштаб
+  //     const minScale = containerWidth / totalTimeRange; // Минимальный масштаб, при котором диапазоны занимают контейнер
 
-      // Текущее значение масштаба перед изменением
-      const previousScale = this.scale;
+  //     // Текущее значение масштаба перед изменением
+  //     const previousScale = this.scale;
 
-      // Ограничиваем масштаб значениями от minScale до maxScale
-      this.scale = Math.min(
-        maxScale,
-        Math.max(minScale, this.scale + scaleChange)
-      );
+  //     // Ограничиваем масштаб значениями от minScale до maxScale
+  //     this.scale = Math.min(
+  //       maxScale,
+  //       Math.max(minScale, this.scale + scaleChange)
+  //     );
 
-      if (this.isReady) {
-        // Рассчитаем позицию трека относительно предыдущего масштаба
-        const track = this.timelineElements.track;
-        if (track) {
-          const trackLeft = track.offsetLeft; // Позиция трека до масштабирования
-          const visibleWidth =
-            this.timelineElements.scrollContainer!.offsetWidth; // Ширина видимой области
+  //     if (this.isReady) {
+  //       // Рассчитаем позицию трека относительно предыдущего масштаба
+  //       const track = this.timelineElements.track;
+  //       if (track) {
+  //         const trackLeft = track.offsetLeft; // Позиция трека до масштабирования
+  //         const visibleWidth =
+  //           this.timelineElements.scrollContainer!.offsetWidth; // Ширина видимой области
 
-          // Сохраним смещение относительно центра или границы
-          let trackOffsetFromLeft =
-            trackLeft - this.timelineElements.scrollContainer!.scrollLeft;
+  //         // Сохраним смещение относительно центра или границы
+  //         let trackOffsetFromLeft =
+  //           trackLeft - this.timelineElements.scrollContainer!.scrollLeft;
 
-          if (trackOffsetFromLeft > visibleWidth / 2) {
-            trackOffsetFromLeft = visibleWidth / 2; // Центрируем трек, если он далеко справа
-          } else if (trackLeft <= 0) {
-            trackOffsetFromLeft = 0; // Трек в самом начале
-          }
+  //         if (trackOffsetFromLeft > visibleWidth / 2) {
+  //           trackOffsetFromLeft = visibleWidth / 2; // Центрируем трек, если он далеко справа
+  //         } else if (trackLeft <= 0) {
+  //           trackOffsetFromLeft = 0; // Трек в самом начале
+  //         }
 
-          // Обновляем отрисовку
-          this.draw(this.currentTime);
+  //         // Обновляем отрисовку
+  //         this.draw(this.currentTime);
 
-          // После перерисовки восстанавливаем позицию трека
-          const newTrackLeft = (trackLeft / previousScale) * this.scale;
-          const newScrollLeft = Math.max(0, newTrackLeft - trackOffsetFromLeft);
-          this.timelineElements.scrollContainer!.scrollTo({
-            left: newScrollLeft,
-            behavior: "auto",
-          });
-        } else {
-          // Если трека нет, просто обновляем таймлайн
-          this.draw(this.currentTime);
-        }
+  //         // После перерисовки восстанавливаем позицию трека
+  //         const newTrackLeft = (trackLeft / previousScale) * this.scale;
+  //         const newScrollLeft = Math.max(0, newTrackLeft - trackOffsetFromLeft);
+  //         this.timelineElements.scrollContainer!.scrollTo({
+  //           left: newScrollLeft,
+  //           behavior: "auto",
+  //         });
+  //       } else {
+  //         // Если трека нет, просто обновляем таймлайн
+  //         this.draw(this.currentTime);
+  //       }
 
-        // Обновляем маркеры экспорта при изменении масштаба
-        this.updateExportMarkers(
-          this.ranges[0]?.start_time || 0,
-          totalTimeRange,
-          totalTimeRange * this.scale
-        );
-      }
-    }
-  }
+  //       // Обновляем маркеры экспорта при изменении масштаба
+  //       this.updateExportMarkers(
+  //         this.ranges[0]?.start_time || 0,
+  //         totalTimeRange,
+  //         totalTimeRange * this.scale
+  //       );
+  //     }
+  //   }
+  // }
 
   private registerListeners() {
     this.timelineElements.scrollContainer?.addEventListener(
       "scroll",
       this.scrollEventListener.bind(this)
     );
-    this.timelineElements.timelineContainer?.addEventListener(
-      "wheel",
-      this.wheelEventListener.bind(this)
-    );
+    // this.timelineElements.timelineContainer?.addEventListener(
+    //   "wheel",
+    //   this.wheelEventListener.bind(this)
+    // );
     this.timelineElements.timelineContainer?.addEventListener(
       "click",
       this.clickEventListener.bind(this)
@@ -889,13 +827,21 @@ export class TimelineOverflowDrawer {
       "scroll",
       this.scrollEventListener
     );
-    this.timelineElements.timelineContainer?.removeEventListener(
-      "wheel",
-      this.wheelEventListener
-    );
+    // this.timelineElements.timelineContainer?.removeEventListener(
+    //   "wheel",
+    //   this.wheelEventListener
+    // );
     this.timelineElements.timelineContainer?.removeEventListener(
       "click",
       this.clickEventListener
     );
+  }
+
+  private setupEvents() {
+    this.eventBus.on("set-timeline-scale", this.setScale);
+  }
+
+  private clearEvents() {
+    this.eventBus.off("set-timeline-scale", this.setScale);
   }
 }

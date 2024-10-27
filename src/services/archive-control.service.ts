@@ -34,11 +34,13 @@ export class ArchiveControlService {
   private ranges: RangeDto[] = [];
   private fragmentIndex = 0;
   private rangeFragmentsGenerator!: Generator<RangeFragment>;
-  private connectionSupporterId: Nullable<number> = null;
-  private preloadTimeoutId: Nullable<number> = null;
+  private connectionSupporterId: Nullable<NodeJS.Timeout> = null;
+  private preloadTimeoutId: Nullable<NodeJS.Timeout> = null;
   private emit!: Emitter;
   private supportConnect: () => void;
   private currentTimestamp: number = 0;
+
+  private speed: number = 1;
 
   private isFirstPreloadDone = false; // Флаг для отслеживания первой дозагрузки
   private isPause = false;
@@ -80,7 +82,6 @@ export class ArchiveControlService {
       "info",
       "Инициализация воспроизведения с начального фрагмента."
     );
-    this.initSupportConnectInterval();
   }
 
   clear() {
@@ -89,6 +90,7 @@ export class ArchiveControlService {
     this.ranges = [];
     this.isFirstPreloadDone = false;
     this.isPause = false;
+    this.speed = 1;
     this.clearSupportConnectInterval();
     this.clearPreloadTimeout();
   }
@@ -107,18 +109,33 @@ export class ArchiveControlService {
       return;
     }
 
-    this.fragmentIndex += 1;
-    this.currentTimestamp = this.currentFragment.start_time;
     this.logger.log(
       "info",
       "Переключение на следующий фрагмент с индексом",
-      this.fragmentIndex
+      this.fragmentIndex + 1
     );
-    this.isPause = false;
 
+    this.setCurrentRange(this.nextFragment.start_time, this.nextFragment, true);
     this.eventBus.emit("new-archive-fragment-started", this.currentFragment);
-    this.clearPreloadTimeout();
-    this.preloadRangeFragment(); // Переход на новый range
+  }
+
+  toPrevFragment() {
+    if (!this.prevFragment) {
+      this.logger.warn(
+        "info",
+        "Нельзя переключиться к предыдущему фрагменту: текущий фрагмент первый."
+      );
+      return;
+    }
+
+    this.logger.log(
+      "info",
+      "Переключение на предыдущий фрагмент с индексом",
+      this.fragmentIndex - 1
+    );
+
+    this.setCurrentRange(this.prevFragment.start_time, this.prevFragment, true);
+    this.eventBus.emit("new-archive-fragment-started", this.currentFragment);
   }
 
   pause(currentTimestamp: number) {
@@ -144,31 +161,12 @@ export class ArchiveControlService {
     this.preloadRangeFragment();
   }
 
-  toPrevFragment() {
-    if (!this.prevFragment) {
-      this.logger.warn(
-        "info",
-        "Нельзя переключиться к предыдущему фрагменту: текущий фрагмент первый."
-      );
-      return;
-    }
-
-    this.fragmentIndex -= 1;
-    this.currentTimestamp = this.currentFragment.start_time;
-    this.logger.log(
-      "info",
-      "Переключение на предыдущий фрагмент с индексом",
-      this.fragmentIndex
-    );
-
-    this.isPause = false;
-
-    this.eventBus.emit("new-archive-fragment-started", this.currentFragment);
-    this.clearPreloadTimeout();
-    this.preloadRangeFragment(); // Переход на новый range
-  }
-
-  setCurrentRange(timestamp: number, range: RangeDto, emitEnable = true) {
+  setCurrentRange(
+    timestamp: number,
+    range: RangeDto,
+    emitEnable = true,
+    preload = false
+  ) {
     const rangeIndex = this.findRangeIndex(range.start_time, range.end_time);
     if (rangeIndex === -1) {
       this.logger.error("info", "Указанный range не найден в списке ranges.");
@@ -191,19 +189,35 @@ export class ArchiveControlService {
       this.isPause = false;
 
       this.clearPreloadTimeout();
-      this.preloadRangeFragment(); // Переход на новый range
+      this.preloadRangeFragment(preload); // Переход на новый range
     }
   }
 
-  setCurrentTime(timestamp: number, isPreload = false) {
+  setCurrentTime(timestamp: number, isPreload = false, onlySave = false) {
     const rangeIndex = this.findRangeIndex(timestamp, timestamp);
     if (rangeIndex === -1) {
       this.logger.error("info", "Указанный range не найден в списке ranges.");
       return;
     }
 
+    if (!onlySave) {
+      this.currentTimestamp = timestamp;
+      this.fragmentIndex = rangeIndex;
+
+      this.logger.log(
+        "info",
+        "Установлен текущий range с индексом",
+        this.fragmentIndex,
+        "и временем",
+        this.currentTimestamp
+      );
+
+      this.initGenerator(this.currentTimestamp);
+      return;
+    }
+
     if (!isPreload) {
-      this.setCurrentRange(timestamp, this.ranges[rangeIndex], false);
+      this.setCurrentRange(timestamp, this.ranges[rangeIndex], true);
     } else {
       this.currentTimestamp = timestamp;
       this.fragmentIndex = rangeIndex;
@@ -222,6 +236,10 @@ export class ArchiveControlService {
       this.initGenerator(this.currentTimestamp);
       this.preloadRangeFragment(true);
     }
+  }
+
+  public setSpeed(speed: number) {
+    this.speed = speed;
   }
 
   private initGenerator(startTimestamp: number) {
@@ -247,14 +265,16 @@ export class ArchiveControlService {
       }
 
       while (rangeFragmentStart < range.end_time) {
+        const interval = preloadInterval * this.speed;
+
         const rangeFragmentEnd = Math.min(
-          rangeFragmentStart + preloadInterval,
+          rangeFragmentStart + interval,
           range.end_time
         );
         const fragmentDuration = rangeFragmentEnd - rangeFragmentStart;
 
         const subFragmentIndex = Math.floor(
-          (rangeFragmentStart - range.start_time) / preloadInterval
+          (rangeFragmentStart - range.start_time) / interval
         );
 
         yield {
@@ -300,10 +320,9 @@ export class ArchiveControlService {
 
       const rangeFragment = rangeFragmentResult.value;
       const fragmentDuration = rangeFragment.duration;
-      const nextPreloadDelay = Math.max(
-        0,
-        fragmentDuration - preloadRangeFragmentTimeout
-      );
+      const nextPreloadDelay =
+        Math.max(0, fragmentDuration - preloadRangeFragmentTimeout) /
+        this.speed;
 
       this.logger.log(
         "info",
@@ -328,8 +347,9 @@ export class ArchiveControlService {
     }
   }
 
-  private initSupportConnectInterval() {
+  public initSupportConnectInterval() {
     this.logger.log("info", "Запуск интервала поддержки подключения.");
+    this.clearSupportConnectInterval();
     this.connectionSupporterId = setInterval(() => {
       this.supportConnect();
     }, connectionSupportInterval);

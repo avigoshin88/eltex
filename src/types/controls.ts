@@ -16,6 +16,8 @@ export enum ControlName {
   SOUND = "sound",
   QUALITY = "quality",
   META = "meta",
+
+  SCALE = "scale",
 }
 
 export type ControlType = "button" | "select" | "range";
@@ -65,7 +67,7 @@ export type SelectControlOptions = Control & {
   type: "select";
   listeners: ControlListeners<SelectListener>;
 
-  value: SelectValue;
+  value?: SelectValue;
   options: SelectOption[];
 };
 
@@ -98,4 +100,6 @@ export type ControlsOptions = {
   [ControlName.STATS]: BinaryButtonControlOptions;
   [ControlName.QUALITY]: SelectControlOptions;
   [ControlName.META]: BinaryButtonControlOptions;
+
+  [ControlName.SCALE]: SelectControlOptions;
 };

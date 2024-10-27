@@ -6,4 +6,8 @@ export type EventName =
   | "stats"
   | "new-archive-fragment-started"
   | "cancel-export"
-  | "play-enabled";
+  | "play-enabled"
+  | "set-timeline-scale-options"
+  | "set-timeline-scale"
+  | "timeline-scale-update"
+  | "archive-timeupdate";

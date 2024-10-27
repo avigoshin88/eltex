@@ -29,6 +29,10 @@ const preloadAfterErrorFrameTimeout = EnvService.getENVAsNumber(
   "VITE_PRELOAD_AFTER_ERROR_FRAME_TIMEOUT"
 );
 
+const fetchRangesInterval = EnvService.getENVAsNumber(
+  "VITE_FETCH_RANGES_INTERVAL"
+);
+
 function isFragmentLoadError(error?: Nullable<string>) {
   return error?.toUpperCase() === ArchiveError.NOT_FOUND;
 }
@@ -53,6 +57,7 @@ export class ArchiveVideoService implements ModeService {
   private isPreRequestRange = false;
 
   private isLoaded = false;
+  private isFirstRangesFetch = true;
 
   private virtualTimeOffset: number = 0;
 
@@ -60,6 +65,8 @@ export class ArchiveVideoService implements ModeService {
   private renewFragment: Nullable<RangeData> = null;
 
   private setControl: (control: ArchiveControlService) => void;
+
+  private fetchRangesIntervalId: Nullable<NodeJS.Timeout> = null;
 
   private ranges: RangeDto[] = [];
 
@@ -95,6 +102,7 @@ export class ArchiveVideoService implements ModeService {
     );
 
     this.timelineDrawer = new TimelineOverflowDrawer(
+      this.id,
       this.player.container,
       this.onChangeCurrentTime.bind(this)
     );
@@ -211,6 +219,7 @@ export class ArchiveVideoService implements ModeService {
           this.virtualTimeOffset = this.player.video.currentTime;
 
           archiveControl.init();
+          archiveControl.initSupportConnectInterval();
 
           this.archiveControl.clear();
 
@@ -233,6 +242,7 @@ export class ArchiveVideoService implements ModeService {
     await this.webRTCClient.reset();
     this.datachannelClient.close();
     this.metaDrawer.destroy();
+    this.clearFetchRangeInterval();
 
     if (fullReset) {
       this.virtualTimeOffset = 0;
@@ -243,6 +253,7 @@ export class ArchiveVideoService implements ModeService {
 
       this.renewStartTime = null;
       this.renewFragment = null;
+      this.isFirstRangesFetch = true;
 
       this.ranges = [];
     }
@@ -268,6 +279,8 @@ export class ArchiveVideoService implements ModeService {
   }
 
   private async onOpenDatachannel() {
+    this.setFetchRangesInterval();
+
     if (this.renewStartTime !== null && this.renewFragment !== null) {
       return;
     }
@@ -298,14 +311,25 @@ export class ArchiveVideoService implements ModeService {
 
     this.ranges = ranges;
 
-    this.archiveControl.setRanges(ranges);
-    this.archiveControl.init();
-    this.archiveControl.preloadRangeFragment();
-
-    this.timelineDrawer.setOptions(this.rangeMapper.calc(ranges));
+    this.timelineDrawer.setOptions(
+      this.rangeMapper.calc(ranges),
+      this.isFirstRangesFetch
+    );
     this.timelineDrawer.draw(
       this.getVirtualCurrentTime(this.player.video.currentTime)
     );
+    this.archiveControl.setRanges(ranges);
+
+    if (this.isFirstRangesFetch) {
+      this.archiveControl.init();
+      this.archiveControl.preloadRangeFragment();
+      this.archiveControl.initSupportConnectInterval();
+      this.isFirstRangesFetch = false;
+    } else {
+      this.archiveControl.setCurrentTime(
+        this.timelineDrawer.getCurrentTimestamp()
+      );
+    }
   }
 
   private onLoadedChange() {
@@ -314,6 +338,19 @@ export class ArchiveVideoService implements ModeService {
 
   setSpeed(speed: number) {
     this.datachannelClient.send(DatachannelMessageType.SET_SPEED, { speed });
+
+    this.player.pause();
+
+    this.archiveControl.setSpeed(speed);
+    this.archiveControl.setCurrentTime(
+      this.timelineDrawer.getCurrentTimestamp()
+    );
+
+    this.eventBus.emit("play-enabled");
+
+    this.timelineDrawer.draw(
+      this.getVirtualCurrentTime(this.player.video.currentTime)
+    );
   }
 
   private onTimeUpdate = (event: Event) => {
@@ -467,6 +504,7 @@ export class ArchiveVideoService implements ModeService {
       );
     }
 
+    this.archiveControl.clearPreloadTimeout();
     this.archiveControl.scheduleNextPreload();
 
     this.player.play();
@@ -478,7 +516,7 @@ export class ArchiveVideoService implements ModeService {
   }
 
   play(isContinue = false) {
-    this.logger.log("info", "Воспроизведение стрима");
+    this.logger.log("info", "Воспроизведение стрима", { isContinue });
 
     if (!isContinue) {
       this.datachannelClient.send(DatachannelMessageType.PLAY_STREAM);
@@ -520,5 +558,19 @@ export class ArchiveVideoService implements ModeService {
       DatachannelMessageType.META,
       on ? (this.metaDrawer.draw as DatachannelEventListener) : undefined
     );
+  }
+
+  private setFetchRangesInterval() {
+    this.fetchRangesIntervalId = setInterval(() => {
+      this.datachannelClient.send(DatachannelMessageType.GET_RANGES);
+    }, fetchRangesInterval);
+  }
+
+  private clearFetchRangeInterval() {
+    if (this.fetchRangesIntervalId !== null) {
+      clearInterval(this.fetchRangesIntervalId);
+
+      this.fetchRangesIntervalId = null;
+    }
   }
 }

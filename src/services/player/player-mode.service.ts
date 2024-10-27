@@ -1,6 +1,6 @@
 import { Mode } from "../../constants/mode";
 import { ModeService } from "../../interfaces/mode";
-import { ControlName } from "../../types/controls";
+import { ControlName, SelectOption } from "../../types/controls";
 import { ConnectionOptions } from "../../types/connection-options";
 import { ArchiveControlService } from "../archive-control.service";
 import { Logger } from "../logger/logger.service";
@@ -41,13 +41,17 @@ export class PlayerModeService {
   private isExport = false;
   private controlsDrawer!: ControlsOverflowDrawerService;
 
-  private soundLevel = "100";
+  private soundLevel = "0";
+  private oldSoundLevel: Nullable<string> = null;
+
   private speed = "1.0";
   private quality: keyof typeof quality = "fhd";
 
   private resolution: Nullable<Stats["resolution"]> = null;
   private isShowStats = false;
   private metaEnabled = false;
+
+  private timelineScaleOptions: SelectOption[] = [];
 
   constructor(
     private id: string,
@@ -214,6 +218,15 @@ export class PlayerModeService {
           value: this.soundLevel,
           getLabel: () => `${this.soundLevel}%`,
         },
+
+        [ControlName.SCALE]: {
+          type: "select",
+          listeners: {
+            change: this.changeScale.bind(this),
+          },
+          value: undefined,
+          options: this.timelineScaleOptions,
+        },
       }
     );
   }
@@ -297,7 +310,9 @@ export class PlayerModeService {
 
     this.isExport = false;
 
-    this.soundLevel = "100";
+    this.soundLevel = "0";
+    this.oldSoundLevel = null;
+
     this.speed = "1.0";
 
     this.metaEnabled = true;
@@ -347,14 +362,24 @@ export class PlayerModeService {
 
   private switchVolumeState() {
     if (!this.player.isVolumeOn) {
+      this.soundLevel = this.oldSoundLevel ?? "100";
+      this.oldSoundLevel = null;
+
       this.player.volumeOn();
     } else {
+      this.oldSoundLevel = this.soundLevel;
+      this.soundLevel = "0";
+
       this.player.volumeMute();
     }
 
     this.controlsDrawer.updateBinaryButtonsState({
       [ControlName.VOLUME]: this.player.isVolumeOn,
     });
+    this.controlsDrawer.updateControlValues({
+      [ControlName.SOUND]: this.soundLevel,
+    });
+
     this.controlsDrawer.draw();
   }
 
@@ -438,18 +463,6 @@ export class PlayerModeService {
         ...stats.resolution,
       };
     }
-
-    if (!this.isShowStats) {
-      return;
-    }
-
-    this.statsDrawer.draw(stats);
-
-    this.controlsDrawer.setDisabled({
-      [ControlName.SNAPSHOT]: this.resolution === null,
-    });
-
-    this.controlsDrawer.draw();
   };
 
   private onChangeSpeed(event: Event) {
@@ -494,11 +507,51 @@ export class PlayerModeService {
 
     this.player.setVolume(Number(this.soundLevel) / 100);
 
+    if (this.soundLevel !== "0") {
+      this.player.volumeOn();
+    } else {
+      this.player.volumeMute();
+    }
+
     this.controlsDrawer.updateControlValues({
       [ControlName.SOUND]: this.soundLevel,
     });
+    this.controlsDrawer.updateBinaryButtonsState({
+      [ControlName.VOLUME]: this.soundLevel !== "0",
+    });
+
     this.controlsDrawer.draw();
   }
+
+  private changeScale(event: Event) {
+    const target = event.target as HTMLInputElement;
+
+    const newScale = target.value;
+
+    this.controlsDrawer.updateControlValues({
+      [ControlName.SCALE]: newScale,
+    });
+    this.controlsDrawer.draw();
+
+    this.eventBus.emit("set-timeline-scale", Number(newScale));
+  }
+
+  private onSetTimelineScaleOptions = ([current, options]: [
+    current: string,
+    options: SelectOption[]
+  ]) => {
+    this.timelineScaleOptions = options;
+
+    this.controlsDrawer.updateControlValues({
+      [ControlName.SCALE]: current,
+    });
+    this.controlsDrawer.updateSelectOptions(
+      ControlName.SCALE,
+      this.timelineScaleOptions
+    );
+
+    this.controlsDrawer.draw();
+  };
 
   private onMicMouseDown() {
     const liveConnection = this.modeConnection as LiveVideoService;
@@ -540,6 +593,10 @@ export class PlayerModeService {
     this.eventBus.on("stats", this.onUpdateStats);
     this.eventBus.on("cancel-export", this.resetExportMode);
     this.eventBus.on("play-enabled", this.enablePlay);
+    this.eventBus.on(
+      "set-timeline-scale-options",
+      this.onSetTimelineScaleOptions
+    );
   }
 
   private clearListeners() {

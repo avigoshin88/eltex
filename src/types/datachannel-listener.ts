@@ -43,19 +43,31 @@ export enum DatachannelMessageType {
    */
   KEY_FRAGMENT = "key_fragment",
 
+  /**
+   * Request: SET_SPEED
+   *
+   * Установить скорость воспроизведения
+   */
   SET_SPEED = "set_speed",
+  /**
+   * Response: SET_SPEED
+   *
+   * Ответ на установку скорости
+   */
+  SPEED = "speed",
+
   STOP_STREAM = "stop_stream",
 
   /**
-   * Request: GET_ARCHIVE_FRAGMENT
+   * Request: PLAY_STREAM
    *
-   * Запросить стрим фрагмента
+   * Начать стрим
    */
   PLAY_STREAM = "play_stream",
   /**
    * Request: GET_ARCHIVE_FRAGMENT
    *
-   * Запросить стрим фрагмента
+   * Ответ на начало стрима
    */
   PLAY = "play",
 
