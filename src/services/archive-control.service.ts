@@ -193,10 +193,26 @@ export class ArchiveControlService {
     }
   }
 
-  setCurrentTime(timestamp: number, isPreload = false) {
+  setCurrentTime(timestamp: number, isPreload = false, onlySave = false) {
     const rangeIndex = this.findRangeIndex(timestamp, timestamp);
     if (rangeIndex === -1) {
       this.logger.error("info", "Указанный range не найден в списке ranges.");
+      return;
+    }
+
+    if (!onlySave) {
+      this.currentTimestamp = timestamp;
+      this.fragmentIndex = rangeIndex;
+
+      this.logger.log(
+        "info",
+        "Установлен текущий range с индексом",
+        this.fragmentIndex,
+        "и временем",
+        this.currentTimestamp
+      );
+
+      this.initGenerator(this.currentTimestamp);
       return;
     }
 
