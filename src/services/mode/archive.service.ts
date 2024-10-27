@@ -318,15 +318,17 @@ export class ArchiveVideoService implements ModeService {
     this.timelineDrawer.draw(
       this.getVirtualCurrentTime(this.player.video.currentTime)
     );
-    this.archiveControl.setRanges(ranges);
 
     if (this.isFirstRangesFetch) {
+      this.archiveControl.setRanges(ranges);
+
       this.archiveControl.init();
       this.archiveControl.preloadRangeFragment();
       this.archiveControl.initSupportConnectInterval();
       this.isFirstRangesFetch = false;
     } else {
-      this.archiveControl.setCurrentTime(
+      this.archiveControl.updateRanges(
+        ranges,
         this.timelineDrawer.getCurrentTimestamp()
       );
     }
