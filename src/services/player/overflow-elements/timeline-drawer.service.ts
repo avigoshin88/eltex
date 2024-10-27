@@ -357,7 +357,6 @@ export class TimelineOverflowDrawer {
     const scrollContainerWidth =
       this.timelineElements.scrollContainer.offsetWidth;
 
-    // Устанавливаем scrollLeft так, чтобы трек был на правом краю
     let newScroll = 0;
     if (align === "right") {
       newScroll = trackLeft + trackWidth - scrollContainerWidth + offset;
