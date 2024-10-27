@@ -214,12 +214,6 @@ export class ArchiveControlService {
   }
 
   setCurrentTime(timestamp: number, isPreload = false, onlySave = false) {
-    console.log(
-      "🚀 ~ ArchiveControlService ~ setCurrentTime ~ onlySave:",
-      timestamp,
-      isPreload,
-      onlySave
-    );
     const rangeIndex = this.findRangeIndex(timestamp, timestamp);
     if (rangeIndex === -1) {
       this.logger.error("info", "Указанный range не найден в списке ranges.");
@@ -338,10 +332,7 @@ export class ArchiveControlService {
     }
 
     const rangeFragment = rangeFragmentResult.value;
-    console.log(
-      "🚀 ~ ArchiveControlService ~ preloadRangeFragment ~ rangeFragment:",
-      rangeFragment
-    );
+
     this.fragmentIndex = rangeFragment.fragmentIndex;
     this.currentSubFragment = rangeFragment.subFragmentIndex;
 
@@ -363,10 +354,7 @@ export class ArchiveControlService {
       }
 
       const rangeFragment = rangeFragmentResult.value;
-      console.log(
-        "🚀 ~ ArchiveControlService ~ scheduleNextPreload ~ rangeFragment:",
-        rangeFragment
-      );
+
       this.fragmentIndex = rangeFragment.fragmentIndex;
       this.currentSubFragment = rangeFragment.subFragmentIndex;
 
