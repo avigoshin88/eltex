@@ -208,19 +208,11 @@ export class ControlsOverflowDrawerService {
         break;
 
       case "range":
-        if (
-          this.shouldUpdateRange(
-            control as HTMLDivElement,
-            name as ControlName,
-            config
-          )
-        ) {
-          this.updateRange(
-            control as HTMLDivElement,
-            name as ControlName,
-            config
-          );
-        }
+        this.updateRange(
+          control as HTMLDivElement,
+          name as ControlName,
+          config
+        );
         break;
     }
   }
@@ -254,19 +246,6 @@ export class ControlsOverflowDrawerService {
   ): boolean {
     const currentValue = this.controlValues[name] ?? config.value;
     return select.value !== currentValue;
-  }
-
-  private shouldUpdateRange(
-    rangeContainer: HTMLDivElement,
-    name: ControlName,
-    config: RangeControlOptions
-  ): boolean {
-    const input = rangeContainer.querySelector("input[type='range']");
-    if (!input) return true;
-
-    const currentValue = this.controlValues[name] ?? config.value;
-    // @ts-ignore
-    return input.value !== currentValue;
   }
 
   private makeButton(
