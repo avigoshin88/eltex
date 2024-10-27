@@ -74,7 +74,6 @@
 
     const registerLiveTurn = (id) => {
       window.addEventListener(`peerconnection-status-${id}`, (event) => {
-        console.log("======", id, event);
         if (event.detail === "new") {
           setTimeout(() => {
             const event = new CustomEvent(`request-local-description-${id}`);
