@@ -8,7 +8,7 @@ import { TimelineElementsFactoryService } from "./timeline/timeline-elements-fac
 import { TimelineElementsService } from "./timeline/timeline-elements.service";
 import { formatTime } from "../../../helpers/format.helper";
 import {
-  TIMELINE_STEPS,
+  TIMELINE_DIVISION_STEPS,
   TIMELINE_STEPS_OPTIONS,
 } from "../../../constants/timeline-steps";
 import { EventBus } from "../../event-bus.service";
@@ -470,13 +470,11 @@ export class TimelineOverflowDrawer {
         ranges[ranges.length - 1].end_time - ranges[0].start_time;
       const containerWidth = this.container.offsetWidth;
 
-      const maxScale = containerWidth / totalTimeRange;
-
       const options = TIMELINE_STEPS_OPTIONS.filter(
-        (step) => Number(step.value) >= maxScale
-      ).sort((a, b) => Number(b.value) - Number(a.value));
+        (step) => Number(step.value) <= totalTimeRange
+      ).sort((a, b) => Number(a.value) - Number(b.value));
 
-      options.push({ label: "Max", value: String(maxScale) });
+      options.push({ label: "Max", value: String(totalTimeRange) });
 
       this.eventBus.emit("set-timeline-scale-options", [
         options[options.length - 1].value,
@@ -519,17 +517,21 @@ export class TimelineOverflowDrawer {
   private getStep() {
     const scaleFactor = this.scale;
 
-    const stepInfo = TIMELINE_STEPS.find((step) => scaleFactor > step.scale);
+    const stepInfo = TIMELINE_DIVISION_STEPS.find(
+      (step) => scaleFactor > step.scale
+    );
 
-    return stepInfo ?? TIMELINE_STEPS[TIMELINE_STEPS.length - 1];
+    return (
+      stepInfo ?? TIMELINE_DIVISION_STEPS[TIMELINE_DIVISION_STEPS.length - 1]
+    );
   }
 
   private setScale = (value: number) => {
-    // const containerWidth = this.container.offsetWidth;
+    const containerWidth = this.container.offsetWidth;
 
-    // this.scale = containerWidth / value;
+    this.scale = containerWidth / value;
 
-    this.scale = value;
+    // this.scale = value;
     this.draw(this.currentTime);
   };
 

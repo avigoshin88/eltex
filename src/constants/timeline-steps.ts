@@ -1,4 +1,6 @@
-const TIMELINE_STEPS = [
+import { SelectOption } from "../types/controls";
+
+const TIMELINE_DIVISION_STEPS = [
   { scale: 0.02, step: 1000, amplifier: 0.0001, label: "1 секунда" }, // 1 секунда
   { scale: 0.004, step: 5 * 1000, amplifier: 0.00005, label: "5 секунд" }, // 5 секунд
   { scale: 0.002, step: 10 * 1000, amplifier: 0.00002, label: "10 секунд" }, // 10 секунд
@@ -126,16 +128,22 @@ const TIMELINE_STEPS = [
   }, // 10 лет
 ];
 
-const TIMELINE_STEPS_OPTIONS = Array.from(TIMELINE_STEPS).map((step) => ({
-  label: step.label,
-  value: String(step.scale),
-}));
+const TIMELINE_STEPS_OPTIONS: SelectOption[] = [
+  { label: "7д", value: String(7 * 24 * 60 * 60 * 1000) },
+  { label: "1д", value: String(1 * 24 * 60 * 60 * 1000) },
+  { label: "12ч", value: String(12 * 60 * 60 * 1000) },
+  { label: "6ч", value: String(6 * 60 * 60 * 1000) },
+  { label: "1ч", value: String(1 * 60 * 60 * 1000) },
+  { label: "30мин", value: String(30 * 60 * 1000) },
+  { label: "10мин", value: String(10 * 60 * 1000) },
+  { label: "5м", value: String(5 * 60 * 1000) },
+];
 
 // Add more TIMELINE_STEPS for smoother transitions
-for (let i = 1; i < TIMELINE_STEPS.length; i++) {
-  const prevStep = TIMELINE_STEPS[i - 1];
-  const nextStep = TIMELINE_STEPS[i];
-  const numIntermediateSteps = 1024 / TIMELINE_STEPS.length;
+for (let i = 1; i < TIMELINE_DIVISION_STEPS.length; i++) {
+  const prevStep = TIMELINE_DIVISION_STEPS[i - 1];
+  const nextStep = TIMELINE_DIVISION_STEPS[i];
+  const numIntermediateSteps = 1024 / TIMELINE_DIVISION_STEPS.length;
 
   for (let j = 1; j < numIntermediateSteps; j++) {
     const scale =
@@ -144,7 +152,7 @@ for (let i = 1; i < TIMELINE_STEPS.length; i++) {
     const amplifier =
       prevStep.amplifier +
       ((nextStep.amplifier - prevStep.amplifier) / numIntermediateSteps) * j;
-    TIMELINE_STEPS.splice(i, 0, {
+    TIMELINE_DIVISION_STEPS.splice(i, 0, {
       scale,
       step: prevStep.step,
       amplifier,
@@ -154,4 +162,4 @@ for (let i = 1; i < TIMELINE_STEPS.length; i++) {
   }
 }
 
-export { TIMELINE_STEPS, TIMELINE_STEPS_OPTIONS };
+export { TIMELINE_DIVISION_STEPS, TIMELINE_STEPS_OPTIONS };
