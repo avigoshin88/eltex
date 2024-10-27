@@ -579,7 +579,6 @@ export class TimelineOverflowDrawer {
 
     this.scale = containerWidth / value;
 
-    // this.scale = value;
     this.draw(this.currentTime);
 
     this.scrollTrackToAlign(this.timelineElements.track!, "center");
