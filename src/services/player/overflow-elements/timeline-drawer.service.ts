@@ -4,160 +4,14 @@ import {
   ExportRangeCallback,
   TimelineClickCallback,
 } from "../../../types/timeline";
-import { format } from "date-fns";
 import { TimelineElementsFactoryService } from "./timeline/timeline-elements-factory.service";
 import { TimelineElementsService } from "./timeline/timeline-elements.service";
-
-const steps = [
-  { scale: 0.02, step: 1000, amplifier: 0.0001, label: "1 секунда" }, // 1 секунда
-  { scale: 0.004, step: 5 * 1000, amplifier: 0.00005, label: "5 секунд" }, // 5 секунд
-  { scale: 0.002, step: 10 * 1000, amplifier: 0.00002, label: "10 секунд" }, // 10 секунд
-  { scale: 0.001, step: 20 * 1000, amplifier: 0.00001, label: "20 секунд" }, // 20 секунд
-  { scale: 0.0005, step: 30 * 1000, amplifier: 0.000005, label: "30 секунд" }, // 30 секунд
-  {
-    scale: 0.0002,
-    step: 1 * 60 * 1000,
-    amplifier: 0.000002,
-    label: "1 минута",
-  }, // 1 минута
-  {
-    scale: 0.0001,
-    step: 2 * 60 * 1000,
-    amplifier: 0.000001,
-    label: "2 минуты",
-  }, // 2 минуты
-  {
-    scale: 0.00005,
-    step: 5 * 60 * 1000,
-    amplifier: 0.0000005,
-    label: "5 минут",
-  }, // 5 минут
-  {
-    scale: 0.00002,
-    step: 10 * 60 * 1000,
-    amplifier: 0.0000002,
-    label: "10 минут",
-  }, // 10 минут
-  {
-    scale: 0.00001,
-    step: 15 * 60 * 1000,
-    amplifier: 0.0000001,
-    label: "15 минут",
-  }, // 15 минут
-  {
-    scale: 0.000005,
-    step: 30 * 60 * 1000,
-    amplifier: 0.00000005,
-    label: "30 минут",
-  }, // 30 минут
-  {
-    scale: 0.000002,
-    step: 1 * 60 * 60 * 1000,
-    amplifier: 0.00000002,
-    label: "1 час",
-  }, // 1 час
-  {
-    scale: 0.000001,
-    step: 6 * 60 * 60 * 1000,
-    amplifier: 0.00000001,
-    label: "6 часов",
-  }, // 6 часов
-  {
-    scale: 0.0000005,
-    step: 12 * 60 * 60 * 1000,
-    amplifier: 0.000000005,
-    label: "12 часов",
-  }, // 12 часов
-  {
-    scale: 0.0000002,
-    step: 1 * 24 * 60 * 60 * 1000,
-    amplifier: 0.000000002,
-    label: "1 день",
-  }, // 1 день
-  {
-    scale: 0.0000001,
-    step: 2 * 24 * 60 * 60 * 1000,
-    amplifier: 0.000000001,
-    label: "2 дня",
-  }, // 2 дня
-  {
-    scale: 0.00000005,
-    step: 7 * 24 * 60 * 60 * 1000,
-    amplifier: 0.0000000005,
-    label: "1 неделя",
-  }, // 1 неделя
-  {
-    scale: 0.00000002,
-    step: 14 * 24 * 60 * 60 * 1000,
-    amplifier: 0.0000000002,
-    label: "2 недели",
-  }, // 2 недели
-  {
-    scale: 0.00000001,
-    step: 1 * 30 * 24 * 60 * 60 * 1000,
-    amplifier: 0.0000000001,
-    label: "1 месяц",
-  }, // 1 месяц
-  {
-    scale: 0.000000005,
-    step: 3 * 30 * 24 * 60 * 60 * 1000,
-    amplifier: 0.00000000005,
-    label: "1 квартал",
-  }, // 1 квартал
-  {
-    scale: 0.000000002,
-    step: 6 * 30 * 24 * 60 * 60 * 1000,
-    amplifier: 0.00000000002,
-    label: "полгода",
-  }, // полгода
-  {
-    scale: 0.000000001,
-    step: 1 * 365 * 24 * 60 * 60 * 1000,
-    amplifier: 0.00000000001,
-    label: "1 год",
-  }, // 1 год
-  {
-    scale: 0.0000000005,
-    step: 2 * 365 * 24 * 60 * 60 * 1000,
-    amplifier: 0.000000000005,
-    label: "2 года",
-  }, // 2 года
-  {
-    scale: 0.0000000002,
-    step: 5 * 365 * 24 * 60 * 60 * 1000,
-    amplifier: 0.000000000002,
-    label: "5 лет",
-  }, // 5 лет
-  {
-    scale: 0.0000000001,
-    step: 10 * 365 * 24 * 60 * 60 * 1000,
-    amplifier: 0.000000000001,
-    label: "10 лет",
-  }, // 10 лет
-];
-
-// Add more steps for smoother transitions
-for (let i = 1; i < steps.length; i++) {
-  const prevStep = steps[i - 1];
-  const nextStep = steps[i];
-  const numIntermediateSteps = 1024 / steps.length;
-
-  for (let j = 1; j < numIntermediateSteps; j++) {
-    const scale =
-      prevStep.scale +
-      ((nextStep.scale - prevStep.scale) / numIntermediateSteps) * j;
-    const amplifier =
-      prevStep.amplifier +
-      ((nextStep.amplifier - prevStep.amplifier) / numIntermediateSteps) * j;
-    steps.splice(i, 0, {
-      scale,
-      step: prevStep.step,
-      amplifier,
-      label: `${prevStep.label} - ${nextStep.label}`,
-    });
-    i++;
-  }
-}
+import { formatTime } from "../../../helpers/format.helper";
+import {
+  TIMELINE_STEPS,
+  TIMELINE_STEPS_OPTIONS,
+} from "../../../constants/timeline-steps";
+import { EventBus } from "../../event-bus.service";
 
 export class TimelineOverflowDrawer {
   private ranges: RangeData[] = [];
@@ -187,10 +41,15 @@ export class TimelineOverflowDrawer {
   private exportEndTime: Nullable<number> = null; // Время конца выбранного диапазона
   private exportCallback: Nullable<ExportRangeCallback> = null; // Callback для экспорта
 
+  private eventBus: EventBus;
+
   constructor(
+    private id: string,
     container: HTMLDivElement,
     clickCallback?: TimelineClickCallback
   ) {
+    this.eventBus = EventBus.getInstance(this.id);
+
     this.clickCallback = clickCallback ?? (() => {});
     this.container = container;
 
@@ -218,6 +77,7 @@ export class TimelineOverflowDrawer {
     this.trackObserver.observe(this.timelineElements.track!);
 
     this.registerListeners();
+    this.setupEvents();
   }
 
   draw(currentTime: number): void {
@@ -610,6 +470,19 @@ export class TimelineOverflowDrawer {
         ranges[ranges.length - 1].end_time - ranges[0].start_time;
       const containerWidth = this.container.offsetWidth;
 
+      const maxScale = containerWidth / totalTimeRange;
+
+      const options = TIMELINE_STEPS_OPTIONS.filter(
+        (step) => Number(step.value) >= maxScale
+      ).sort((a, b) => Number(b.value) - Number(a.value));
+
+      options.push({ label: "Max", value: String(maxScale) });
+
+      this.eventBus.emit("set-timeline-scale-options", [
+        options[options.length - 1].value,
+        options,
+      ]);
+
       // Устанавливаем начальный масштаб так, чтобы диапазоны занимали всю ширину контейнера
       this.scale = containerWidth / totalTimeRange;
       this.draw(this.currentStartTime); // Отрисовка шкалы после установки диапазонов
@@ -623,6 +496,7 @@ export class TimelineOverflowDrawer {
 
     this.currentTime = 0;
 
+    this.clearEvents();
     this.clearListeners();
 
     this.trackObserver?.disconnect();
@@ -639,30 +513,25 @@ export class TimelineOverflowDrawer {
   }
 
   private formatTime(time: number): string {
-    const date = new Date(time);
-
-    if (this.scale >= 0.00001) {
-      // Малый масштаб: часы, минуты, секунды
-      return format(date, "HH:mm:ss");
-    } else if (this.scale >= 0.000001) {
-      // Средний масштаб: день, месяц, часы, минуты
-      return format(date, "dd.MM HH:mm");
-    } else if (this.scale >= 0.00000001) {
-      // Большой масштаб: день, месяц
-      return format(date, "dd.MM");
-    } else {
-      // Очень большой масштаб: год
-      return format(date, "yyyy");
-    }
+    return formatTime(time, this.scale);
   }
 
   private getStep() {
     const scaleFactor = this.scale;
 
-    const stepInfo = steps.find((step) => scaleFactor > step.scale);
+    const stepInfo = TIMELINE_STEPS.find((step) => scaleFactor > step.scale);
 
-    return stepInfo ?? steps[steps.length - 1];
+    return stepInfo ?? TIMELINE_STEPS[TIMELINE_STEPS.length - 1];
   }
+
+  private setScale = (value: number) => {
+    // const containerWidth = this.container.offsetWidth;
+
+    // this.scale = containerWidth / value;
+
+    this.scale = value;
+    this.draw(this.currentTime);
+  };
 
   private clickEventListener(event: MouseEvent): void {
     event.preventDefault();
@@ -898,5 +767,13 @@ export class TimelineOverflowDrawer {
       "click",
       this.clickEventListener
     );
+  }
+
+  private setupEvents() {
+    this.eventBus.on("set-timeline-scale", this.setScale);
+  }
+
+  private clearEvents() {
+    this.eventBus.off("set-timeline-scale", this.setScale);
   }
 }

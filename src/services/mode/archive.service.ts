@@ -102,6 +102,7 @@ export class ArchiveVideoService implements ModeService {
     );
 
     this.timelineDrawer = new TimelineOverflowDrawer(
+      this.id,
       this.player.container,
       this.onChangeCurrentTime.bind(this)
     );

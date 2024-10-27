@@ -1,6 +1,6 @@
 import { Mode } from "../../constants/mode";
 import { ModeService } from "../../interfaces/mode";
-import { ControlName } from "../../types/controls";
+import { ControlName, SelectOption } from "../../types/controls";
 import { ConnectionOptions } from "../../types/connection-options";
 import { ArchiveControlService } from "../archive-control.service";
 import { Logger } from "../logger/logger.service";
@@ -15,6 +15,7 @@ import { StatsOverflowDrawerService } from "./overflow-elements/stats-drawer.ser
 import { Nullable } from "../../types/global";
 import { CustomEventsService } from "../custom-events.service";
 import { PlayerStatsService } from "./player-stats.service";
+import { TIMELINE_STEPS_OPTIONS } from "../../constants/timeline-steps";
 
 const quality = {
   sd: { name: "SD", bitrate: 500 },
@@ -50,6 +51,8 @@ export class PlayerModeService {
   private resolution: Nullable<Stats["resolution"]> = null;
   private isShowStats = false;
   private metaEnabled = false;
+
+  private timelineScaleOptions: SelectOption[] = [];
 
   constructor(
     private id: string,
@@ -215,6 +218,15 @@ export class PlayerModeService {
           },
           value: this.soundLevel,
           getLabel: () => `${this.soundLevel}%`,
+        },
+
+        [ControlName.SCALE]: {
+          type: "select",
+          listeners: {
+            change: this.changeScale.bind(this),
+          },
+          value: undefined,
+          options: this.timelineScaleOptions,
         },
       }
     );
@@ -515,6 +527,29 @@ export class PlayerModeService {
     this.controlsDrawer.draw();
   }
 
+  private changeScale(event: Event) {
+    const target = event.target as HTMLInputElement;
+
+    this.eventBus.emit("set-timeline-scale", Number(target.value));
+  }
+
+  private onSetTimelineScaleOptions = ([current, options]: [
+    current: string,
+    options: SelectOption[]
+  ]) => {
+    this.timelineScaleOptions = options;
+
+    this.controlsDrawer.updateControlValues({
+      [ControlName.SCALE]: current,
+    });
+    this.controlsDrawer.updateSelectOptions(
+      ControlName.SCALE,
+      this.timelineScaleOptions
+    );
+
+    this.controlsDrawer.draw();
+  };
+
   private onMicMouseDown() {
     const liveConnection = this.modeConnection as LiveVideoService;
     if (liveConnection) {
@@ -555,6 +590,10 @@ export class PlayerModeService {
     this.eventBus.on("stats", this.onUpdateStats);
     this.eventBus.on("cancel-export", this.resetExportMode);
     this.eventBus.on("play-enabled", this.enablePlay);
+    this.eventBus.on(
+      "set-timeline-scale-options",
+      this.onSetTimelineScaleOptions
+    );
   }
 
   private clearListeners() {
