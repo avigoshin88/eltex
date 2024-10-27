@@ -117,6 +117,35 @@ export class ArchiveControlService {
       "Переключение на следующий фрагмент с индексом",
       this.fragmentIndex
     );
+
+    this.initGenerator(this.currentTimestamp);
+
+    this.isPause = false;
+
+    this.eventBus.emit("new-archive-fragment-started", this.currentFragment);
+    this.clearPreloadTimeout();
+    this.preloadRangeFragment(); // Переход на новый range
+  }
+
+  toPrevFragment() {
+    if (!this.prevFragment) {
+      this.logger.warn(
+        "info",
+        "Нельзя переключиться к предыдущему фрагменту: текущий фрагмент первый."
+      );
+      return;
+    }
+
+    this.fragmentIndex -= 1;
+    this.currentTimestamp = this.currentFragment.start_time;
+    this.logger.log(
+      "info",
+      "Переключение на предыдущий фрагмент с индексом",
+      this.fragmentIndex
+    );
+
+    this.initGenerator(this.currentTimestamp);
+
     this.isPause = false;
 
     this.eventBus.emit("new-archive-fragment-started", this.currentFragment);
@@ -145,30 +174,6 @@ export class ArchiveControlService {
 
     this.initGenerator(this.currentTimestamp);
     this.preloadRangeFragment();
-  }
-
-  toPrevFragment() {
-    if (!this.prevFragment) {
-      this.logger.warn(
-        "info",
-        "Нельзя переключиться к предыдущему фрагменту: текущий фрагмент первый."
-      );
-      return;
-    }
-
-    this.fragmentIndex -= 1;
-    this.currentTimestamp = this.currentFragment.start_time;
-    this.logger.log(
-      "info",
-      "Переключение на предыдущий фрагмент с индексом",
-      this.fragmentIndex
-    );
-
-    this.isPause = false;
-
-    this.eventBus.emit("new-archive-fragment-started", this.currentFragment);
-    this.clearPreloadTimeout();
-    this.preloadRangeFragment(); // Переход на новый range
   }
 
   setCurrentRange(
