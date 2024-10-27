@@ -310,7 +310,10 @@ export class ArchiveVideoService implements ModeService {
 
     this.ranges = ranges;
 
-    this.timelineDrawer.setOptions(this.rangeMapper.calc(ranges));
+    this.timelineDrawer.setOptions(
+      this.rangeMapper.calc(ranges),
+      this.isFirstRangesFetch
+    );
     this.timelineDrawer.draw(
       this.getVirtualCurrentTime(this.player.video.currentTime)
     );

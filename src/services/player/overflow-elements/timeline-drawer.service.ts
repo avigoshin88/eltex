@@ -600,19 +600,20 @@ export class TimelineOverflowDrawer {
     return null; // Если не найден диапазон
   }
 
-  setOptions(ranges: RangeData[]): void {
+  setOptions(ranges: RangeData[], updateScale = true): void {
     this.ranges = ranges;
     this.currentStartTime = this.ranges[0]?.start_time || 0;
     this.isReady = true;
 
-    const totalTimeRange =
-      ranges[ranges.length - 1].end_time - ranges[0].start_time;
-    const containerWidth = this.container.offsetWidth;
+    if (updateScale) {
+      const totalTimeRange =
+        ranges[ranges.length - 1].end_time - ranges[0].start_time;
+      const containerWidth = this.container.offsetWidth;
 
-    // Устанавливаем начальный масштаб так, чтобы диапазоны занимали всю ширину контейнера
-    this.scale = containerWidth / totalTimeRange;
-
-    this.draw(this.currentStartTime); // Отрисовка шкалы после установки диапазонов
+      // Устанавливаем начальный масштаб так, чтобы диапазоны занимали всю ширину контейнера
+      this.scale = containerWidth / totalTimeRange;
+      this.draw(this.currentStartTime); // Отрисовка шкалы после установки диапазонов
+    }
   }
 
   clear(): void {
