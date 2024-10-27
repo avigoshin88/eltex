@@ -463,6 +463,12 @@ export class PlayerModeService {
         ...stats.resolution,
       };
     }
+
+    if (!this.isShowStats) {
+      return;
+    }
+
+    this.statsDrawer.draw(stats);
   };
 
   private onChangeSpeed(event: Event) {

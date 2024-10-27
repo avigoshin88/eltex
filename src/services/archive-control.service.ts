@@ -33,6 +33,7 @@ export class ArchiveControlService {
 
   private ranges: RangeDto[] = [];
   private fragmentIndex = 0;
+  private currentSubFragment = 0;
   private rangeFragmentsGenerator!: Generator<RangeFragment>;
   private connectionSupporterId: Nullable<NodeJS.Timeout> = null;
   private preloadTimeoutId: Nullable<NodeJS.Timeout> = null;
@@ -161,6 +162,25 @@ export class ArchiveControlService {
     this.preloadRangeFragment();
   }
 
+  updateRanges(ranges: RangeDto[], currentTime: number) {
+    this.ranges = ranges;
+    this.currentTimestamp = currentTime;
+    this.logger.log("info", "Обновлены ranges:", ranges);
+
+    const rangeFragmentResult = this.rangeFragmentsGenerator.next();
+    if (rangeFragmentResult.done) {
+      this.logger.log("info", "Все фрагменты загружены.");
+      return;
+    }
+
+    const nextSubFragment = rangeFragmentResult.value;
+
+    this.fragmentIndex = nextSubFragment.fragmentIndex;
+    this.currentSubFragment = nextSubFragment.subFragmentIndex;
+
+    this.initGenerator(this.currentTimestamp, this.currentSubFragment);
+  }
+
   setCurrentRange(
     timestamp: number,
     range: RangeDto,
@@ -200,7 +220,7 @@ export class ArchiveControlService {
       return;
     }
 
-    if (!onlySave) {
+    if (onlySave) {
       this.currentTimestamp = timestamp;
       this.fragmentIndex = rangeIndex;
 
@@ -242,13 +262,16 @@ export class ArchiveControlService {
     this.speed = speed;
   }
 
-  private initGenerator(startTimestamp: number) {
-    this.rangeFragmentsGenerator =
-      this.splitRangeIntoFragmentsLazy(startTimestamp);
+  private initGenerator(startTimestamp: number, subFragmentIndex?: number) {
+    this.rangeFragmentsGenerator = this.splitRangeIntoFragmentsLazy(
+      startTimestamp,
+      subFragmentIndex
+    );
   }
 
   private *splitRangeIntoFragmentsLazy(
-    startTimestamp: number
+    startTimestamp: number,
+    subFragmentIndex?: number
   ): Generator<RangeFragment> {
     for (
       let rangeIndex = this.fragmentIndex;
@@ -264,6 +287,14 @@ export class ArchiveControlService {
         rangeFragmentStart = startTimestamp;
       }
 
+      if (subFragmentIndex !== undefined) {
+        rangeFragmentStart =
+          range.start_time + subFragmentIndex * preloadInterval * this.speed;
+        if (rangeFragmentStart >= range.end_time) {
+          continue;
+        }
+      }
+
       while (rangeFragmentStart < range.end_time) {
         const interval = preloadInterval * this.speed;
 
@@ -273,7 +304,7 @@ export class ArchiveControlService {
         );
         const fragmentDuration = rangeFragmentEnd - rangeFragmentStart;
 
-        const subFragmentIndex = Math.floor(
+        const currentSubFragmentIndex = Math.floor(
           (rangeFragmentStart - range.start_time) / interval
         );
 
@@ -282,7 +313,7 @@ export class ArchiveControlService {
           end_time: rangeFragmentEnd,
           duration: fragmentDuration,
           fragmentIndex: rangeIndex,
-          subFragmentIndex: subFragmentIndex,
+          subFragmentIndex: currentSubFragmentIndex,
           isLastFragment: rangeFragmentEnd >= range.end_time,
         };
 
@@ -301,6 +332,10 @@ export class ArchiveControlService {
     }
 
     const rangeFragment = rangeFragmentResult.value;
+
+    this.fragmentIndex = rangeFragment.fragmentIndex;
+    this.currentSubFragment = rangeFragment.subFragmentIndex;
+
     this.emit(rangeFragment, preload); // Первый фрагмент
     this.isFirstPreloadDone = true; // Флаг того, что первый фрагмент отправлен
   }
@@ -319,6 +354,10 @@ export class ArchiveControlService {
       }
 
       const rangeFragment = rangeFragmentResult.value;
+
+      this.fragmentIndex = rangeFragment.fragmentIndex;
+      this.currentSubFragment = rangeFragment.subFragmentIndex;
+
       const fragmentDuration = rangeFragment.duration;
       const nextPreloadDelay =
         Math.max(0, fragmentDuration - preloadRangeFragmentTimeout) /
