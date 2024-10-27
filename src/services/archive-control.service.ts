@@ -82,7 +82,6 @@ export class ArchiveControlService {
       "info",
       "Инициализация воспроизведения с начального фрагмента."
     );
-    this.initSupportConnectInterval();
   }
 
   clear() {
@@ -332,8 +331,9 @@ export class ArchiveControlService {
     }
   }
 
-  private initSupportConnectInterval() {
+  public initSupportConnectInterval() {
     this.logger.log("info", "Запуск интервала поддержки подключения.");
+    this.clearSupportConnectInterval();
     this.connectionSupporterId = setInterval(() => {
       this.supportConnect();
     }, connectionSupportInterval);
