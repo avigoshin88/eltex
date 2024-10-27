@@ -26,6 +26,7 @@ export class TimelineOverflowDrawer {
   private isReady: boolean = false; // Флаг, указывающий готовность к отрисовке
   private clickCallback: TimelineClickCallback; // Callback для кликов
 
+  private scrollTimeout: Nullable<NodeJS.Timeout> = null;
   private isUserScrolling: boolean = false;
   private isProgrammaticScroll: boolean = false;
   private userScrollTimeout: Nullable<NodeJS.Timeout> = null;
@@ -326,7 +327,6 @@ export class TimelineOverflowDrawer {
     }
 
     if (trackEntry.isIntersecting) {
-      this.isUserScrolling = false;
       return;
     }
 
@@ -334,7 +334,56 @@ export class TimelineOverflowDrawer {
       return;
     }
 
-    this.scrollToTrackRightEdge();
+    this.scrollTrackToAlign(this.timelineElements.track!, "right");
+  }
+
+  public scrollTrackToAlign(
+    track: HTMLElement,
+    align: "center" | "left" | "right",
+    offset = 0
+  ) {
+    if (
+      !this.timelineElements.scrollContainer ||
+      !this.timelineElements.timelineContainer
+    )
+      return;
+
+    // Получаем позицию трека относительно timelineElements.timelineContainer
+    const trackLeft = track.offsetLeft;
+    const trackRight = track.offsetLeft;
+    const trackWidth = track.offsetWidth;
+
+    // Рассчитываем необходимый scrollLeft
+    const scrollContainerWidth =
+      this.timelineElements.scrollContainer.offsetWidth;
+
+    // Устанавливаем scrollLeft так, чтобы трек был на правом краю
+    let newScroll = 0;
+    if (align === "right") {
+      newScroll = trackLeft + trackWidth - scrollContainerWidth + offset;
+    } else if (align === "left") {
+      newScroll = trackRight - offset;
+    } else {
+      newScroll =
+        trackLeft - scrollContainerWidth / 2 + trackWidth / 2 + offset;
+    }
+
+    // Ограничиваем scrollLeft допустимыми значениями
+    const maxScrollLeft =
+      this.timelineElements.scrollContainer.scrollWidth - scrollContainerWidth;
+    newScroll = Math.max(0, Math.min(newScroll, maxScrollLeft));
+
+    // Устанавливаем флаг программной прокрутки
+    this.isProgrammaticScroll = true;
+
+    // Используем плавную прокрутку
+    this.timelineElements.scrollContainer.scrollTo({
+      left: newScroll,
+      behavior: "smooth",
+    });
+
+    // Начинаем отслеживать завершение прокрутки
+    this.monitorProgrammaticScrollEnd();
   }
 
   public scrollToTrackRightEdge(): void {
@@ -533,6 +582,8 @@ export class TimelineOverflowDrawer {
 
     // this.scale = value;
     this.draw(this.currentTime);
+
+    this.scrollTrackToAlign(this.timelineElements.track!, "center");
   };
 
   private clickEventListener(event: MouseEvent): void {
@@ -605,6 +656,7 @@ export class TimelineOverflowDrawer {
 
   private scrollEventListener() {
     // Очищаем предыдущий таймер завершения прокрутки
+
     if (this.scrollEndTimeout) {
       clearTimeout(this.scrollEndTimeout);
     }
@@ -629,13 +681,29 @@ export class TimelineOverflowDrawer {
       clearTimeout(this.userScrollTimeout);
     }
 
-    const rangesDuration =
-      this.ranges[this.ranges.length - 1].end_time - this.ranges[0].start_time;
-
     // Устанавливаем таймер для сброса флага пользовательской прокрутки
     this.userScrollTimeout = setTimeout(() => {
       this.isUserScrolling = false;
-    }, rangesDuration);
+
+      if (this.isProgrammaticScroll) {
+        this.isProgrammaticScroll = false;
+      }
+    }, 1000);
+
+    if (this.scrollTimeout) {
+      clearTimeout(this.scrollTimeout);
+    }
+
+    const trackScroll = this.timelineElements.track!.offsetLeft;
+
+    this.scrollTimeout = setTimeout(() => {
+      const newTrackScroll = this.timelineElements.track!.offsetLeft;
+      this.scrollTrackToAlign(
+        this.timelineElements.track!,
+        "center",
+        newTrackScroll - trackScroll
+      );
+    }, 2000);
 
     const startTime = this.ranges[0]?.start_time || 0;
     const endTime = this.ranges[this.ranges.length - 1]?.end_time || 0;
@@ -746,10 +814,10 @@ export class TimelineOverflowDrawer {
       "scroll",
       this.scrollEventListener.bind(this)
     );
-    this.timelineElements.timelineContainer?.addEventListener(
-      "wheel",
-      this.wheelEventListener.bind(this)
-    );
+    // this.timelineElements.timelineContainer?.addEventListener(
+    //   "wheel",
+    //   this.wheelEventListener.bind(this)
+    // );
     this.timelineElements.timelineContainer?.addEventListener(
       "click",
       this.clickEventListener.bind(this)
@@ -761,10 +829,10 @@ export class TimelineOverflowDrawer {
       "scroll",
       this.scrollEventListener
     );
-    this.timelineElements.timelineContainer?.removeEventListener(
-      "wheel",
-      this.wheelEventListener
-    );
+    // this.timelineElements.timelineContainer?.removeEventListener(
+    //   "wheel",
+    //   this.wheelEventListener
+    // );
     this.timelineElements.timelineContainer?.removeEventListener(
       "click",
       this.clickEventListener
