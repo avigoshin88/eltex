@@ -530,7 +530,14 @@ export class PlayerModeService {
   private changeScale(event: Event) {
     const target = event.target as HTMLInputElement;
 
-    this.eventBus.emit("set-timeline-scale", Number(target.value));
+    const newScale = target.value;
+
+    this.controlsDrawer.updateControlValues({
+      [ControlName.SCALE]: newScale,
+    });
+    this.controlsDrawer.draw();
+
+    this.eventBus.emit("set-timeline-scale", Number(newScale));
   }
 
   private onSetTimelineScaleOptions = ([current, options]: [
