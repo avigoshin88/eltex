@@ -721,93 +721,93 @@ export class TimelineOverflowDrawer {
     );
   }
 
-  private wheelEventListener(event: WheelEvent) {
-    event.preventDefault();
+  // private wheelEventListener(event: WheelEvent) {
+  //   event.preventDefault();
 
-    if (event.shiftKey) {
-      // Если зажата клавиша Shift — горизонтальная прокрутка
-      this.container.scrollLeft += event.deltaY;
-    } else {
-      // Иначе — изменение масштаба
+  //   if (event.shiftKey) {
+  //     // Если зажата клавиша Shift — горизонтальная прокрутка
+  //     this.container.scrollLeft += event.deltaY;
+  //   } else {
+  //     // Иначе — изменение масштаба
 
-      // Устанавливаем флаг пользовательского взаимодействия
-      this.isUserScrolling = true;
+  //     // Устанавливаем флаг пользовательского взаимодействия
+  //     this.isUserScrolling = true;
 
-      // Очищаем предыдущий таймер, если он был установлен
-      if (this.userScrollTimeout) {
-        clearTimeout(this.userScrollTimeout);
-      }
+  //     // Очищаем предыдущий таймер, если он был установлен
+  //     if (this.userScrollTimeout) {
+  //       clearTimeout(this.userScrollTimeout);
+  //     }
 
-      // Устанавливаем таймер для сброса флага пользовательского взаимодействия
-      // Например, через 2 секунды после последнего масштабирования
-      this.userScrollTimeout = setTimeout(() => {
-        this.isUserScrolling = false;
-      }, 2000);
+  //     // Устанавливаем таймер для сброса флага пользовательского взаимодействия
+  //     // Например, через 2 секунды после последнего масштабирования
+  //     this.userScrollTimeout = setTimeout(() => {
+  //       this.isUserScrolling = false;
+  //     }, 2000);
 
-      // Ограничим максимальные изменения при каждом событии скролла
-      // const scaleChange = Math.sign(event.deltaY) *  0.000002;
-      const scaleChange = Math.sign(event.deltaY) * this.getStep().amplifier; // Более мелкий шаг для плавности
+  //     // Ограничим максимальные изменения при каждом событии скролла
+  //     // const scaleChange = Math.sign(event.deltaY) *  0.000002;
+  //     const scaleChange = Math.sign(event.deltaY) * this.getStep().amplifier; // Более мелкий шаг для плавности
 
-      const totalTimeRange =
-        this.ranges[this.ranges.length - 1].end_time -
-        this.ranges[0].start_time;
-      const containerWidth = this.container.offsetWidth;
+  //     const totalTimeRange =
+  //       this.ranges[this.ranges.length - 1].end_time -
+  //       this.ranges[0].start_time;
+  //     const containerWidth = this.container.offsetWidth;
 
-      // Рассчитаем максимальный масштаб так, чтобы диапазоны не могли выходить за пределы контейнера
-      const maxScale = 1; // Масштабирование не должно превышать единичный масштаб
-      const minScale = containerWidth / totalTimeRange; // Минимальный масштаб, при котором диапазоны занимают контейнер
+  //     // Рассчитаем максимальный масштаб так, чтобы диапазоны не могли выходить за пределы контейнера
+  //     const maxScale = 1; // Масштабирование не должно превышать единичный масштаб
+  //     const minScale = containerWidth / totalTimeRange; // Минимальный масштаб, при котором диапазоны занимают контейнер
 
-      // Текущее значение масштаба перед изменением
-      const previousScale = this.scale;
+  //     // Текущее значение масштаба перед изменением
+  //     const previousScale = this.scale;
 
-      // Ограничиваем масштаб значениями от minScale до maxScale
-      this.scale = Math.min(
-        maxScale,
-        Math.max(minScale, this.scale + scaleChange)
-      );
+  //     // Ограничиваем масштаб значениями от minScale до maxScale
+  //     this.scale = Math.min(
+  //       maxScale,
+  //       Math.max(minScale, this.scale + scaleChange)
+  //     );
 
-      if (this.isReady) {
-        // Рассчитаем позицию трека относительно предыдущего масштаба
-        const track = this.timelineElements.track;
-        if (track) {
-          const trackLeft = track.offsetLeft; // Позиция трека до масштабирования
-          const visibleWidth =
-            this.timelineElements.scrollContainer!.offsetWidth; // Ширина видимой области
+  //     if (this.isReady) {
+  //       // Рассчитаем позицию трека относительно предыдущего масштаба
+  //       const track = this.timelineElements.track;
+  //       if (track) {
+  //         const trackLeft = track.offsetLeft; // Позиция трека до масштабирования
+  //         const visibleWidth =
+  //           this.timelineElements.scrollContainer!.offsetWidth; // Ширина видимой области
 
-          // Сохраним смещение относительно центра или границы
-          let trackOffsetFromLeft =
-            trackLeft - this.timelineElements.scrollContainer!.scrollLeft;
+  //         // Сохраним смещение относительно центра или границы
+  //         let trackOffsetFromLeft =
+  //           trackLeft - this.timelineElements.scrollContainer!.scrollLeft;
 
-          if (trackOffsetFromLeft > visibleWidth / 2) {
-            trackOffsetFromLeft = visibleWidth / 2; // Центрируем трек, если он далеко справа
-          } else if (trackLeft <= 0) {
-            trackOffsetFromLeft = 0; // Трек в самом начале
-          }
+  //         if (trackOffsetFromLeft > visibleWidth / 2) {
+  //           trackOffsetFromLeft = visibleWidth / 2; // Центрируем трек, если он далеко справа
+  //         } else if (trackLeft <= 0) {
+  //           trackOffsetFromLeft = 0; // Трек в самом начале
+  //         }
 
-          // Обновляем отрисовку
-          this.draw(this.currentTime);
+  //         // Обновляем отрисовку
+  //         this.draw(this.currentTime);
 
-          // После перерисовки восстанавливаем позицию трека
-          const newTrackLeft = (trackLeft / previousScale) * this.scale;
-          const newScrollLeft = Math.max(0, newTrackLeft - trackOffsetFromLeft);
-          this.timelineElements.scrollContainer!.scrollTo({
-            left: newScrollLeft,
-            behavior: "auto",
-          });
-        } else {
-          // Если трека нет, просто обновляем таймлайн
-          this.draw(this.currentTime);
-        }
+  //         // После перерисовки восстанавливаем позицию трека
+  //         const newTrackLeft = (trackLeft / previousScale) * this.scale;
+  //         const newScrollLeft = Math.max(0, newTrackLeft - trackOffsetFromLeft);
+  //         this.timelineElements.scrollContainer!.scrollTo({
+  //           left: newScrollLeft,
+  //           behavior: "auto",
+  //         });
+  //       } else {
+  //         // Если трека нет, просто обновляем таймлайн
+  //         this.draw(this.currentTime);
+  //       }
 
-        // Обновляем маркеры экспорта при изменении масштаба
-        this.updateExportMarkers(
-          this.ranges[0]?.start_time || 0,
-          totalTimeRange,
-          totalTimeRange * this.scale
-        );
-      }
-    }
-  }
+  //       // Обновляем маркеры экспорта при изменении масштаба
+  //       this.updateExportMarkers(
+  //         this.ranges[0]?.start_time || 0,
+  //         totalTimeRange,
+  //         totalTimeRange * this.scale
+  //       );
+  //     }
+  //   }
+  // }
 
   private registerListeners() {
     this.timelineElements.scrollContainer?.addEventListener(

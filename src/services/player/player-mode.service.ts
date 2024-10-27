@@ -15,7 +15,6 @@ import { StatsOverflowDrawerService } from "./overflow-elements/stats-drawer.ser
 import { Nullable } from "../../types/global";
 import { CustomEventsService } from "../custom-events.service";
 import { PlayerStatsService } from "./player-stats.service";
-import { TIMELINE_STEPS_OPTIONS } from "../../constants/timeline-steps";
 
 const quality = {
   sd: { name: "SD", bitrate: 500 },
