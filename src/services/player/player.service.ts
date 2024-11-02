@@ -5,15 +5,21 @@ export class VideoPlayerService {
   container!: HTMLDivElement;
   videoContainer!: HTMLDivElement;
   video!: HTMLVideoElement;
+  private placeholder: HTMLDivElement | undefined;
 
   isPlaying = true;
   isVolumeOn = false;
+  cameraName = "";
 
-  init() {
-    const { container, videoContainer, video } = this.builder.createPlayer();
+  init(cameraName: string) {
+    this.cameraName = cameraName;
+
+    const { container, videoContainer, video, placeholder } =
+      this.builder.createPlayer(this.cameraName);
 
     this.container = container;
     this.videoContainer = videoContainer;
+    this.placeholder = placeholder;
 
     this.video = video;
 
@@ -24,7 +30,7 @@ export class VideoPlayerService {
     if (stream.getVideoTracks().length === 0) return;
 
     if (this.video.srcObject) {
-      const videoElement = this.builder.createVideoElement();
+      const videoElement = this.builder.createVideoElement(this.cameraName);
       videoElement.srcObject = stream;
 
       const onPlay = () => {
@@ -70,5 +76,10 @@ export class VideoPlayerService {
     if (volume > 1) this.video.volume = 1;
     else if (volume < 0) this.video.volume = 0;
     else this.video.volume = volume;
+  }
+
+  togglePlaceholder(on: boolean) {
+    if (this.placeholder)
+      this.placeholder.style.visibility = on ? "visible" : "hidden";
   }
 }

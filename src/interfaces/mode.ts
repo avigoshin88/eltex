@@ -16,4 +16,5 @@ export interface ModeService {
   reinitWithNewOptions?(options: ConnectionOptions, metaEnabled: boolean): void;
 
   toggleMeta(on: boolean): void;
+  connectionState: RTCPeerConnectionState | undefined;
 }
