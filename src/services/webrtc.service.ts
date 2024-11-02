@@ -386,11 +386,9 @@ export class WebRTCService {
 
     this.onConnectionStateChangeCb();
 
-    if (
-      this.peerConnection?.connectionState === "disconnected" ||
-      this.peerConnection?.connectionState === "failed"
-    ) {
+    if (this.peerConnection?.connectionState === "disconnected") {
       await this.reset();
+      this.reinitPeerConnection();
     }
   }
 
