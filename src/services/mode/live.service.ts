@@ -27,7 +27,8 @@ export class LiveVideoService implements ModeService {
   constructor(
     private id: string,
     options: ConnectionOptions,
-    player: VideoPlayerService
+    player: VideoPlayerService,
+    private onConnectionStateChangeCb: () => void
   ) {
     this.player = player;
     this.metaDrawer = new MetaOverflowDrawerService(this.player.videoContainer);
@@ -37,7 +38,8 @@ export class LiveVideoService implements ModeService {
       Mode.LIVE,
       options,
       this.datachannelClient,
-      this.setSource.bind(this)
+      this.setSource.bind(this),
+      onConnectionStateChangeCb
     );
     this.metaDrawer.init();
   }
@@ -79,7 +81,8 @@ export class LiveVideoService implements ModeService {
       Mode.LIVE,
       options,
       datachannelClient,
-      this.setSource.bind(this)
+      this.setSource.bind(this),
+      this.onConnectionStateChangeCb
     );
 
     metaDrawer.init();
@@ -132,5 +135,9 @@ export class LiveVideoService implements ModeService {
       DatachannelMessageType.META,
       on ? (this.metaDrawer.draw as DatachannelEventListener) : undefined
     );
+  }
+
+  get connectionState() {
+    return this.webRTCClient.connectionState;
   }
 }

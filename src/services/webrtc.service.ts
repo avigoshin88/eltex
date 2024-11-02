@@ -34,7 +34,8 @@ export class WebRTCService {
     mode: Mode,
     options: ConnectionOptions,
     datachannel: DatachannelClientService,
-    setSource: (stream: MediaStream) => void
+    setSource: (stream: MediaStream) => void,
+    private onConnectionStateChangeCb: () => void
   ) {
     this.options = { ...options };
     this.currentMode = mode;
@@ -383,6 +384,8 @@ export class WebRTCService {
       this.peerConnection?.connectionState
     );
 
+    this.onConnectionStateChangeCb();
+
     if (
       this.peerConnection?.connectionState === "disconnected" ||
       this.peerConnection?.connectionState === "failed"
@@ -432,5 +435,9 @@ export class WebRTCService {
       }
     }
     return candidate;
+  }
+
+  get connectionState() {
+    return this.peerConnection?.connectionState;
   }
 }

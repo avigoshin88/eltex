@@ -118,6 +118,9 @@
 
 - `.video-player`
 - `.video-player__container`
+- `.video-player__video-element`
+- `.video-player__placeholder-container`
+- `.video-player__placeholder-text`
 - `.video-player__controls__container`
 - `.video-player__controls__button`
 - `.video-player__timeline`

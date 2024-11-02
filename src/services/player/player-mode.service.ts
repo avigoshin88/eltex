@@ -231,6 +231,12 @@ export class PlayerModeService {
     );
   }
 
+  private onConnectionStateChange = () => {
+    this.player.togglePlaceholder(
+      this.modeConnection.connectionState !== "connected"
+    );
+  };
+
   async enable(newMode: Mode) {
     this.modeConnection?.reset();
     this.logger.log("info", "Включение режима: ", newMode);
@@ -258,7 +264,8 @@ export class PlayerModeService {
         this.modeConnection = new LiveVideoService(
           this.id,
           options,
-          this.player
+          this.player,
+          this.onConnectionStateChange
         );
         this.setupControlsDrawer();
         this.controlsDrawer.setHidden({
@@ -276,7 +283,8 @@ export class PlayerModeService {
           this.id,
           this.options,
           this.player,
-          (archiveControl) => (this.archiveControl = archiveControl)
+          (archiveControl) => (this.archiveControl = archiveControl),
+          this.onConnectionStateChange
         );
         this.setupControlsDrawer();
         this.controlsDrawer.setHidden({

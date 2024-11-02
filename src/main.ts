@@ -74,7 +74,7 @@ class VideoPlayerElement extends HTMLElement {
       this.removeChild(this.container);
     }
 
-    const { container } = this.player.init();
+    const { container } = this.player.init(cameraName);
 
     this.container = container;
 

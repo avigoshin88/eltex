@@ -74,7 +74,8 @@ export class ArchiveVideoService implements ModeService {
     private id: string,
     options: ConnectionOptions,
     player: VideoPlayerService,
-    setControl: (control: ArchiveControlService) => void
+    setControl: (control: ArchiveControlService) => void,
+    private onConnectionStateChangeCb: () => void
   ) {
     this.player = player;
     this.eventBus = EventBus.getInstance(this.id);
@@ -92,7 +93,8 @@ export class ArchiveVideoService implements ModeService {
       Mode.ARCHIVE,
       options,
       this.datachannelClient,
-      this.setSource.bind(this)
+      this.setSource.bind(this),
+      onConnectionStateChangeCb
     );
 
     this.archiveControl = new ArchiveControlService(
@@ -170,7 +172,8 @@ export class ArchiveVideoService implements ModeService {
       Mode.ARCHIVE,
       options,
       datachannelClient,
-      this.setSource.bind(this)
+      this.setSource.bind(this),
+      this.onConnectionStateChangeCb
     );
 
     metaDrawer.init();
@@ -574,5 +577,9 @@ export class ArchiveVideoService implements ModeService {
 
       this.fetchRangesIntervalId = null;
     }
+  }
+
+  get connectionState() {
+    return this.webRTCClient.connectionState;
   }
 }
