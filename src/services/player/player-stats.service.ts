@@ -40,6 +40,11 @@ export class PlayerStatsService {
   }
 
   private startTracking() {
+    if (this.trackingStatsInterval) {
+      clearInterval(this.trackingStatsInterval);
+      this.trackingStatsInterval = null;
+    }
+
     const trackWebRTCStats = this.createWebRTCStatsTracker(
       this.peerConnection!,
       this.videoElement!
