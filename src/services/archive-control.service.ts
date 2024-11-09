@@ -1,9 +1,8 @@
 import { Mode } from "../constants/mode";
-import { RangeDto } from "../dto/ranges";
+import { RangeDto, RangeFragment } from "../dto/ranges";
 import { Nullable } from "../types/global";
 import { CustomEventsService } from "./custom-events.service";
 import { EnvService } from "./env.service";
-import { EventBus } from "./event-bus.service";
 import { Logger } from "./logger/logger.service";
 
 const connectionSupportInterval = EnvService.getENVAsNumber(
@@ -18,25 +17,24 @@ const preloadInterval = EnvService.getENVAsNumber(
   "VITE_ARCHIVE_PRELOAD_INTERVAL"
 );
 
-type Emitter = (fragment: RangeDto, isPreload: boolean) => void;
-
-type RangeFragment = RangeDto & {
-  fragmentIndex: number;
-  subFragmentIndex: number;
-  isLastFragment: boolean;
-};
+type Emitter = (
+  fragment: RangeFragment,
+  isPreload: boolean,
+  isNeedToUpdateTrack?: boolean
+) => void;
 
 export class ArchiveControlService {
   private readonly logger = new Logger(ArchiveControlService.name);
   private customEventsService: CustomEventsService;
-  private eventBus: EventBus;
 
   private ranges: RangeDto[] = [];
   private fragmentIndex = 0;
   private currentSubFragment = 0;
   private rangeFragmentsGenerator!: Generator<RangeFragment>;
-  private connectionSupporterId: Nullable<NodeJS.Timeout> = null;
-  private preloadTimeoutId: Nullable<NodeJS.Timeout> = null;
+
+  private connectionSupporterId: Nullable<number> = null;
+  private preloadTimeoutId: Nullable<number> = null;
+
   private emit!: Emitter;
   private supportConnect: () => void;
   private currentTimestamp: number = 0;
@@ -46,26 +44,27 @@ export class ArchiveControlService {
   private isFirstPreloadDone = false; // Флаг для отслеживания первой дозагрузки
   private isPause = false;
 
+  public isNewRange = false;
+
   constructor(private id: string, emit: Emitter, supportConnect: () => void) {
-    this.eventBus = EventBus.getInstance(this.id);
     this.customEventsService = CustomEventsService.getInstance(this.id);
     this.emit = emit;
     this.supportConnect = supportConnect;
     this.logger.log("info", "Сервис ArchiveControlService инициализирован.");
   }
 
-  get currentFragment() {
+  getCurrentFragment() {
     return this.ranges[this.fragmentIndex];
   }
 
-  get nextFragment() {
+  getNextFragment() {
     if (this.fragmentIndex >= this.ranges.length - 1) {
       return null;
     }
     return this.ranges[this.fragmentIndex + 1];
   }
 
-  get prevFragment() {
+  getPrevFragment() {
     if (this.fragmentIndex === 0) {
       return null;
     }
@@ -77,8 +76,12 @@ export class ArchiveControlService {
     this.logger.log("info", "Установлены ranges:", ranges);
   }
 
+  setFragmentIndex(index: number) {
+    this.fragmentIndex = index;
+  }
+
   init() {
-    this.initGenerator(this.currentFragment.start_time);
+    this.initGenerator(this.getCurrentFragment().start_time);
     this.logger.log(
       "info",
       "Инициализация воспроизведения с начального фрагмента."
@@ -92,6 +95,8 @@ export class ArchiveControlService {
     this.isFirstPreloadDone = false;
     this.isPause = false;
     this.speed = 1;
+
+    this.isNewRange = false;
     this.clearSupportConnectInterval();
     this.clearPreloadTimeout();
   }
@@ -102,11 +107,14 @@ export class ArchiveControlService {
   }
 
   toNextFragment() {
-    if (!this.nextFragment) {
+    const nextFragment = this.getNextFragment();
+    if (!nextFragment) {
       this.logger.warn(
         "info",
         "Нельзя переключиться к следующему фрагменту: текущий фрагмент последний."
       );
+
+      this.switchToLiveMode();
       return;
     }
 
@@ -116,12 +124,18 @@ export class ArchiveControlService {
       this.fragmentIndex + 1
     );
 
-    this.setCurrentRange(this.nextFragment.start_time, this.nextFragment, true);
-    this.eventBus.emit("new-archive-fragment-started", this.currentFragment);
+    this.setCurrentRange(
+      nextFragment.start_time,
+      nextFragment,
+      true,
+      false,
+      true
+    );
   }
 
   toPrevFragment() {
-    if (!this.prevFragment) {
+    const prevFragment = this.getPrevFragment();
+    if (!prevFragment) {
       this.logger.warn(
         "info",
         "Нельзя переключиться к предыдущему фрагменту: текущий фрагмент первый."
@@ -135,8 +149,13 @@ export class ArchiveControlService {
       this.fragmentIndex - 1
     );
 
-    this.setCurrentRange(this.prevFragment.start_time, this.prevFragment, true);
-    this.eventBus.emit("new-archive-fragment-started", this.currentFragment);
+    this.setCurrentRange(
+      prevFragment.start_time,
+      prevFragment,
+      true,
+      false,
+      true
+    );
   }
 
   pause(currentTimestamp: number) {
@@ -185,7 +204,8 @@ export class ArchiveControlService {
     timestamp: number,
     range: RangeDto,
     emitEnable = true,
-    preload = false
+    preload = false,
+    isNeedToUpdateTrack = false
   ) {
     const rangeIndex = this.findRangeIndex(range.start_time, range.end_time);
     if (rangeIndex === -1) {
@@ -209,7 +229,7 @@ export class ArchiveControlService {
       this.isPause = false;
 
       this.clearPreloadTimeout();
-      this.preloadRangeFragment(preload); // Переход на новый range
+      this.preloadRangeFragment(preload, isNeedToUpdateTrack); // Переход на новый range
     }
   }
 
@@ -290,10 +310,15 @@ export class ArchiveControlService {
       if (subFragmentIndex !== undefined) {
         rangeFragmentStart =
           range.start_time + subFragmentIndex * preloadInterval * this.speed;
+        if (rangeFragmentStart < startTimestamp) {
+          rangeFragmentStart = startTimestamp;
+        }
         if (rangeFragmentStart >= range.end_time) {
           continue;
         }
       }
+
+      const isLastRange = rangeIndex === this.ranges.length - 1;
 
       while (rangeFragmentStart < range.end_time) {
         const interval = preloadInterval * this.speed;
@@ -308,6 +333,9 @@ export class ArchiveControlService {
           (rangeFragmentStart - range.start_time) / interval
         );
 
+        const isLastSubFragmentOfLastRange =
+          isLastRange && rangeFragmentEnd >= range.end_time;
+
         yield {
           start_time: rangeFragmentStart,
           end_time: rangeFragmentEnd,
@@ -315,6 +343,7 @@ export class ArchiveControlService {
           fragmentIndex: rangeIndex,
           subFragmentIndex: currentSubFragmentIndex,
           isLastFragment: rangeFragmentEnd >= range.end_time,
+          isLastRangeSubFragment: isLastSubFragmentOfLastRange,
         };
 
         rangeFragmentStart = rangeFragmentEnd;
@@ -322,12 +351,12 @@ export class ArchiveControlService {
     }
   }
 
-  public preloadRangeFragment(preload = false) {
+  public preloadRangeFragment(preload = false, isNeedToUpdateTrack = false) {
     // Первый фрагмент отправляется без продвижения генератора
     const rangeFragmentResult = this.rangeFragmentsGenerator.next();
     if (rangeFragmentResult.done) {
       this.logger.log("info", "Все фрагменты загружены.");
-      this.customEventsService.emit("mode-changed", Mode.LIVE);
+      this.switchToLiveMode();
       return;
     }
 
@@ -336,7 +365,7 @@ export class ArchiveControlService {
     this.fragmentIndex = rangeFragment.fragmentIndex;
     this.currentSubFragment = rangeFragment.subFragmentIndex;
 
-    this.emit(rangeFragment, preload); // Первый фрагмент
+    this.emit(rangeFragment, preload, isNeedToUpdateTrack); // Первый фрагмент
     this.isFirstPreloadDone = true; // Флаг того, что первый фрагмент отправлен
   }
 
@@ -350,18 +379,26 @@ export class ArchiveControlService {
       const rangeFragmentResult = this.rangeFragmentsGenerator.next();
       if (rangeFragmentResult.done) {
         this.logger.log("info", "Все фрагменты загружены.");
+        this.switchToLiveMode();
         return;
       }
 
       const rangeFragment = rangeFragmentResult.value;
 
-      this.fragmentIndex = rangeFragment.fragmentIndex;
       this.currentSubFragment = rangeFragment.subFragmentIndex;
 
       const fragmentDuration = rangeFragment.duration;
       const nextPreloadDelay =
-        Math.max(0, fragmentDuration - preloadRangeFragmentTimeout) /
-        this.speed;
+        Math.max(
+          0,
+          this.isNewRange
+            ? fragmentDuration - preloadRangeFragmentTimeout
+            : fragmentDuration
+        ) / this.speed;
+
+      if (this.isNewRange) {
+        this.isNewRange = false;
+      }
 
       this.logger.log(
         "info",
@@ -424,5 +461,10 @@ export class ArchiveControlService {
 
     this.logger.warn("info", "Range для заданного времени не найден.");
     return -1;
+  }
+
+  private switchToLiveMode() {
+    this.logger.log("info", "Переключение на режим LIVE.");
+    this.customEventsService.emit("mode-changed", Mode.LIVE);
   }
 }

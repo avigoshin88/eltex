@@ -226,6 +226,7 @@ export class PlayerModeService {
           },
           value: undefined,
           options: this.timelineScaleOptions,
+          placeholderLabel: "Не выбрано",
         },
       }
     );
@@ -275,6 +276,7 @@ export class PlayerModeService {
           [ControlName.NEXT_FRAGMENT]: true,
           [ControlName.PREV_FRAGMENT]: true,
           [ControlName.SPEED]: true,
+          [ControlName.SCALE]: true,
         });
 
         break;
@@ -372,6 +374,8 @@ export class PlayerModeService {
     if (!this.player.isVolumeOn) {
       this.soundLevel = this.oldSoundLevel ?? "100";
       this.oldSoundLevel = null;
+
+      this.player.setVolume(Number(this.soundLevel) / 100);
 
       this.player.volumeOn();
     } else {
@@ -524,6 +528,7 @@ export class PlayerModeService {
     if (this.soundLevel !== "0") {
       this.player.volumeOn();
     } else {
+      this.oldSoundLevel = "100";
       this.player.volumeMute();
     }
 
@@ -541,6 +546,9 @@ export class PlayerModeService {
     const target = event.target as HTMLInputElement;
 
     const newScale = target.value;
+    if (!newScale) {
+      return;
+    }
 
     this.controlsDrawer.updateControlValues({
       [ControlName.SCALE]: newScale,
@@ -549,6 +557,13 @@ export class PlayerModeService {
 
     this.eventBus.emit("set-timeline-scale", Number(newScale));
   }
+
+  private onManualScaleChange = (scale: string) => {
+    this.controlsDrawer.updateControlValues({
+      [ControlName.SCALE]: scale,
+    });
+    this.controlsDrawer.draw();
+  };
 
   private onSetTimelineScaleOptions = ([current, options]: [
     current: string,
@@ -571,11 +586,6 @@ export class PlayerModeService {
     const liveConnection = this.modeConnection as LiveVideoService;
     if (liveConnection) {
       liveConnection.mic.micCallbacks?.mousedown();
-
-      this.controlsDrawer.updateBinaryButtonsState({
-        [ControlName.MICROPHONE]: liveConnection.mic.isMicEnabled,
-      });
-      this.controlsDrawer.draw();
     }
   }
 
@@ -583,11 +593,6 @@ export class PlayerModeService {
     const liveConnection = this.modeConnection as LiveVideoService;
     if (liveConnection) {
       liveConnection.mic.micCallbacks?.mouseup();
-
-      this.controlsDrawer.updateBinaryButtonsState({
-        [ControlName.MICROPHONE]: liveConnection.mic.isMicEnabled,
-      });
-      this.controlsDrawer.draw();
     }
   }
 
@@ -595,13 +600,15 @@ export class PlayerModeService {
     const liveConnection = this.modeConnection as LiveVideoService;
     if (liveConnection) {
       liveConnection.mic.micCallbacks?.mouseleave();
-
-      this.controlsDrawer.updateBinaryButtonsState({
-        [ControlName.MICROPHONE]: liveConnection.mic.isMicEnabled,
-      });
-      this.controlsDrawer.draw();
     }
   }
+
+  private onChangeMicState = (micState: boolean) => {
+    this.controlsDrawer.updateBinaryButtonsState({
+      [ControlName.MICROPHONE]: micState,
+    });
+    this.controlsDrawer.draw();
+  };
 
   private setListeners() {
     this.eventBus.on("stats", this.onUpdateStats);
@@ -611,11 +618,19 @@ export class PlayerModeService {
       "set-timeline-scale-options",
       this.onSetTimelineScaleOptions
     );
+    this.eventBus.on("change-mic-state", this.onChangeMicState);
+    this.eventBus.on("manual-scale-change", this.onManualScaleChange);
   }
 
   private clearListeners() {
     this.eventBus.off("stats", this.onUpdateStats);
     this.eventBus.off("cancel-export", this.resetExportMode);
     this.eventBus.off("play-enabled", this.enablePlay);
+    this.eventBus.off(
+      "set-timeline-scale-options",
+      this.onSetTimelineScaleOptions
+    );
+    this.eventBus.off("change-mic-state", this.onChangeMicState);
+    this.eventBus.off("manual-scale-change", this.onManualScaleChange);
   }
 }

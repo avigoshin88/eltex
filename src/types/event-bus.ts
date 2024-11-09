@@ -7,7 +7,10 @@ export type EventName =
   | "new-archive-fragment-started"
   | "cancel-export"
   | "play-enabled"
+  | "current-video-codec"
   | "set-timeline-scale-options"
   | "set-timeline-scale"
+  | 'manual-scale-change'
   | "timeline-scale-update"
-  | "archive-timeupdate";
+  | "archive-timeupdate"
+  | "change-mic-state";

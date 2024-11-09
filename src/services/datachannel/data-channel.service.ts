@@ -15,12 +15,18 @@ export class DatachannelClientService {
   private readonly datachannelTransportBuilder: DatachannelTransportBuilderService =
     new DatachannelTransportBuilderService();
   private listeners: DatachannelEventListeners = {};
+  private errorListener?: (error: any) => void;
 
   onClose?: () => void | Promise<void>;
 
-  constructor(private id: string, onClose?: () => void | Promise<void>) {
+  constructor(
+    private id: string,
+    onClose?: () => void | Promise<void>,
+    errorListener?: (error: any) => void
+  ) {
     this.customEventsService = CustomEventsService.getInstance(this.id);
     this.onClose = onClose;
+    this.errorListener = errorListener;
   }
 
   register(
@@ -97,6 +103,11 @@ export class DatachannelClientService {
       }
 
       const { type, data, error } = result;
+
+      if (!type && error) {
+        this.errorListener?.(error);
+        return;
+      }
 
       this.signalData(type, data);
 

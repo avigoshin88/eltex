@@ -1,3 +1,5 @@
+import { Nullable } from "../types/global";
+import { EventBus } from "./event-bus.service";
 import { Logger } from "./logger/logger.service";
 
 export class MicrophoneService {
@@ -9,10 +11,14 @@ export class MicrophoneService {
   private currentDeviceId: string | null = null;
   private isMicOn = false;
   private isPushToTalk = false;
-  private pressTimer: NodeJS.Timeout | null = null;
+  private pressTimer: Nullable<number> = null;
   private PRESS_THRESHOLD = 500; // Время в мс для определения "долгого нажатия"
 
-  constructor() {}
+  private eventBus!: EventBus;
+
+  constructor(id: string) {
+    this.eventBus = EventBus.getInstance(id);
+  }
 
   // Запрашиваем доступ к микрофону с заданным устройством
   public async enableMicrophone(
@@ -81,6 +87,7 @@ export class MicrophoneService {
       }
 
       this.isMicEnabled = false;
+      this.eventBus.emit("change-mic-state", this.isMicEnabled);
     }
   }
 
@@ -96,6 +103,7 @@ export class MicrophoneService {
       }
 
       this.isMicEnabled = true;
+      this.eventBus.emit("change-mic-state", this.isMicEnabled);
     }
   }
 

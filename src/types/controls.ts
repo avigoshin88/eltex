@@ -69,6 +69,7 @@ export type SelectControlOptions = Control & {
 
   value?: SelectValue;
   options: SelectOption[];
+  placeholderLabel?: string;
 };
 
 export type RangeControlOptions = Control & {

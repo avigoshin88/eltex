@@ -15,7 +15,7 @@ export class PlayerStatsService {
   private peerConnection: Nullable<RTCPeerConnection> = null;
   private videoElement: Nullable<HTMLVideoElement> = null;
 
-  private trackingStatsInterval: Nullable<NodeJS.Timeout> = null;
+  private trackingStatsInterval: Nullable<number> = null;
 
   constructor(private id: string) {
     this.eventBus = EventBus.getInstance(this.id);
@@ -39,7 +39,7 @@ export class PlayerStatsService {
     this.startTracking();
   }
 
-  private startTracking() {
+  private async startTracking() {
     if (this.trackingStatsInterval) {
       clearInterval(this.trackingStatsInterval);
       this.trackingStatsInterval = null;
@@ -50,14 +50,10 @@ export class PlayerStatsService {
       this.videoElement!
     );
 
-    this.trackingStatsInterval = setInterval(async () => {
-      try {
-        const stats = await trackWebRTCStats();
+    await this.updateStats(trackWebRTCStats);
 
-        this.eventBus.emit("stats", stats);
-      } catch (error) {
-        this.logger.error("info", "Ошибка получения статистики: ", error);
-      }
+    this.trackingStatsInterval = setInterval(() => {
+      this.updateStats(trackWebRTCStats);
     }, trackingStatsInterval);
   }
 
@@ -75,6 +71,18 @@ export class PlayerStatsService {
 
     if (this.trackingStatsInterval !== null) {
       clearInterval(this.trackingStatsInterval);
+    }
+  }
+
+  private async updateStats(trackWebRTCStats: () => Promise<Stats>) {
+    try {
+      const stats = await trackWebRTCStats();
+
+      this.eventBus.emit("current-video-codec", stats.videoCodec);
+
+      this.eventBus.emit("stats", stats);
+    } catch (error) {
+      this.logger.error("info", "Ошибка получения статистики: ", error);
     }
   }
 

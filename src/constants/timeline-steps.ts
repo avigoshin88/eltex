@@ -137,6 +137,8 @@ const TIMELINE_STEPS_OPTIONS: SelectOption[] = [
   { label: "30мин", value: String(30 * 60 * 1000) },
   { label: "10мин", value: String(10 * 60 * 1000) },
   { label: "5м", value: String(5 * 60 * 1000) },
+  { label: "1м", value: String(1 * 60 * 1000) },
+  { label: "30s", value: String(30 * 1000) },
 ];
 
 // Add more TIMELINE_STEPS for smoother transitions

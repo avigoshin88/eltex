@@ -35,14 +35,14 @@
 
     function getSDPOffer(port = 18083, app, stream) {
       return fetch(
-        `https://evi-webrtc.eltex-co.ru:${port}/index/api/webrtc?app=${app}&stream=${stream}`,
+        `https://evi-webrtc.eltex-co.ru:${port}/webrtc?app=${app}&stream=${stream}`,
         { method: "GET" }
       ).then((response) => response.json());
     }
 
     function saveOffer(port = 18083, app, stream, type, offer) {
       return fetch(
-        `https://evi-webrtc.eltex-co.ru:${port}/index/api/webrtc?app=${app}&stream=${stream}&type=${type}`,
+        `https://evi-webrtc.eltex-co.ru:${port}/webrtc?app=${app}&stream=${stream}&type=${type}`,
         { method: "POST", body: offer }
       ).then((response) => response.json());
     }

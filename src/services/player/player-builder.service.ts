@@ -33,6 +33,7 @@ export class VideoPlayerBuilderService {
     video.controls = false;
     video.autoplay = true;
     video.preload = "none";
+    video.playbackRate = 1.0;
     video.muted = true;
     video.id = `video-player-${name}-${Math.random() * 100}`;
     video.className = "video-player__video-element";
