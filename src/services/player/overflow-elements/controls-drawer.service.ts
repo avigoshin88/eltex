@@ -44,8 +44,8 @@ const BINARY_BUTTON_ICONS: Record<
     off: "/archive-mode.svg",
   },
   [ControlName.EXPORT]: {
-    on: "./cancel.svg",
-    off: "./export.svg",
+    on: "/cancel.svg",
+    off: "/export.svg",
   },
   [ControlName.MICROPHONE]: {
     on: "/mic-on.svg",
@@ -62,7 +62,7 @@ const BINARY_BUTTON_ICONS: Record<
 };
 
 const COMMON_BUTTON_ICONS: Record<CommonButtonControl, string> = {
-  [ControlName.STOP]: "./stop.svg",
+  [ControlName.STOP]: "/stop.svg",
   [ControlName.SNAPSHOT]: "/snapshot.svg",
   [ControlName.NEXT_FRAGMENT]: "/step-forward.svg",
   [ControlName.PREV_FRAGMENT]: "/step-backward.svg",

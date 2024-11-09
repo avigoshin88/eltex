@@ -26,7 +26,10 @@ export class VideoPlayerService {
     return { container };
   }
 
-  setSource(stream: MediaStream) {
+  setSource(
+    stream: MediaStream,
+    onStartPlay?: (video: HTMLVideoElement) => void
+  ) {
     if (stream.getVideoTracks().length === 0) return;
 
     if (this.video.srcObject) {
@@ -37,6 +40,7 @@ export class VideoPlayerService {
         videoElement.onplaying = null;
         this.videoContainer.replaceChild(videoElement, this.video);
         this.video = videoElement;
+        onStartPlay?.(videoElement);
       };
 
       videoElement.onplaying = onPlay;

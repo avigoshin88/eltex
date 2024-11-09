@@ -105,6 +105,7 @@ export class TimelineOverflowDrawer {
     if (totalRangeWidth > containerWidth) {
       this.timelineElements.timelineContainer.style.width = `${totalRangeWidth}px`; // Задаем большую ширину таймлайна
     } else {
+      this.eventBus.emit("manual-scale-change", String(totalTimeRange));
       this.timelineElements.timelineContainer.style.width = `${containerWidth}px`; // Устанавливаем стандартную ширину
     }
 

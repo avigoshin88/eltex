@@ -155,15 +155,18 @@ export class ArchiveVideoService implements ModeService {
     options: ConnectionOptions,
     metaEnabled: boolean
   ) {
+    this.pause(true);
+
     this.renewStartTime = this.archiveTimeControl.getCurrentTimestamp();
     this.renewFragment = {
       ...this.archiveControl.getCurrentFragment(),
+      start_time: this.renewStartTime,
       type: "data",
     };
 
     this.logger.log(
       "info",
-      "Перезапускаем live соединение с новыми параметрами:",
+      "Перезапускаем archive соединение с новыми параметрами:",
       JSON.stringify(options)
     );
 
@@ -223,7 +226,9 @@ export class ArchiveVideoService implements ModeService {
             this.emitStartNewFragment.bind(this),
             this.supportConnect.bind(this)
           );
+
           archiveControl.setRanges(this.ranges);
+          archiveControl.init();
 
           archiveControl.setCurrentRange(
             this.renewStartTime!,
@@ -231,7 +236,6 @@ export class ArchiveVideoService implements ModeService {
             false
           );
 
-          archiveControl.init();
           archiveControl.initSupportConnectInterval();
 
           this.archiveControl.clear();
@@ -239,6 +243,10 @@ export class ArchiveVideoService implements ModeService {
           this.archiveControl = archiveControl;
 
           this.setControl(this.archiveControl);
+
+          archiveTimeControl.setFragmentStartTimestamp(
+            this.renewFragment!.start_time
+          );
 
           this.archiveTimeControl = archiveTimeControl;
 
@@ -410,6 +418,8 @@ export class ArchiveVideoService implements ModeService {
       return;
     }
 
+    this.eventBus.emit("play-enabled");
+
     this.archiveControl.setFragmentIndex(fragment.fragmentIndex);
 
     this.archiveControl.isNewRange = true;
@@ -431,8 +441,6 @@ export class ArchiveVideoService implements ModeService {
     this.player.pause();
 
     this.archiveControl.setCurrentRange(timestamp, range);
-
-    this.eventBus.emit("play-enabled");
   }
 
   private onDropComplete() {
@@ -593,7 +601,9 @@ export class ArchiveVideoService implements ModeService {
   }
 
   setSource(stream: MediaStream) {
-    this.player.setSource(stream);
+    this.player.setSource(stream, (video) => {
+      video.requestVideoFrameCallback(this.rerenderTrack);
+    });
     this.player.play();
   }
 

@@ -72,7 +72,7 @@ export class ArchiveControlService {
   }
 
   setRanges(ranges: RangeDto[]) {
-    this.ranges = ranges;
+    this.ranges = [...ranges];
     this.logger.log("info", "Установлены ranges:", ranges);
   }
 
