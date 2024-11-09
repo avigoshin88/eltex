@@ -76,6 +76,8 @@ export class ArchiveVideoService implements ModeService {
 
   private isNeedSetFragmentStartTimeAfterPreload = false;
 
+  private speed = 1;
+
   constructor(
     private id: string,
     options: ConnectionOptions,
@@ -312,6 +314,10 @@ export class ArchiveVideoService implements ModeService {
     this.player.video.requestVideoFrameCallback(this.rerenderTrack);
 
     if (this.renewStartTime !== null && this.renewFragment !== null) {
+      if (this.speed !== 1) {
+        this.setSpeed(this.speed);
+      }
+
       return;
     }
 
@@ -366,6 +372,10 @@ export class ArchiveVideoService implements ModeService {
   }
 
   setSpeed(speed: number) {
+    this.logger.log("info", "Установка скорости воспроизведения: ", speed);
+
+    this.speed = speed;
+
     this.datachannelClient.send(DatachannelMessageType.SET_SPEED, { speed });
 
     this.player.pause();

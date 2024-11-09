@@ -40,8 +40,8 @@ const BINARY_BUTTON_ICONS: Record<
     off: "/volume-mute.svg",
   },
   [ControlName.MODE]: {
-    on: "/live-mode.svg",
-    off: "/archive-mode.svg",
+    on: "/archive-mode.svg",
+    off: "/live-mode.svg",
   },
   [ControlName.EXPORT]: {
     on: "/cancel.svg",
