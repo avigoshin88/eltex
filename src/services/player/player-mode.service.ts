@@ -610,6 +610,16 @@ export class PlayerModeService {
     this.controlsDrawer.draw();
   };
 
+  private onPush2Talk = (push2TalkState: boolean) => {
+    this.logger.log(
+      "info",
+      push2TalkState
+        ? `Приглушаем звук на время включения микрофона в режиме Push to talk`
+        : `Возвращаем звук после выключения микрофона в режиме Push to talk`
+    );
+    this.switchVolumeState();
+  };
+
   private setListeners() {
     this.eventBus.on("stats", this.onUpdateStats);
     this.eventBus.on("cancel-export", this.resetExportMode);
@@ -620,6 +630,7 @@ export class PlayerModeService {
     );
     this.eventBus.on("change-mic-state", this.onChangeMicState);
     this.eventBus.on("manual-scale-change", this.onManualScaleChange);
+    this.eventBus.on("push2Talk", this.onPush2Talk);
   }
 
   private clearListeners() {
@@ -632,5 +643,6 @@ export class PlayerModeService {
     );
     this.eventBus.off("change-mic-state", this.onChangeMicState);
     this.eventBus.off("manual-scale-change", this.onManualScaleChange);
+    this.eventBus.off("push2Talk", this.onPush2Talk);
   }
 }

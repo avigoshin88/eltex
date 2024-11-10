@@ -111,8 +111,10 @@ export class MicrophoneService {
   public pushToTalk(isPressed: boolean): void {
     if (isPressed) {
       this.unmuteMicrophone(); // Включаем микрофон при нажатии
+      this.eventBus.emit("push2Talk", true); // Приглушаем звук
     } else {
       this.muteMicrophone(); // Отключаем микрофон при отпускании
+      this.eventBus.emit("push2Talk", true); // Восстанавливаем звук
     }
   }
 

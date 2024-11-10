@@ -10,7 +10,8 @@ export type EventName =
   | "current-video-codec"
   | "set-timeline-scale-options"
   | "set-timeline-scale"
-  | 'manual-scale-change'
+  | "manual-scale-change"
   | "timeline-scale-update"
   | "archive-timeupdate"
-  | "change-mic-state";
+  | "change-mic-state"
+  | "push2Talk";
