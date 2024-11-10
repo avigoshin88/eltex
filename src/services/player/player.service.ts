@@ -38,6 +38,9 @@ export class VideoPlayerService {
 
       const onPlay = () => {
         videoElement.onplaying = null;
+        videoElement.muted = this.video.muted;
+        videoElement.volume = this.video.volume;
+        videoElement.playbackRate = this.video.playbackRate;
         this.videoContainer.replaceChild(videoElement, this.video);
         this.video = videoElement;
         onStartPlay?.(videoElement);
