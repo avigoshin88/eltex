@@ -1,15 +1,21 @@
 import { EventCallback, EventName } from "../types/event-bus";
+import { Logger } from "./logger/logger.service";
 
 class EventBus {
   static instances: Record<string, EventBus> = {};
   static getInstance(id: string): EventBus {
     if (!EventBus.instances[id]) {
-      EventBus.instances[id] = new EventBus();
+      EventBus.instances[id] = new EventBus(id);
     }
     return EventBus.instances[id];
   }
 
+  private logger: Logger;
   private listeners: Map<EventName, EventCallback[]> = new Map();
+
+  constructor(id: string) {
+    this.logger = new Logger(id, "EventBus");
+  }
 
   on(event: EventName, callback: EventCallback): void {
     if (!this.listeners.has(event)) {

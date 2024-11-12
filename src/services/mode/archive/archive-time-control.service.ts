@@ -10,7 +10,7 @@ const NEW_FRAGMENT_PACKAGE_DIFFERENCE = 10 * 1000;
 const RESET_PACKAGE_DIFFERENCE = 10 * 1000;
 
 export class ArchiveTimeControlService {
-  private readonly logger = new Logger("ArchiveTimeControlService");
+  private logger: Logger;
 
   private eventBus: EventBus;
   private currentCodec: Nullable<string> = null;
@@ -31,8 +31,9 @@ export class ArchiveTimeControlService {
 
   private isIgnorePackets = false;
 
-  constructor(private id: string, private webRTCClient: WebRTCService) {
-    this.eventBus = EventBus.getInstance(this.id);
+  constructor(id: string, private webRTCClient: WebRTCService) {
+    this.eventBus = EventBus.getInstance(id);
+    this.logger = new Logger(id, "ArchiveTimeControlService");
 
     this.setupListeners();
   }

@@ -23,16 +23,15 @@ const quality = {
 };
 
 export class PlayerModeService {
-  private readonly logger = new Logger(PlayerModeService.name);
+  private readonly logger: Logger;
   private customEventsService: CustomEventsService;
   private eventBus: EventBus;
 
   private modeConnection!: ModeService;
   private options!: ConnectionOptions;
   private currentMode: Mode = Mode.LIVE;
-  private player: VideoPlayerService;
   private archiveControl!: ArchiveControlService;
-  private readonly snapshotManager = new SnapshotService();
+  private snapshotManager: SnapshotService;
 
   private readonly playerStats: PlayerStatsService;
 
@@ -57,13 +56,14 @@ export class PlayerModeService {
     private id: string,
     mode: Mode,
     options: ConnectionOptions,
-    player: VideoPlayerService
+    private player: VideoPlayerService
   ) {
+    this.logger = new Logger(id, PlayerModeService.name);
     this.options = { ...options };
-    this.player = player;
     this.customEventsService = CustomEventsService.getInstance(this.id);
-    this.eventBus = EventBus.getInstance(this.id);
-    this.playerStats = new PlayerStatsService(this.id);
+    this.eventBus = EventBus.getInstance(id);
+    this.playerStats = new PlayerStatsService(id);
+    this.snapshotManager = new SnapshotService(id);
 
     this.playerStats.init();
 
@@ -72,6 +72,7 @@ export class PlayerModeService {
     this.setListeners();
 
     this.statsDrawer = new StatsOverflowDrawerService(
+      id,
       this.player.videoContainer
     );
 
@@ -89,6 +90,7 @@ export class PlayerModeService {
     this.controlsDrawer?.clear();
 
     this.controlsDrawer = new ControlsOverflowDrawerService(
+      this.id,
       this.player.container,
       {
         [ControlName.MODE]: {

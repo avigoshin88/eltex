@@ -11,7 +11,11 @@ const defaultSnapConfig: SnapConfig = {
 };
 
 export class SnapshotService {
-  private readonly logger = new Logger(SnapshotService.name);
+  private logger: Logger;
+
+  constructor(id: string) {
+    this.logger = new Logger(id, "SnapshotService");
+  }
 
   snap(
     snapWidth: number,

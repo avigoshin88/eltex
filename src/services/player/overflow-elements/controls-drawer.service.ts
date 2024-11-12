@@ -6,6 +6,7 @@ import {
   SelectControlOptions,
 } from "../../../types/controls";
 import { Nullable } from "../../../types/global";
+import { Logger } from "../../logger/logger.service";
 
 type ButtonControl = Exclude<
   ControlName,
@@ -87,6 +88,7 @@ const CONTROLS_ORDER: ControlName[] = [
 ];
 
 export class ControlsOverflowDrawerService {
+  private logger: Logger;
   private readonly container!: HTMLDivElement;
 
   private hiddenButtons: Partial<Record<ControlName, boolean>> = {};
@@ -101,7 +103,8 @@ export class ControlsOverflowDrawerService {
   private controlsContainer: Nullable<HTMLDivElement> = null;
   private controls: Partial<Record<ControlName, HTMLElement>> = {};
 
-  constructor(container: HTMLDivElement, options: ControlsOptions) {
+  constructor(id: string, container: HTMLDivElement, options: ControlsOptions) {
+    this.logger = new Logger(id, "ControlsOverflowDrawerService");
     this.container = container;
     this.options = options;
   }

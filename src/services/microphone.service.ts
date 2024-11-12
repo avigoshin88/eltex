@@ -3,7 +3,7 @@ import { EventBus } from "./event-bus.service";
 import { Logger } from "./logger/logger.service";
 
 export class MicrophoneService {
-  private logger = new Logger(MicrophoneService.name);
+  private logger: Logger;
   private localStream: MediaStream | null = null;
   private audioTransceiver: RTCRtpTransceiver | null = null;
   private isMicEnabled: boolean = false;
@@ -17,6 +17,7 @@ export class MicrophoneService {
   private eventBus!: EventBus;
 
   constructor(id: string) {
+    this.logger = new Logger(id, "MicrophoneService");
     this.eventBus = EventBus.getInstance(id);
   }
 

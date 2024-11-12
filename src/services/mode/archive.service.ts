@@ -14,7 +14,7 @@ import { RangeDto, RangeFragment } from "../../dto/ranges";
 import { TimelineOverflowDrawer } from "../player/overflow-elements/timeline-drawer.service";
 import { RangeMapperService } from "../range-mapper.service";
 import { ArchiveControlService } from "../archive-control.service";
-import { MetaOverflowDrawerService } from "../player/overflow-elements/meta-drawer.service";
+import MetaOverflowDrawerService from "../player/overflow-elements/meta-drawer.service";
 import { TimelineClickCallback } from "../../types/timeline";
 import { Nullable } from "../../types/global";
 import { ExportURLDto } from "../../dto/export";
@@ -39,7 +39,7 @@ function isFragmentLoadError(error?: Nullable<string>) {
 }
 
 export class ArchiveVideoService implements ModeService {
-  private logger = new Logger("ArchiveVideoService");
+  private logger: Logger;
   private eventBus: EventBus;
 
   private webRTCClient!: WebRTCService;
@@ -49,10 +49,10 @@ export class ArchiveVideoService implements ModeService {
   private readonly timelineDrawer!: TimelineOverflowDrawer;
   private metaDrawer!: MetaOverflowDrawerService;
 
-  private readonly rangeMapper = new RangeMapperService();
+  private readonly rangeMapper: RangeMapperService;
   private archiveControl: ArchiveControlService;
 
-  private readonly fileDownloader = new FileDownloader();
+  private readonly fileDownloader: FileDownloader;
 
   private nextProcessedRange: Nullable<RangeDto> = null;
   private isPreRequestRange = false;
@@ -86,16 +86,19 @@ export class ArchiveVideoService implements ModeService {
     private onConnectionStateChangeCb: () => void
   ) {
     this.player = player;
-    this.eventBus = EventBus.getInstance(this.id);
+    this.eventBus = EventBus.getInstance(id);
+    this.logger = new Logger(id, "ArchiveVideoService");
+    this.rangeMapper = new RangeMapperService(id);
+    this.fileDownloader = new FileDownloader(id);
 
     this.datachannelClient = new DatachannelClientService(
-      this.id,
+      id,
       this.clearListeners.bind(this),
       this.onError.bind(this)
     );
 
     this.webRTCClient = new WebRTCService(
-      this.id,
+      id,
       Mode.ARCHIVE,
       options,
       this.datachannelClient,
@@ -104,17 +107,20 @@ export class ArchiveVideoService implements ModeService {
     );
 
     this.archiveControl = new ArchiveControlService(
-      this.id,
+      id,
       this.emitStartNewFragment.bind(this),
       this.supportConnect.bind(this)
     );
 
     this.timelineDrawer = new TimelineOverflowDrawer(
-      this.id,
+      id,
       this.player.container,
       this.onChangeCurrentTime.bind(this)
     );
-    this.metaDrawer = new MetaOverflowDrawerService(this.player.videoContainer);
+    this.metaDrawer = new MetaOverflowDrawerService(
+      id,
+      this.player.videoContainer
+    );
 
     this.setControl = setControl;
 
@@ -173,6 +179,7 @@ export class ArchiveVideoService implements ModeService {
     );
 
     const metaDrawer = new MetaOverflowDrawerService(
+      this.id,
       this.player.videoContainer
     );
     const datachannelClient = new DatachannelClientService(

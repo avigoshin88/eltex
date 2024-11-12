@@ -24,7 +24,7 @@ type Emitter = (
 ) => void;
 
 export class ArchiveControlService {
-  private readonly logger = new Logger(ArchiveControlService.name);
+  private logger: Logger;
   private customEventsService: CustomEventsService;
 
   private ranges: RangeDto[] = [];
@@ -47,6 +47,7 @@ export class ArchiveControlService {
   public isNewRange = false;
 
   constructor(private id: string, emit: Emitter, supportConnect: () => void) {
+    this.logger = new Logger(id, "ArchiveControlService");
     this.customEventsService = CustomEventsService.getInstance(this.id);
     this.emit = emit;
     this.supportConnect = supportConnect;

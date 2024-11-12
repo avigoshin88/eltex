@@ -1,4 +1,12 @@
+import { Logger } from "../logger/logger.service";
+
 export class VideoPlayerBuilderService {
+  private logger: Logger | undefined;
+
+  constructor(id: string) {
+    this.logger = new Logger(id, "VideoPlayerBuilderService");
+  }
+
   createPlayer(name: string) {
     const container = this.createContainer();
     const videoContainer = this.createVideoContainer();

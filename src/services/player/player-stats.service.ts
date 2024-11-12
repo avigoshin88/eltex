@@ -9,7 +9,7 @@ const trackingStatsInterval = EnvService.getENVAsNumber(
 );
 
 export class PlayerStatsService {
-  private readonly logger = new Logger("PlayerStatsService");
+  private logger: Logger;
   private eventBus: EventBus;
 
   private peerConnection: Nullable<RTCPeerConnection> = null;
@@ -19,6 +19,7 @@ export class PlayerStatsService {
 
   constructor(private id: string) {
     this.eventBus = EventBus.getInstance(this.id);
+    this.logger = new Logger(id, "PlayerStatsService");
   }
 
   private setupPeerConnection = (peerConnection: RTCPeerConnection) => {

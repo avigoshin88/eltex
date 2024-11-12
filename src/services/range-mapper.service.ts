@@ -1,7 +1,14 @@
 import { RangeDto } from "../dto/ranges";
 import { RangeData } from "../types/range";
+import { Logger } from "./logger/logger.service";
 
 export class RangeMapperService {
+  private logger: Logger;
+
+  constructor(id: string) {
+    this.logger = new Logger(id, "RangeMapperService");
+  }
+
   calc(ranges: RangeDto[]): RangeData[] {
     const result: RangeData[] = [];
 

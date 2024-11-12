@@ -1,4 +1,4 @@
-import { Nullable } from "../types/global";
+import { Logger } from "./logger/logger.service";
 
 export type CustomEventListenerName =
   | "meta"
@@ -18,21 +18,17 @@ class CustomEventsService {
   static instances: Record<string, CustomEventsService> = {};
   static getInstance(id: string): CustomEventsService {
     if (!CustomEventsService.instances[id]) {
-      CustomEventsService.instances[id] = new CustomEventsService();
-      CustomEventsService.instances[id].setId(id);
+      CustomEventsService.instances[id] = new CustomEventsService(id);
     }
     return CustomEventsService.instances[id];
   }
 
-  private id: Nullable<string> = null;
-
+  private logger: Logger;
   private eventListeners: Map<string, Map<CustomEventCallback, EventListener>> =
     new Map();
 
-  constructor() {}
-
-  setId(id: string) {
-    this.id = id;
+  constructor(private id: string) {
+    this.logger = new Logger(id, "CustomEventsService");
   }
 
   on<T = any>(name: CustomEventEmitName, callback: CustomEventCallback<T>) {

@@ -9,11 +9,10 @@ import { Logger } from "../logger/logger.service";
 import { DatachannelTransportBuilderService } from "./data-channel-transport-builder.service";
 
 export class DatachannelClientService {
-  private readonly logger = new Logger(DatachannelClientService.name);
+  private logger: Logger;
   private customEventsService: CustomEventsService;
   private datachannel!: RTCDataChannel;
-  private readonly datachannelTransportBuilder: DatachannelTransportBuilderService =
-    new DatachannelTransportBuilderService();
+  private readonly datachannelTransportBuilder: DatachannelTransportBuilderService;
   private listeners: DatachannelEventListeners = {};
   private errorListener?: (error: any) => void;
 
@@ -27,6 +26,10 @@ export class DatachannelClientService {
     this.customEventsService = CustomEventsService.getInstance(this.id);
     this.onClose = onClose;
     this.errorListener = errorListener;
+    this.logger = new Logger(id, "DatachannelClientService");
+    this.datachannelTransportBuilder = new DatachannelTransportBuilderService(
+      id
+    );
   }
 
   register(

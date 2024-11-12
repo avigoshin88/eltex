@@ -1,7 +1,9 @@
+import { Logger } from "../logger/logger.service";
 import { VideoPlayerBuilderService } from "./player-builder.service";
 
 export class VideoPlayerService {
-  builder = new VideoPlayerBuilderService();
+  private logger: Logger | undefined;
+  builder: VideoPlayerBuilderService;
   container!: HTMLDivElement;
   videoContainer!: HTMLDivElement;
   video!: HTMLVideoElement;
@@ -10,6 +12,11 @@ export class VideoPlayerService {
   isPlaying = true;
   isVolumeOn = false;
   cameraName = "";
+
+  constructor(id: string) {
+    this.builder = new VideoPlayerBuilderService(id);
+    this.logger = new Logger(id, "VideoPlayerService");
+  }
 
   init(cameraName: string) {
     this.cameraName = cameraName;

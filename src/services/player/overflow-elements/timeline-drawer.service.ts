@@ -12,13 +12,14 @@ import {
   TIMELINE_STEPS_OPTIONS,
 } from "../../../constants/timeline-steps";
 import { EventBus } from "../../event-bus.service";
+import { Logger } from "../../logger/logger.service";
 
 export class TimelineOverflowDrawer {
   private ranges: RangeData[] = [];
   private readonly container: HTMLDivElement;
 
   private readonly timelineElements: TimelineElementsService;
-  private timelineElementsFactory = new TimelineElementsFactoryService();
+  private timelineElementsFactory: TimelineElementsFactoryService;
 
   private scale: number = 1; // Начальный масштаб
   private currentStartTime: number = 0; // Текущее начало времени
@@ -41,18 +42,23 @@ export class TimelineOverflowDrawer {
   private exportCallback: Nullable<ExportRangeCallback> = null; // Callback для экспорта
 
   private eventBus: EventBus;
+  private logger: Logger;
 
   constructor(
-    private id: string,
+    id: string,
     container: HTMLDivElement,
     clickCallback?: TimelineClickCallback
   ) {
-    this.eventBus = EventBus.getInstance(this.id);
+    this.eventBus = EventBus.getInstance(id);
+    this.logger = new Logger(id, "TimelineOverflowDrawer");
 
     this.clickCallback = clickCallback ?? (() => {});
     this.container = container;
 
+    this.timelineElementsFactory = new TimelineElementsFactoryService(id);
+
     this.timelineElements = new TimelineElementsService(
+      id,
       this.timelineElementsFactory.makeScrollContainer(),
       this.timelineElementsFactory.makeTimelineContainer(),
       this.timelineElementsFactory.makeTrack()

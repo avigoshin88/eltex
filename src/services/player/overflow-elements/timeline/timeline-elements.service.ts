@@ -1,14 +1,19 @@
 import { Nullable } from "../../../../types/global";
+import { Logger } from "../../../logger/logger.service";
 
 export class TimelineElementsService {
   private ranges: HTMLDivElement[] = [];
   private divisions: HTMLDivElement[] = [];
+  private logger: Logger;
 
   constructor(
+    id: string,
     public scrollContainer: Nullable<HTMLDivElement>,
     public timelineContainer: Nullable<HTMLDivElement>,
     public track: Nullable<HTMLDivElement>
-  ) {}
+  ) {
+    this.logger = new Logger(id, "TimelineElementsService");
+  }
 
   setRanges(ranges: HTMLDivElement[]) {
     this.ranges = ranges;

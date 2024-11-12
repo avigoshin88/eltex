@@ -13,7 +13,7 @@ import { MicrophoneService } from "./microphone.service";
 import { Mode } from "../constants/mode";
 
 export class WebRTCService {
-  private logger = new Logger(WebRTCService.name);
+  private logger: Logger;
   private customEventsService: CustomEventsService | undefined;
   private eventBus: EventBus;
 
@@ -39,6 +39,7 @@ export class WebRTCService {
   ) {
     this.options = { ...options };
     this.currentMode = mode;
+    this.logger = new Logger(id, "WebRTCService");
 
     this.datachannelClient = datachannel;
     this.microphoneService = new MicrophoneService(id);

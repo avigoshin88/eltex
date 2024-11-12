@@ -12,11 +12,11 @@ import {
 } from "../../types/datachannel-listener";
 import { DatachannelClientService } from "../datachannel/data-channel.service";
 import { VideoPlayerService } from "../player/player.service";
-import { MetaOverflowDrawerService } from "../player/overflow-elements/meta-drawer.service";
+import MetaOverflowDrawerService from "../player/overflow-elements/meta-drawer.service";
 import { Mode } from "../../constants/mode";
 
 export class LiveVideoService implements ModeService {
-  private logger = new Logger(LiveVideoService.name);
+  private logger: Logger;
 
   private webRTCClient: WebRTCService;
   private datachannelClient: DatachannelClientService;
@@ -30,11 +30,15 @@ export class LiveVideoService implements ModeService {
     player: VideoPlayerService,
     private onConnectionStateChangeCb: () => void
   ) {
+    this.logger = new Logger(id, "LiveVideoService");
     this.player = player;
-    this.metaDrawer = new MetaOverflowDrawerService(this.player.videoContainer);
-    this.datachannelClient = new DatachannelClientService(this.id);
+    this.metaDrawer = new MetaOverflowDrawerService(
+      id,
+      this.player.videoContainer
+    );
+    this.datachannelClient = new DatachannelClientService(id);
     this.webRTCClient = new WebRTCService(
-      this.id,
+      id,
       Mode.LIVE,
       options,
       this.datachannelClient,
@@ -73,6 +77,7 @@ export class LiveVideoService implements ModeService {
     );
 
     const metaDrawer = new MetaOverflowDrawerService(
+      this.id,
       this.player.videoContainer
     );
     const datachannelClient = new DatachannelClientService(this.id);

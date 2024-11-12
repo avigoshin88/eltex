@@ -17,6 +17,7 @@
 
 video-player {
   overflow: hidden;
+  width: 100%;
 }
 
 .video-player {

@@ -8,35 +8,44 @@ const LOGGER_LEVEL: LogLevel = import.meta.env.DEV
   : "info";
 
 class LoggerService {
-  private TAG: string;
-  private logLevel: LogLevel;
+  static logLevels: Record<string, LogLevel> = {};
+  static setLogLevel = (id: string, logLevel: LogLevel = LOGGER_LEVEL) => {
+    LoggerService.logLevels[id] = logLevel;
+  };
+  private PREFIX: string;
 
-  constructor(tag?: string, logLevel: LogLevel = LOGGER_LEVEL) {
-    this.TAG = tag ? `${tag}:` : "";
-    this.logLevel = logLevel;
+  constructor(
+    private id: string,
+    tag: string,
+    logLevel: LogLevel = LOGGER_LEVEL
+  ) {
+    this.PREFIX = `[${id}] ${tag}:`;
+    LoggerService.setLogLevel(id, logLevel);
   }
 
   log(level: LogLevel, ...messages: LogMessage[]) {
     if (this.shouldLog(level)) {
-      console.log(this.TAG, ...this.makeLogMessage(messages));
+      console.log(this.PREFIX, ...this.makeLogMessage(messages));
     }
   }
 
   warn(level: LogLevel, ...messages: LogMessage[]) {
     if (this.shouldLog(level)) {
-      console.warn(this.TAG, ...this.makeLogMessage(messages));
+      console.warn(this.PREFIX, ...this.makeLogMessage(messages));
     }
   }
 
   error(level: LogLevel, ...messages: LogMessage[]) {
     if (this.shouldLog(level)) {
-      console.error(this.TAG, ...this.makeLogMessage(messages));
+      console.error(this.PREFIX, ...this.makeLogMessage(messages));
     }
   }
 
   private shouldLog(level: LogLevel): boolean {
     const levels = ["info", "debug", "trace"];
-    return levels.indexOf(level) <= levels.indexOf(this.logLevel);
+    return (
+      levels.indexOf(level) <= levels.indexOf(LoggerService.logLevels[this.id])
+    );
   }
 
   private makeLogMessage(messages: LogMessage[]) {

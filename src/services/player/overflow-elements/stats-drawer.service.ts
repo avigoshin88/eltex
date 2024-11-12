@@ -1,7 +1,9 @@
 import { Nullable } from "../../../types/global";
 import { Stats } from "../../../types/video";
+import { Logger } from "../../logger/logger.service";
 
 export class StatsOverflowDrawerService {
+  private logger: Logger;
   private readonly container!: HTMLDivElement;
 
   private statsContainer: Nullable<HTMLDivElement> = null;
@@ -12,7 +14,8 @@ export class StatsOverflowDrawerService {
   private audioCodec: Nullable<HTMLSpanElement> = null;
   private frameRate: Nullable<HTMLSpanElement> = null;
 
-  constructor(container: HTMLDivElement) {
+  constructor(id: string, container: HTMLDivElement) {
+    this.logger = new Logger(id, "StatsOverflowDrawerService");
     this.container = container;
   }
 
