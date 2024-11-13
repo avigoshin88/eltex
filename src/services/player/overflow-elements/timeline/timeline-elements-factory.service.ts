@@ -1,11 +1,7 @@
 import { RangeType } from "../../../../types/range";
-import { Logger } from "../../../logger/logger.service";
 
 export class TimelineElementsFactoryService {
-  private logger: Logger;
-  constructor(id: string) {
-    this.logger = new Logger(id, "TimelineElementsFactoryService");
-  }
+  constructor() {}
 
   makeScrollContainer(): HTMLDivElement {
     const scrollContainer = document.createElement("div");

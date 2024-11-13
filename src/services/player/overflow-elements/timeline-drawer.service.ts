@@ -71,12 +71,11 @@ export class TimelineOverflowDrawer {
     this.clickCallback = clickCallback ?? (() => {});
     this.container = container;
 
-    this.timelineElementsFactory = new TimelineElementsFactoryService(id);
+    this.timelineElementsFactory = new TimelineElementsFactoryService();
     const [phantomTrack, phantomTrackTimeCard, phantomTrackTimeCardText] =
       this.timelineElementsFactory.makePhantomTrack();
 
     this.timelineElements = new TimelineElementsService(
-      id,
       this.timelineElementsFactory.makeScrollContainer(),
       this.timelineElementsFactory.makeContentContainer(),
       this.timelineElementsFactory.makeTimelineContainer(),
@@ -124,7 +123,10 @@ export class TimelineOverflowDrawer {
   }
 
   draw(currentTimestamp: number): void {
+    this.logger.log("trace", `Отрисовываем таймштемп ${currentTimestamp}`);
+
     if (!this.isReady || !this.timelineElements.timelineContainer) {
+      this.logger.error("trace", `Не удается отрисовать`);
       return;
     }
 
@@ -240,6 +242,8 @@ export class TimelineOverflowDrawer {
 
   // Включение режима экспорта
   enableExportMode(callback: ExportRangeCallback): void {
+    this.logger.log("trace", `Включаем экспорт мод`);
+
     this.exportMode = true;
     this.exportCallback = callback;
     this.exportStartTime = null;
@@ -251,6 +255,8 @@ export class TimelineOverflowDrawer {
 
   // Отключение режима экспорта
   disableExportMode(): void {
+    this.logger.log("trace", `Выключаем экспорт мод`);
+
     this.exportMode = false;
     this.exportCallback = null;
     this.exportStartTime = null;
@@ -261,6 +267,8 @@ export class TimelineOverflowDrawer {
   }
 
   private clearExportMarkers(): void {
+    this.logger.log("trace", `Очищаем маркеры экспорта`);
+
     const markers = this.timelineElements.timelineContainer!.querySelectorAll(
       ".video-player__timeline__export-marker"
     );
@@ -268,6 +276,8 @@ export class TimelineOverflowDrawer {
   }
 
   private addExportMarker(position: number, type: "start" | "end"): void {
+    this.logger.log("trace", `Добавляем маркер экспорта`);
+
     const marker = document.createElement("div");
 
     marker.classList.add("video-player__timeline__export-marker");
@@ -288,6 +298,8 @@ export class TimelineOverflowDrawer {
     totalTimeRange: number,
     totalRangeWidth: number
   ): void {
+    this.logger.log("trace", `Обновляем экспорт маркеры`);
+
     this.clearExportMarkers();
 
     if (this.exportStartTime !== null) {
@@ -322,11 +334,16 @@ export class TimelineOverflowDrawer {
     if (this.isUserScrolling) {
       return;
     }
+    this.logger.log(
+      "trace",
+      `Трек вышел за пределы видимости, скроллим до него`
+    );
 
     this.scrollTrackToAlign(this.timelineElements.track!, "right");
   };
 
   private onTimelineResize = () => {
+    this.logger.log("trace", `Произошло изменение размеров`);
     this.draw(this.currentTimestamp);
   };
 
@@ -335,6 +352,8 @@ export class TimelineOverflowDrawer {
     align: "center" | "left" | "right",
     offset = 0
   ) {
+    this.logger.log("trace", `Скроллируем до трека`);
+
     if (
       !this.timelineElements.scrollContainer ||
       !this.timelineElements.trackContainer
@@ -460,6 +479,11 @@ export class TimelineOverflowDrawer {
   }
 
   setOptions(ranges: RangeData[], updateScale = true): void {
+    this.logger.log(
+      "trace",
+      `Устанавливаем фрагменты: ${JSON.stringify(ranges)}`
+    );
+
     this.timelineMathService.setRanges(ranges);
 
     this.isReady = true;
@@ -487,6 +511,8 @@ export class TimelineOverflowDrawer {
   }
 
   clear(): void {
+    this.logger.log("trace", `Очищаем сервис`);
+
     if (!this.timelineElements.scrollContainer) {
       return;
     }
@@ -522,6 +548,8 @@ export class TimelineOverflowDrawer {
   }
 
   private setScale = (value: number) => {
+    this.logger.log("trace", `Устанавливаем масштаб равный ${value}`);
+
     const containerWidth = this.timelineElements.scrollContainer!.offsetWidth;
 
     this.scale = containerWidth / value;
@@ -576,10 +604,12 @@ export class TimelineOverflowDrawer {
   }
 
   private showPhantomTrack() {
+    this.logger.log("trace", `Показываем фантомный трек`);
     this.timelineElements.phantomTrack!.style.visibility = "visible";
   }
 
   private hidePhantomTrack() {
+    this.logger.log("trace", `Скрываем фантомный трек`);
     this.timelineElements.phantomTrack!.style.visibility = "hidden";
   }
 
@@ -608,6 +638,8 @@ export class TimelineOverflowDrawer {
   };
 
   private updatePhantomTrack(position: number) {
+    this.logger.log("trace", `Обновляем фантомный трек`);
+
     const time = this.getTimestampByPosition(position);
     if (!time) {
       return;
@@ -891,6 +923,8 @@ export class TimelineOverflowDrawer {
   }
 
   private registerListeners() {
+    this.logger.log("trace", `Регистрируем слушателей`);
+
     this.timelineElements.scrollContainer?.addEventListener(
       "scroll",
       this.scrollEventListener.bind(this)
@@ -934,6 +968,8 @@ export class TimelineOverflowDrawer {
   }
 
   private clearListeners() {
+    this.logger.log("trace", `Удаляем слушателей`);
+
     this.timelineElements.timelineContainer?.removeEventListener(
       "scroll",
       this.scrollEventListener
