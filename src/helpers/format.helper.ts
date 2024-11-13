@@ -17,3 +17,9 @@ export function formatTime(time: number, scale: number): string {
     return format(date, "yyyy");
   }
 }
+
+
+export function formatPhantomTime(time: number): string {
+  const date = new Date(time);
+  return format(date, "dd.MM.yyyy HH:mm:ss");
+}
