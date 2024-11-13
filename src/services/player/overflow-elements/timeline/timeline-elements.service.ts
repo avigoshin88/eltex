@@ -9,8 +9,13 @@ export class TimelineElementsService {
   constructor(
     id: string,
     public scrollContainer: Nullable<HTMLDivElement>,
+    public contentContainer: Nullable<HTMLDivElement>,
     public timelineContainer: Nullable<HTMLDivElement>,
-    public track: Nullable<HTMLDivElement>
+    public trackContainer: Nullable<HTMLDivElement>,
+    public track: Nullable<HTMLDivElement>,
+    public phantomTrack: Nullable<HTMLDivElement>,
+    public phantomTrackTimeCard: Nullable<HTMLDivElement>,
+    public phantomTrackTimeCardText: Nullable<HTMLSpanElement>
   ) {
     this.logger = new Logger(id, "TimelineElementsService");
   }

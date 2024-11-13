@@ -10,16 +10,31 @@ export class TimelineElementsFactoryService {
   makeScrollContainer(): HTMLDivElement {
     const scrollContainer = document.createElement("div");
 
-    scrollContainer.style.width = "100%";
-    scrollContainer.style.overflowX = "auto";
+    scrollContainer.classList.add("video-player__timeline");
 
     return scrollContainer;
+  }
+
+  makeContentContainer(): HTMLDivElement {
+    const contentContainer = document.createElement("div");
+
+    contentContainer.classList.add("video-player__timeline__content");
+
+    return contentContainer;
+  }
+
+  makeTrackContainer(): HTMLDivElement {
+    const trackContainer = document.createElement("div");
+
+    trackContainer.classList.add("video-player__timeline__track-container");
+
+    return trackContainer;
   }
 
   makeTimelineContainer(): HTMLDivElement {
     const timelineContainer = document.createElement("div");
 
-    timelineContainer.classList.add("video-player__timeline");
+    timelineContainer.classList.add("video-player__timeline__ranges");
 
     timelineContainer.style.overflowX = "hidden";
     timelineContainer.style.whiteSpace = "nowrap";
@@ -34,6 +49,40 @@ export class TimelineElementsFactoryService {
     track.classList.add("video-player__timeline__track");
 
     return track;
+  }
+
+  makePhantomTrack(): [HTMLDivElement, HTMLDivElement, HTMLSpanElement] {
+    const phantomTrackContainer = document.createElement("div");
+    const phantomTrackTimeCard = document.createElement("div");
+    const phantomTrackTimeCardText = document.createElement("span");
+
+    const phantomTrack = document.createElement("div");
+
+    phantomTrack.id = "phantom-track";
+    phantomTrack.classList.add("video-player__timeline__track");
+    phantomTrack.classList.add("video-player__timeline__track_phantom");
+
+    phantomTrackContainer.classList.add(
+      "video-player__timeline__track_phantom__container"
+    );
+    phantomTrackTimeCard.classList.add(
+      "video-player__timeline__track_phantom__time-card"
+    );
+    phantomTrackTimeCardText.classList.add(
+      "video-player__timeline__track_phantom__time-card__text"
+    );
+
+    phantomTrackTimeCard.appendChild(phantomTrackTimeCardText);
+    phantomTrackContainer.appendChild(phantomTrackTimeCard);
+    phantomTrackContainer.appendChild(phantomTrack);
+
+    phantomTrackContainer.style.visibility = "hidden";
+
+    return [
+      phantomTrackContainer,
+      phantomTrackTimeCard,
+      phantomTrackTimeCardText,
+    ];
   }
 
   makeRange(
