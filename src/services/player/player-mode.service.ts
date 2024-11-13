@@ -80,6 +80,13 @@ export class PlayerModeService {
   }
 
   switch() {
+    this.logger.log(
+      "info",
+      `Включаем режим ${
+        this.currentMode === Mode.LIVE ? Mode.ARCHIVE : Mode.LIVE
+      }`
+    );
+
     this.customEventsService.emit(
       "mode-changed",
       this.currentMode === Mode.LIVE ? Mode.ARCHIVE : Mode.LIVE
@@ -87,6 +94,8 @@ export class PlayerModeService {
   }
 
   setupControlsDrawer() {
+    this.logger.log("debug", `Конфигурируем элементы управления плеером`);
+
     this.controlsDrawer?.clear();
 
     this.controlsDrawer = new ControlsOverflowDrawerService(
@@ -235,6 +244,15 @@ export class PlayerModeService {
   }
 
   private onConnectionStateChange = () => {
+    this.logger.log(
+      "debug",
+      `Новый статус соединения ${this.modeConnection.connectionState}, ${
+        this.modeConnection.connectionState !== "connected"
+          ? "отображаем"
+          : "скрываем"
+      } заглушку`
+    );
+
     this.player.togglePlaceholder(
       this.modeConnection.connectionState !== "connected"
     );
@@ -246,7 +264,7 @@ export class PlayerModeService {
 
     if (this.currentMode === newMode) {
       this.logger.warn(
-        "info",
+        "debug",
         "Попытка включить включенный режим плеера",
         newMode
       );
@@ -259,6 +277,11 @@ export class PlayerModeService {
         };
 
         if (this.quality !== "fhd") {
+          this.logger.log(
+            "debug",
+            `Выбрано ограничение битрета ${this.quality}`
+          );
+
           options.constrains = {
             maxBitrate: quality[this.quality].bitrate,
           };
@@ -316,6 +339,8 @@ export class PlayerModeService {
   }
 
   async reset() {
+    this.logger.log("debug", "Очистка сервиса");
+
     this.playerStats.reset();
 
     this.clearListeners();
@@ -335,6 +360,13 @@ export class PlayerModeService {
   }
 
   private switchPlayState() {
+    this.logger.log(
+      "debug",
+      `Переключение режима воспроизведения после нажатия на кнопку управления, новый режим: ${
+        this.player.isPlaying ? "плей" : "пауза"
+      }`
+    );
+
     if (!this.player.isPlaying) {
       this.modeConnection.play?.(true);
       this.player.play();
@@ -350,6 +382,10 @@ export class PlayerModeService {
   }
 
   private enablePlay = () => {
+    this.logger.log(
+      "trace",
+      `Переключение режима воспроизведения после срабатывания коллбэка`
+    );
     if (this.player.isPlaying) {
       return;
     }
@@ -359,10 +395,13 @@ export class PlayerModeService {
     this.controlsDrawer.updateBinaryButtonsState({
       [ControlName.PLAY]: this.player.isPlaying,
     });
+
     this.controlsDrawer.draw();
   };
 
   private stop() {
+    this.logger.log("debug", `Установление режима воспроизведения в стоп`);
+
     this.modeConnection.stop?.();
     this.player.pause();
 
@@ -373,6 +412,11 @@ export class PlayerModeService {
   }
 
   private switchVolumeState() {
+    this.logger.log(
+      "debug",
+      `${this.player.isVolumeOn ? "Выключаем" : "Включаем"} звук`
+    );
+
     if (!this.player.isVolumeOn) {
       this.soundLevel = this.oldSoundLevel ?? "100";
       this.oldSoundLevel = null;
@@ -398,6 +442,11 @@ export class PlayerModeService {
   }
 
   private switchMetaState() {
+    this.logger.log(
+      "debug",
+      `${this.metaEnabled ? "Выключаем" : "Включаем"} отображение метаданных`
+    );
+
     const newState = !this.metaEnabled;
 
     this.modeConnection.toggleMeta(newState);
@@ -411,14 +460,20 @@ export class PlayerModeService {
   }
 
   private toNextFragment() {
+    this.logger.log("debug", `Переходим к следующему фрагменту`);
+
     this.archiveControl?.toNextFragment();
   }
 
   private toPrevFragment() {
+    this.logger.log("debug", `Переходим к предыдущему фрагменту`);
+
     this.archiveControl?.toPrevFragment();
   }
 
   private snap() {
+    this.logger.log("debug", `Делаем скриншот`);
+
     const metaLayer = this.player.container.getElementsByTagName("canvas")[0];
 
     this.snapshotManager.snap(
@@ -430,6 +485,11 @@ export class PlayerModeService {
   }
 
   private switchStats() {
+    this.logger.log(
+      "debug",
+      `${this.isShowStats ? "Выключаем" : "включаем"} отображение статистики`
+    );
+
     this.isShowStats = !this.isShowStats;
 
     if (!this.isShowStats) {
@@ -444,6 +504,8 @@ export class PlayerModeService {
   }
 
   private switchExportMode = () => {
+    this.logger.log("debug", `Переключаем режим экспорта`);
+
     if (this.isExport === false) {
       this.modeConnection.export?.();
 
@@ -461,6 +523,8 @@ export class PlayerModeService {
   };
 
   private resetExportMode = () => {
+    this.logger.log("debug", `Обнуляем режим экспорта`);
+
     this.isExport = false;
 
     this.controlsDrawer.updateBinaryButtonsState({
@@ -470,6 +534,13 @@ export class PlayerModeService {
   };
 
   private onUpdateStats = (stats: Stats) => {
+    this.logger.log(
+      "trace",
+      `Коллбэк на изменение статистики, новая статистика: ${JSON.stringify(
+        stats
+      )}`
+    );
+
     if (!stats.resolution.width || !stats.resolution.height) {
       this.resolution = null;
     } else {
@@ -488,6 +559,11 @@ export class PlayerModeService {
   private onChangeSpeed(event: Event) {
     const target = event.target as HTMLInputElement;
 
+    this.logger.log(
+      "debug",
+      `Скорость изменена, новая скорость: ${JSON.stringify(target.value)}`
+    );
+
     this.speed = target.value;
 
     this.controlsDrawer.updateControlValues({
@@ -500,6 +576,11 @@ export class PlayerModeService {
 
   private onChangeQuality(event: Event) {
     const target = event.target as HTMLInputElement;
+
+    this.logger.log(
+      "debug",
+      `Качество изменено, новое качество: ${JSON.stringify(target.value)}`
+    );
 
     // @ts-ignore
     this.quality = target.value;
@@ -522,6 +603,11 @@ export class PlayerModeService {
 
   private onChangeSoundLevel(event: Event) {
     const target = event.target as HTMLInputElement;
+
+    this.logger.log(
+      "debug",
+      `Громкость изменена, новая громкость: ${JSON.stringify(target.value)}`
+    );
 
     this.soundLevel = target.value;
 
@@ -547,6 +633,13 @@ export class PlayerModeService {
   private changeScale(event: Event) {
     const target = event.target as HTMLInputElement;
 
+    this.logger.log(
+      "debug",
+      `Масштаб таймлайна изменен, новый масштаб: ${JSON.stringify(
+        target.value
+      )}`
+    );
+
     const newScale = target.value;
     if (!newScale) {
       return;
@@ -561,6 +654,13 @@ export class PlayerModeService {
   }
 
   private onManualScaleChange = (scale: string) => {
+    this.logger.log(
+      "debug",
+      `Коллбэк на изменение масштаба таймлайна сработал, новый масштаб: ${JSON.stringify(
+        scale
+      )}`
+    );
+
     this.controlsDrawer.updateControlValues({
       [ControlName.SCALE]: scale,
     });
@@ -571,6 +671,13 @@ export class PlayerModeService {
     current: string,
     options: SelectOption[]
   ]) => {
+    this.logger.log(
+      "debug",
+      `Устанавливаем варианты масштаба ${JSON.stringify(
+        options
+      )}, текущий вариант ${current}`
+    );
+
     this.timelineScaleOptions = options;
 
     this.controlsDrawer.updateControlValues({
@@ -585,6 +692,8 @@ export class PlayerModeService {
   };
 
   private onMicMouseDown() {
+    this.logger.log("debug", `Нажата кнопка микрофона`);
+
     const liveConnection = this.modeConnection as LiveVideoService;
     if (liveConnection) {
       liveConnection.mic.micCallbacks?.mousedown();
@@ -592,6 +701,8 @@ export class PlayerModeService {
   }
 
   private onMicMouseUp() {
+    this.logger.log("debug", `Кнопку микрофона отпущена`);
+
     const liveConnection = this.modeConnection as LiveVideoService;
     if (liveConnection) {
       liveConnection.mic.micCallbacks?.mouseup();
@@ -599,6 +710,8 @@ export class PlayerModeService {
   }
 
   private onMicMouseLeave() {
+    this.logger.log("debug", `Курсор мыши вышел за пределы кнопки микрофона`);
+
     const liveConnection = this.modeConnection as LiveVideoService;
     if (liveConnection) {
       liveConnection.mic.micCallbacks?.mouseleave();
@@ -614,7 +727,7 @@ export class PlayerModeService {
 
   private onPush2Talk = (push2TalkState: boolean) => {
     this.logger.log(
-      "info",
+      "debug",
       push2TalkState
         ? `Приглушаем звук на время включения микрофона в режиме Push to talk`
         : `Возвращаем звук после выключения микрофона в режиме Push to talk`
@@ -623,6 +736,8 @@ export class PlayerModeService {
   };
 
   private setListeners() {
+    this.logger.log("debug", `Устанавливаем слушателей`);
+
     this.eventBus.on("stats", this.onUpdateStats);
     this.eventBus.on("cancel-export", this.resetExportMode);
     this.eventBus.on("play-enabled", this.enablePlay);
@@ -636,6 +751,8 @@ export class PlayerModeService {
   }
 
   private clearListeners() {
+    this.logger.log("debug", `Убираем слушателей`);
+
     this.eventBus.off("stats", this.onUpdateStats);
     this.eventBus.off("cancel-export", this.resetExportMode);
     this.eventBus.off("play-enabled", this.enablePlay);

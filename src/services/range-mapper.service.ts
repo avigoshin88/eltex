@@ -10,6 +10,11 @@ export class RangeMapperService {
   }
 
   calc(ranges: RangeDto[]): RangeData[] {
+    this.logger.log(
+      "trace",
+      `Обрабатываем полученные фрагменты архива: ${JSON.stringify(ranges)}`
+    );
+
     const result: RangeData[] = [];
 
     // Добавляем первый элемент

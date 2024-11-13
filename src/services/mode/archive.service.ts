@@ -128,6 +128,8 @@ export class ArchiveVideoService implements ModeService {
   }
 
   async init(metaEnabled: boolean): Promise<void> {
+    this.logger.log("debug", `Инициируем Archive сервис`);
+
     await this.webRTCClient.setupPeerConnection({
       nativeListeners: {
         open: this.onOpenDatachannel.bind(this),
@@ -163,6 +165,12 @@ export class ArchiveVideoService implements ModeService {
     options: ConnectionOptions,
     metaEnabled: boolean
   ) {
+    this.logger.log(
+      "debug",
+      "Перезапускаем archive соединение с новыми параметрами:",
+      JSON.stringify(options)
+    );
+
     this.pause(true);
 
     this.renewStartTime = this.archiveTimeControl.getCurrentTimestamp();
@@ -171,12 +179,6 @@ export class ArchiveVideoService implements ModeService {
       start_time: this.renewStartTime,
       type: "data",
     };
-
-    this.logger.log(
-      "info",
-      "Перезапускаем archive соединение с новыми параметрами:",
-      JSON.stringify(options)
-    );
 
     const metaDrawer = new MetaOverflowDrawerService(
       this.id,
@@ -262,6 +264,8 @@ export class ArchiveVideoService implements ModeService {
           this.archiveControl.preloadRangeFragment();
 
           this.onOpenDatachannel();
+
+          this.logger.log("debug", `Перезапущено с новыми параметрами`);
         },
       },
     };
@@ -271,6 +275,8 @@ export class ArchiveVideoService implements ModeService {
   }
 
   async reset(fullReset = true): Promise<void> {
+    this.logger.log("debug", `Обнуляем сервис`);
+
     await this.webRTCClient.reset();
     this.datachannelClient.close();
     this.metaDrawer.destroy();
@@ -308,10 +314,14 @@ export class ArchiveVideoService implements ModeService {
   };
 
   export(): void {
+    this.logger.log("debug", `Включаем экспорт мод`);
+
     this.timelineDrawer.enableExportMode(this.exportFragment.bind(this));
   }
 
   cancelExport(): void {
+    this.logger.log("debug", `Выключаем экспорт мод`);
+
     this.timelineDrawer.disableExportMode();
   }
 
@@ -332,6 +342,8 @@ export class ArchiveVideoService implements ModeService {
   }
 
   private exportFragment(range: RangeDto) {
+    this.logger.log("debug", `Экспортируем фрагмент ${JSON.stringify(range)}`);
+
     this.datachannelClient.send(
       DatachannelMessageType.GET_EXPORT_FRAGMENT_URL,
       {
@@ -348,7 +360,7 @@ export class ArchiveVideoService implements ModeService {
   }
 
   private onError(error: string) {
-    this.logger.error("info", "Ошибка в запросе видео:", error);
+    this.logger.error("debug", "Ошибка в запросе видео:", error);
   }
 
   private onRanges(data: unknown) {
@@ -379,7 +391,7 @@ export class ArchiveVideoService implements ModeService {
   }
 
   setSpeed(speed: number) {
-    this.logger.log("info", "Установка скорости воспроизведения: ", speed);
+    this.logger.log("debug", "Установка скорости воспроизведения: ", speed);
 
     this.speed = speed;
 
@@ -397,6 +409,10 @@ export class ArchiveVideoService implements ModeService {
   }
 
   private supportConnect() {
+    this.logger.log(
+      "trace",
+      `Отправляем сообщение для поддержки соединения по datachannel`
+    );
     this.datachannelClient.send(DatachannelMessageType.ARCHIVE_CONNECT_SUPPORT);
   }
 
@@ -408,7 +424,7 @@ export class ArchiveVideoService implements ModeService {
     this.nextProcessedRange = fragment;
 
     this.logger.log(
-      "info",
+      "trace",
       "Новый фрагмент",
       fragment,
       "isPreRequestRange",
@@ -417,7 +433,7 @@ export class ArchiveVideoService implements ModeService {
 
     if (this.isPreRequestRange) {
       this.logger.log(
-        "info",
+        "trace",
         DatachannelMessageType.GET_ARCHIVE_FRAGMENT,
         fragment
       );
@@ -445,14 +461,14 @@ export class ArchiveVideoService implements ModeService {
 
     this.datachannelClient.send(DatachannelMessageType.DROP_BUFFER);
 
-    this.logger.log("info", "Начался новый фрагмент");
-    this.logger.log("info", DatachannelMessageType.DROP_BUFFER, fragment);
+    this.logger.log("trace", "Начался новый фрагмент");
+    this.logger.log("trace", DatachannelMessageType.DROP_BUFFER, fragment);
   }
 
   private onChangeCurrentTime(
     ...[timestamp, range]: Parameters<TimelineClickCallback>
   ) {
-    this.logger.log("info", "Изменение текущего времени", timestamp, range);
+    this.logger.log("trace", "Изменение текущего времени", timestamp, range);
 
     this.pause();
     this.player.pause();
@@ -461,14 +477,14 @@ export class ArchiveVideoService implements ModeService {
   }
 
   private onDropComplete() {
-    this.logger.log("info", "Очистка буфера завершена");
+    this.logger.log("trace", "Очистка буфера завершена");
 
     if (!this.nextProcessedRange) {
-      this.logger.warn("info", "Следующий диапазон пустой: нечего очищать");
+      this.logger.warn("trace", "Следующий диапазон пустой: нечего очищать");
       return;
     }
 
-    this.logger.log("info", DatachannelMessageType.GET_KEY, {
+    this.logger.log("trace", DatachannelMessageType.GET_KEY, {
       start_time: this.nextProcessedRange.start_time,
     });
 
@@ -482,7 +498,7 @@ export class ArchiveVideoService implements ModeService {
     error?: Nullable<string>
   ) {
     if (isFragmentLoadError(error)) {
-      this.logger.error("info", "Ошибка загрузки ключевого фрагмента");
+      this.logger.error("trace", "Ошибка загрузки ключевого фрагмента");
 
       this.archiveControl.setCurrentTime(
         this.archiveTimeControl.getCurrentTimestamp() +
@@ -494,16 +510,16 @@ export class ArchiveVideoService implements ModeService {
 
     if (!this.nextProcessedRange) {
       this.logger.warn(
-        "info",
+        "trace",
         "Нечего загружать в буфер: следующий диапазон пустой"
       );
       return;
     }
 
-    this.logger.log("info", "Загрузка ключевого фрагмента завершена");
+    this.logger.log("trace", "Загрузка ключевого фрагмента завершена");
 
     this.logger.log(
-      "info",
+      "trace",
       DatachannelMessageType.GET_ARCHIVE_FRAGMENT,
       this.nextProcessedRange
     );
@@ -519,7 +535,7 @@ export class ArchiveVideoService implements ModeService {
     error?: Nullable<string>
   ) {
     if (isFragmentLoadError(error)) {
-      this.logger.error("info", "Ошибка загрузки ключевого фрагмента");
+      this.logger.error("trace", "Ошибка загрузки ключевого фрагмента");
 
       this.archiveControl.setCurrentTime(
         this.archiveTimeControl.getCurrentTimestamp() +
@@ -534,7 +550,7 @@ export class ArchiveVideoService implements ModeService {
 
       if (this.nextProcessedRange) {
         this.logger.log(
-          "info",
+          "trace",
           "Фрагмент стрима начался: ",
           this.nextProcessedRange
         );
@@ -551,11 +567,11 @@ export class ArchiveVideoService implements ModeService {
   }
 
   private onStreamPlay() {
-    this.logger.log("info", "Стрим начал воспроизведение");
+    this.logger.log("trace", "Стрим начал воспроизведение");
 
     if (this.nextProcessedRange) {
       this.logger.log(
-        "info",
+        "trace",
         "Фрагмент стрима начался: ",
         this.nextProcessedRange
       );
@@ -575,14 +591,16 @@ export class ArchiveVideoService implements ModeService {
   }
 
   private clearListeners() {
+    this.logger.log("debug", `Очищаем слушателей`);
+
     this.archiveControl.clearIntervals();
   }
 
   play(isContinue = false) {
-    this.logger.log("info", "Воспроизведение стрима", { isContinue });
+    this.logger.log("debug", "Воспроизведение стрима", { isContinue });
 
     if (!isContinue) {
-      this.logger.log("info", "Запуск стрима");
+      this.logger.log("debug", "Запуск стрима");
 
       this.datachannelClient.send(DatachannelMessageType.PLAY_STREAM);
     } else {
@@ -592,21 +610,21 @@ export class ArchiveVideoService implements ModeService {
 
   pause(rerender = true) {
     this.logger.log(
-      "info",
+      "debug",
       "Пауза стрима: ",
       this.archiveTimeControl.getCurrentTimestamp()
     );
     this.datachannelClient.send(DatachannelMessageType.STOP_STREAM);
 
     if (rerender) {
-      this.logger.log("info", "Перерисовка трека");
+      this.logger.log("debug", "Перерисовка трека");
 
       this.archiveControl.pause(this.archiveTimeControl.getCurrentTimestamp());
     }
   }
 
   stop() {
-    this.logger.log("info", "Остановка стрима");
+    this.logger.log("debug", "Остановка стрима");
     this.datachannelClient.send(DatachannelMessageType.STOP_STREAM);
 
     const startTime = this.ranges[0].start_time;
@@ -625,6 +643,11 @@ export class ArchiveVideoService implements ModeService {
   }
 
   toggleMeta(on: boolean) {
+    this.logger.log(
+      "debug",
+      `${on ? "Включаем" : "Выключаем"} отображение метаданных`
+    );
+
     this.datachannelClient.updateListener(
       DatachannelMessageType.META,
       on ? (this.metaDrawer.draw as DatachannelEventListener) : undefined

@@ -33,7 +33,17 @@ export class PlayerStatsService {
   };
 
   tryStartTracking() {
+    this.logger.log(
+      "debug",
+      "Пробуем начать отслеживание изменения статистики"
+    );
+
     if (!this.videoElement || !this.peerConnection) {
+      this.logger.error(
+        "debug",
+        "Не удается начать отслеживание изменения статистики, соединение и/или видео элемент отсутствуют"
+      );
+
       return;
     }
 
@@ -41,7 +51,14 @@ export class PlayerStatsService {
   }
 
   private async startTracking() {
+    this.logger.log("debug", "Начинаем отслеживание изменения статистики");
+
     if (this.trackingStatsInterval) {
+      this.logger.log(
+        "debug",
+        "Отслеживание было запущено ранее, удаляем старое"
+      );
+
       clearInterval(this.trackingStatsInterval);
       this.trackingStatsInterval = null;
     }
@@ -56,14 +73,20 @@ export class PlayerStatsService {
     this.trackingStatsInterval = setInterval(() => {
       this.updateStats(trackWebRTCStats);
     }, trackingStatsInterval);
+
+    this.logger.log("debug", "Отслеживание изменения статистики запущено");
   }
 
   init() {
+    this.logger.log("debug", "Инициализация сервиса статистики");
+
     this.eventBus.on("setup-video", this.setupVideo);
     this.eventBus.on("setup-peerconnection", this.setupPeerConnection);
   }
 
   reset() {
+    this.logger.log("debug", "Обнуляем сервис статистики");
+
     this.eventBus.off("setup-video", this.setupVideo);
     this.eventBus.off("setup-peerconnection", this.setupPeerConnection);
 
@@ -73,17 +96,23 @@ export class PlayerStatsService {
     if (this.trackingStatsInterval !== null) {
       clearInterval(this.trackingStatsInterval);
     }
+
+    this.logger.log("debug", "Сервис статистики обнулен");
   }
 
   private async updateStats(trackWebRTCStats: () => Promise<Stats>) {
+    this.logger.log("trace", "Обновляем статистику");
+
     try {
       const stats = await trackWebRTCStats();
+
+      this.logger.log("trace", `Новая статистика: ${stats}`);
 
       this.eventBus.emit("current-video-codec", stats.videoCodec);
 
       this.eventBus.emit("stats", stats);
     } catch (error) {
-      this.logger.error("info", "Ошибка получения статистики: ", error);
+      this.logger.error("trace", "Ошибка получения статистики: ", error);
     }
   }
 
@@ -91,6 +120,8 @@ export class PlayerStatsService {
     peerConnection: RTCPeerConnection,
     videoElement: HTMLVideoElement
   ) {
+    this.logger.log("debug", "Создаем трекер статистики");
+
     let prevBytesReceived: number = 0;
     let prevTimestamp: number = 0;
 

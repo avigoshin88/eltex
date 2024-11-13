@@ -19,25 +19,49 @@ class LoggerService {
     tag: string,
     logLevel: LogLevel = LOGGER_LEVEL
   ) {
-    this.PREFIX = `[${id}] ${tag}:`;
+    this.PREFIX = `[ID: ${id}] ${tag}:`;
     LoggerService.setLogLevel(id, logLevel);
   }
 
   log(level: LogLevel, ...messages: LogMessage[]) {
     if (this.shouldLog(level)) {
-      console.log(this.PREFIX, ...this.makeLogMessage(messages));
+      console.log(
+        `%c[${new Date().toISOString()}]%c %c${
+          this.PREFIX
+        }%c ${this.makeLogMessage(messages)}`,
+        "color: white; background-color: black;",
+        "",
+        "color: black; background-color: white;",
+        ""
+      );
     }
   }
 
   warn(level: LogLevel, ...messages: LogMessage[]) {
     if (this.shouldLog(level)) {
-      console.warn(this.PREFIX, ...this.makeLogMessage(messages));
+      console.warn(
+        `%c[${new Date().toISOString()}]%c %c${
+          this.PREFIX
+        }%c ${this.makeLogMessage(messages)}`,
+        "color: white; background-color: black;",
+        "",
+        "color: black; background-color: white;",
+        ""
+      );
     }
   }
 
   error(level: LogLevel, ...messages: LogMessage[]) {
     if (this.shouldLog(level)) {
-      console.error(this.PREFIX, ...this.makeLogMessage(messages));
+      console.error(
+        `%c[${new Date().toISOString()}]%c %c${
+          this.PREFIX
+        }%c ${this.makeLogMessage(messages)}`,
+        "color: white; background-color: black;",
+        "",
+        "color: black; background-color: white;",
+        ""
+      );
     }
   }
 
@@ -49,7 +73,7 @@ class LoggerService {
   }
 
   private makeLogMessage(messages: LogMessage[]) {
-    return messages.map(this.parseMessage);
+    return messages.map(this.parseMessage).filter(Boolean).join(" ");
   }
 
   private parseMessage(message: LogMessage) {

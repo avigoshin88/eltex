@@ -31,6 +31,9 @@ export class LiveVideoService implements ModeService {
     private onConnectionStateChangeCb: () => void
   ) {
     this.logger = new Logger(id, "LiveVideoService");
+
+    this.logger.log("debug", "Инициализация конструктора");
+
     this.player = player;
     this.metaDrawer = new MetaOverflowDrawerService(
       id,
@@ -49,6 +52,7 @@ export class LiveVideoService implements ModeService {
   }
 
   async init(metaEnabled: boolean): Promise<void> {
+    this.logger.log("debug", "Инициализация live соединения");
     const datachannelListeners: {
       nativeListeners: DatachannelNativeEventListeners;
       listeners: DatachannelEventListeners;
@@ -71,7 +75,7 @@ export class LiveVideoService implements ModeService {
     metaEnabled: boolean
   ) {
     this.logger.log(
-      "info",
+      "debug",
       "Перезапускаем live соединение с новыми параметрами:",
       JSON.stringify(options)
     );
@@ -110,6 +114,11 @@ export class LiveVideoService implements ModeService {
           this.metaDrawer = metaDrawer;
           this.datachannelClient = datachannelClient;
           this.webRTCClient = webRTCClient;
+
+          this.logger.log(
+            "debug",
+            "Live соединение с новыми параметрами запущено"
+          );
         },
       },
     };
@@ -125,17 +134,29 @@ export class LiveVideoService implements ModeService {
   }
 
   async reset() {
+    this.logger.log("debug", "Сбрасываем Live соединение");
     this.metaDrawer.destroy();
     this.datachannelClient.close();
     this.webRTCClient.reset();
+    this.logger.log("debug", "Live соединение сброшено");
   }
 
   setSource(stream: MediaStream) {
+    this.logger.log(
+      "debug",
+      "Устанавливаем источник Live соединения в видеоплеер"
+    );
     this.player.setSource(stream);
     this.player.play();
   }
 
   toggleMeta(on: boolean) {
+    this.logger.log(
+      "debug",
+      `Переключаем отображение метаданных в режим ${
+        on ? "включено" : "выключено"
+      }`
+    );
     this.datachannelClient.updateListener(
       DatachannelMessageType.META,
       on ? (this.metaDrawer.draw as DatachannelEventListener) : undefined

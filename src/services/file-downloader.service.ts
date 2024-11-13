@@ -8,6 +8,9 @@ export class FileDownloader {
   }
 
   download(url: string, filename?: string) {
+    this.logger.log("trace", `Загружаем файл по ссылке: ${url}`);
+    filename && this.logger.log("trace", `Имя файла ${filename}`);
+
     const a = document.createElement("a");
 
     a.target = "_blank";

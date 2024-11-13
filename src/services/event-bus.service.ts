@@ -18,14 +18,20 @@ class EventBus {
   }
 
   on(event: EventName, callback: EventCallback): void {
+    this.logger.log("trace", `Подписываемся на событие ${event}`);
+
     if (!this.listeners.has(event)) {
       this.listeners.set(event, []);
     }
+
     this.listeners.get(event)!.push(callback);
   }
 
   off(event: EventName, callback: EventCallback): void {
+    this.logger.log("trace", `Отписываемся от события ${event}`);
+
     const eventListeners = this.listeners.get(event);
+
     if (!eventListeners) {
       return;
     }
@@ -41,7 +47,10 @@ class EventBus {
   }
 
   emit(event: EventName, data?: any): void {
+    this.logger.log("trace", `Вызываем событие ${event}`);
+
     const eventListeners = this.listeners.get(event);
+
     if (!eventListeners) {
       return;
     }

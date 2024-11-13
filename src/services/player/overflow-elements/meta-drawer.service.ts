@@ -12,6 +12,7 @@ export default class MetaOverflowDrawerService {
   private canvas: HTMLCanvasElement;
   private context: CanvasRenderingContext2D | null;
   private observer = new ResizeObserver(() => {
+    this.logger.log("trace", "Размеры контейнера обновлены");
     this.resizeCanvas();
   });
   private timeoutId?: number;
@@ -24,6 +25,7 @@ export default class MetaOverflowDrawerService {
   }
 
   init = () => {
+    this.logger.log("debug", "Инициализируем отрисовщик метаданных");
     this.canvas.style.position = "absolute";
     this.canvas.style.top = "0";
     this.canvas.style.left = "0";
@@ -37,30 +39,62 @@ export default class MetaOverflowDrawerService {
   };
 
   clear = () => {
+    this.logger.log("trace", "Очищаем канвас");
+
     if (this.context) {
       this.context.clearRect(0, 0, this.canvas.width, this.canvas.height);
     }
   };
 
   destroy = () => {
+    this.logger.log("trace", "Уничтожаем отрисовщика метаданных");
+
     this.clear();
     this.observer.disconnect();
     this.container.removeChild(this.canvas);
   };
 
   resizeCanvas = () => {
+    this.logger.log(
+      "trace",
+      `Изменяем размер канваса, старые значения (ширина х высота) - ${this.canvas.width} x ${this.canvas.height}, новые значения ${this.container.clientWidth} x ${this.container.clientHeight}`
+    );
+
     this.canvas.width = this.container.clientWidth;
     this.canvas.height = this.container.clientHeight;
+
+    this.logger.log(
+      "trace",
+      "Очищаем канвас после изменения размеров, тк отрисованное ранее может отображаться некорректно"
+    );
     this.clear(); // Чтобы корректно пересчитать размеры
   };
 
   draw = (meta: MetaDto): void => {
+    this.logger.log(
+      "trace",
+      `Отрисовываем метаданные: ${JSON.stringify(meta)}`
+    );
+
     const context = this.context;
 
-    if (!context) return;
+    if (!context) {
+      this.logger.error(
+        "trace",
+        "Контекст канваса отсутствует, не удается отрисовать."
+      );
+      return;
+    }
 
     this.clear();
-    if (this.timeoutId) clearTimeout(this.timeoutId);
+
+    if (this.timeoutId) {
+      this.logger.log(
+        "trace",
+        "Удаляем ранее установленный таймер самоочистки канваса"
+      );
+      clearTimeout(this.timeoutId);
+    }
 
     const canvasWidth = this.canvas.width;
     const canvasHeight = this.canvas.height;
@@ -130,6 +164,10 @@ export default class MetaOverflowDrawerService {
       context.fillText(zone.name, x, y + fontMargin);
     });
 
+    this.logger.log(
+      "trace",
+      "Устанавливаем таймер самоочистки канваса через 300 мс"
+    );
     this.timeoutId = setTimeout(this.clear, 300);
   };
 }

@@ -32,6 +32,8 @@ class CustomEventsService {
   }
 
   on<T = any>(name: CustomEventEmitName, callback: CustomEventCallback<T>) {
+    this.logger.log("trace", `Подписываемся на событие ${name}`);
+
     const eventName = this.getEventNameWithId(name);
 
     const eventListener = (event: CustomEvent) => {
@@ -45,6 +47,8 @@ class CustomEventsService {
   }
 
   off<T = any>(name: CustomEventEmitName, callback: CustomEventCallback<T>) {
+    this.logger.log("trace", `Отписываемся от события ${name}`);
+
     const eventName = this.getEventNameWithId(name);
 
     const eventListener = this.retrieveEventListener(eventName, callback);
@@ -56,6 +60,8 @@ class CustomEventsService {
   }
 
   emit<T = any>(name: CustomEventListenerName, data?: T) {
+    this.logger.log("trace", `Вызываем событие ${name}`);
+
     const eventName = this.getEventNameWithId(name);
 
     const event = new CustomEvent(eventName, {
@@ -79,9 +85,12 @@ class CustomEventsService {
     callback: CustomEventCallback,
     eventListener: CustomEventCallback
   ) {
+    this.logger.log("trace", `Сохраняем слушателя`);
+
     if (!this.eventListeners.has(eventName)) {
       this.eventListeners.set(eventName, new Map());
     }
+
     this.eventListeners.get(eventName)!.set(callback, eventListener);
   }
 
@@ -89,6 +98,8 @@ class CustomEventsService {
     eventName: string,
     callback: CustomEventCallback
   ): EventListener | undefined {
+    this.logger.log("trace", `Получаем слушателя из памяти ${eventName}`);
+
     return this.eventListeners.get(eventName)?.get(callback);
   }
 
@@ -96,7 +107,13 @@ class CustomEventsService {
     eventName: string,
     callback: CustomEventCallback
   ) {
+    this.logger.log(
+      "trace",
+      `Удаляем сохраненного слушателя из памяти ${eventName}`
+    );
+
     this.eventListeners.get(eventName)?.delete(callback);
+
     if (this.eventListeners.get(eventName)?.size === 0) {
       this.eventListeners.delete(eventName);
     }

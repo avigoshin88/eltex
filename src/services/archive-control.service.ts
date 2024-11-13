@@ -51,46 +51,51 @@ export class ArchiveControlService {
     this.customEventsService = CustomEventsService.getInstance(this.id);
     this.emit = emit;
     this.supportConnect = supportConnect;
-    this.logger.log("info", "Сервис ArchiveControlService инициализирован.");
   }
 
   getCurrentFragment() {
+    this.logger.log("trace", `Запрос текущего фрагмента`);
     return this.ranges[this.fragmentIndex];
   }
 
   getNextFragment() {
+    this.logger.log("trace", `Запрос следующего фрагмента`);
     if (this.fragmentIndex >= this.ranges.length - 1) {
+      this.logger.log("trace", `Следующего фрагмента нет, текущий последний`);
       return null;
     }
     return this.ranges[this.fragmentIndex + 1];
   }
 
   getPrevFragment() {
+    this.logger.log("trace", `Запрос предыдущего фрагмента`);
     if (this.fragmentIndex === 0) {
+      this.logger.log("trace", `Предыдущего фрагмента нет, текущий первый`);
       return null;
     }
     return this.ranges[this.fragmentIndex - 1];
   }
 
   setRanges(ranges: RangeDto[]) {
+    this.logger.log("trace", "Установлены фрагменты:", JSON.stringify(ranges));
     this.ranges = [...ranges];
-    this.logger.log("info", "Установлены ranges:", ranges);
   }
 
   setFragmentIndex(index: number) {
+    this.logger.log("trace", `Устанавливаем новый номер фрагмента: ${index}`);
     this.fragmentIndex = index;
   }
 
   init() {
     this.initGenerator(this.getCurrentFragment().start_time);
     this.logger.log(
-      "info",
+      "debug",
       "Инициализация воспроизведения с начального фрагмента."
     );
   }
 
   clear() {
-    this.logger.log("info", "Очистка состояния ArchiveControlService.");
+    this.logger.log("debug", "Очистка состояния ArchiveControlService.");
     this.fragmentIndex = 0;
     this.ranges = [];
     this.isFirstPreloadDone = false;
@@ -103,16 +108,20 @@ export class ArchiveControlService {
   }
 
   clearIntervals() {
+    this.logger.log("debug", `Чистим интервалы`);
     this.clearSupportConnectInterval();
     this.clearPreloadTimeout();
   }
 
   toNextFragment() {
+    this.logger.log("trace", `Переход к следующего фрагменту`);
+
     const nextFragment = this.getNextFragment();
+
     if (!nextFragment) {
       this.logger.warn(
-        "info",
-        "Нельзя переключиться к следующему фрагменту: текущий фрагмент последний."
+        "trace",
+        "Нельзя переключиться к следующему фрагменту, переключаемся в режим Live"
       );
 
       this.switchToLiveMode();
@@ -120,7 +129,7 @@ export class ArchiveControlService {
     }
 
     this.logger.log(
-      "info",
+      "trace",
       "Переключение на следующий фрагмент с индексом",
       this.fragmentIndex + 1
     );
@@ -135,17 +144,17 @@ export class ArchiveControlService {
   }
 
   toPrevFragment() {
+    this.logger.log("trace", `Переход к предыдущему фрагменты`);
+
     const prevFragment = this.getPrevFragment();
+
     if (!prevFragment) {
-      this.logger.warn(
-        "info",
-        "Нельзя переключиться к предыдущему фрагменту: текущий фрагмент первый."
-      );
+      this.logger.warn("trace", "Нельзя переключиться к предыдущему фрагменту");
       return;
     }
 
     this.logger.log(
-      "info",
+      "trace",
       "Переключение на предыдущий фрагмент с индексом",
       this.fragmentIndex - 1
     );
@@ -160,7 +169,7 @@ export class ArchiveControlService {
   }
 
   pause(currentTimestamp: number) {
-    this.logger.log("info", "Пауза дозагрузки фрагментов.");
+    this.logger.log("trace", "Пауза дозагрузки фрагментов.");
 
     this.currentTimestamp = currentTimestamp;
     this.fragmentIndex = this.findRangeIndex(
@@ -174,7 +183,7 @@ export class ArchiveControlService {
   }
 
   resume() {
-    this.logger.log("info", "Возобновление дозагрузки фрагментов.");
+    this.logger.log("trace", "Возобновление дозагрузки фрагментов.");
 
     this.isPause = false;
 
@@ -185,11 +194,11 @@ export class ArchiveControlService {
   updateRanges(ranges: RangeDto[], currentTime: number) {
     this.ranges = ranges;
     this.currentTimestamp = currentTime;
-    this.logger.log("info", "Обновлены ranges:", ranges);
+    this.logger.log("trace", "Обновлены ranges:", ranges);
 
     const rangeFragmentResult = this.rangeFragmentsGenerator.next();
     if (rangeFragmentResult.done) {
-      this.logger.log("info", "Все фрагменты загружены.");
+      this.logger.log("trace", "Все фрагменты загружены.");
       return;
     }
 
@@ -210,14 +219,15 @@ export class ArchiveControlService {
   ) {
     const rangeIndex = this.findRangeIndex(range.start_time, range.end_time);
     if (rangeIndex === -1) {
-      this.logger.error("info", "Указанный range не найден в списке ranges.");
+      this.logger.error("trace", "Указанный range не найден в списке ranges.");
       return;
     }
 
     this.fragmentIndex = rangeIndex;
     this.currentTimestamp = timestamp;
+
     this.logger.log(
-      "info",
+      "trace",
       "Установлен текущий range с индексом",
       this.fragmentIndex,
       "и временем",
@@ -237,7 +247,7 @@ export class ArchiveControlService {
   setCurrentTime(timestamp: number, isPreload = false, onlySave = false) {
     const rangeIndex = this.findRangeIndex(timestamp, timestamp);
     if (rangeIndex === -1) {
-      this.logger.error("info", "Указанный range не найден в списке ranges.");
+      this.logger.error("trace", "Указанный range не найден в списке ranges.");
       return;
     }
 
@@ -246,7 +256,7 @@ export class ArchiveControlService {
       this.fragmentIndex = rangeIndex;
 
       this.logger.log(
-        "info",
+        "trace",
         "Установлен текущий range с индексом",
         this.fragmentIndex,
         "и временем",
@@ -264,7 +274,7 @@ export class ArchiveControlService {
       this.fragmentIndex = rangeIndex;
 
       this.logger.log(
-        "info",
+        "trace",
         "Установлен текущий range с индексом",
         this.fragmentIndex,
         "и временем",
@@ -280,6 +290,7 @@ export class ArchiveControlService {
   }
 
   public setSpeed(speed: number) {
+    this.logger.log("trace", `Устанавливаем скорость ${speed}`);
     this.speed = speed;
   }
 
@@ -356,7 +367,7 @@ export class ArchiveControlService {
     // Первый фрагмент отправляется без продвижения генератора
     const rangeFragmentResult = this.rangeFragmentsGenerator.next();
     if (rangeFragmentResult.done) {
-      this.logger.log("info", "Все фрагменты загружены.");
+      this.logger.log("trace", "Все фрагменты загружены.");
       this.switchToLiveMode();
       return;
     }
@@ -379,7 +390,7 @@ export class ArchiveControlService {
     if (this.isFirstPreloadDone) {
       const rangeFragmentResult = this.rangeFragmentsGenerator.next();
       if (rangeFragmentResult.done) {
-        this.logger.log("info", "Все фрагменты загружены.");
+        this.logger.log("trace", "Все фрагменты загружены.");
         this.switchToLiveMode();
         return;
       }
@@ -402,14 +413,14 @@ export class ArchiveControlService {
       }
 
       this.logger.log(
-        "info",
+        "trace",
         "Планируем дозагрузку фрагмента через",
         nextPreloadDelay,
         "мс."
       );
 
       this.preloadTimeoutId = setTimeout(() => {
-        this.logger.log("info", "Выполняем дозагрузку фрагмента.");
+        this.logger.log("trace", "Выполняем дозагрузку фрагмента.");
         this.emit(rangeFragment, true); // Дозагрузка фрагмента
         this.scheduleNextPreload();
       }, nextPreloadDelay);
@@ -419,13 +430,13 @@ export class ArchiveControlService {
   public clearPreloadTimeout() {
     if (this.preloadTimeoutId !== null) {
       clearTimeout(this.preloadTimeoutId);
-      this.logger.log("info", "Очищен таймаут дозагрузки.");
+      this.logger.log("trace", "Очищен таймаут дозагрузки.");
       this.preloadTimeoutId = null;
     }
   }
 
   public initSupportConnectInterval() {
-    this.logger.log("info", "Запуск интервала поддержки подключения.");
+    this.logger.log("trace", "Запуск интервала поддержки подключения.");
     this.clearSupportConnectInterval();
     this.connectionSupporterId = setInterval(() => {
       this.supportConnect();
@@ -435,7 +446,7 @@ export class ArchiveControlService {
   private clearSupportConnectInterval() {
     if (this.connectionSupporterId !== null) {
       clearInterval(this.connectionSupporterId);
-      this.logger.log("info", "Очищен интервал поддержки подключения.");
+      this.logger.log("trace", "Очищен интервал поддержки подключения.");
       this.connectionSupporterId = null;
     }
   }
@@ -451,7 +462,7 @@ export class ArchiveControlService {
         customEndTime <= range.end_time
       ) {
         this.logger.log(
-          "info",
+          "trace",
           "Найден range с индексом",
           i,
           "для заданного времени."
@@ -460,12 +471,12 @@ export class ArchiveControlService {
       }
     }
 
-    this.logger.warn("info", "Range для заданного времени не найден.");
+    this.logger.warn("trace", "Range для заданного времени не найден.");
     return -1;
   }
 
   private switchToLiveMode() {
-    this.logger.log("info", "Переключение на режим LIVE.");
+    this.logger.log("debug", "Переключение на режим LIVE.");
     this.customEventsService.emit("mode-changed", Mode.LIVE);
   }
 }
