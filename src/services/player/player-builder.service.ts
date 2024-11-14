@@ -1,5 +1,18 @@
+import { Logger } from "../logger/logger.service";
+
 export class VideoPlayerBuilderService {
+  private logger: Logger;
+
+  constructor(id: string) {
+    this.logger = new Logger(id, "VideoPlayerBuilderService");
+  }
+
   createPlayer(name: string) {
+    this.logger.log(
+      "debug",
+      "Создаем компоненты плеера: контейнер, контейнер для видео, видеоэлемент, заглушка"
+    );
+
     const container = this.createContainer();
     const videoContainer = this.createVideoContainer();
     const video = this.createVideoElement(name);
@@ -13,6 +26,8 @@ export class VideoPlayerBuilderService {
   }
 
   private createPlaceholder(name: string) {
+    this.logger.log("debug", "Создаем элемент заглушки");
+
     const container = document.createElement("div");
 
     container.className = "video-player__placeholder-container";
@@ -28,6 +43,8 @@ export class VideoPlayerBuilderService {
   }
 
   public createVideoElement(name: string) {
+    this.logger.log("debug", "Создаем видеоэлемент");
+
     const video = document.createElement("video");
 
     video.controls = false;
@@ -42,6 +59,8 @@ export class VideoPlayerBuilderService {
   }
 
   private createVideoContainer() {
+    this.logger.log("debug", "Создаем видео контейнер");
+
     const container = document.createElement("div");
 
     container.className = "video-player__container";
@@ -50,6 +69,8 @@ export class VideoPlayerBuilderService {
   }
 
   private createContainer() {
+    this.logger.log("debug", "Создаем элемент контейнера");
+
     const container = document.createElement("div");
 
     container.className = "video-player";

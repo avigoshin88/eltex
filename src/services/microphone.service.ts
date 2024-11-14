@@ -3,7 +3,7 @@ import { EventBus } from "./event-bus.service";
 import { Logger } from "./logger/logger.service";
 
 export class MicrophoneService {
-  private logger = new Logger(MicrophoneService.name);
+  private logger: Logger;
   private localStream: MediaStream | null = null;
   private audioTransceiver: RTCRtpTransceiver | null = null;
   private isMicEnabled: boolean = false;
@@ -12,21 +12,22 @@ export class MicrophoneService {
   private isMicOn = false;
   private isPushToTalk = false;
   private pressTimer: Nullable<number> = null;
-  private PRESS_THRESHOLD = 500; // Время в мс для определения "долгого нажатия"
+  private PRESS_THRESHOLD = 500;
 
   private eventBus!: EventBus;
 
   constructor(id: string) {
+    this.logger = new Logger(id, "MicrophoneService");
     this.eventBus = EventBus.getInstance(id);
   }
 
-  // Запрашиваем доступ к микрофону с заданным устройством
   public async enableMicrophone(
     peerConnection: RTCPeerConnection,
     deviceId: string | null = null
   ): Promise<void> {
+    this.logger.log("debug", "Пробуем подключить микрофон");
+
     try {
-      // Запрашиваем доступ к микрофону с определенным устройством
       const constraints: MediaStreamConstraints = {
         audio: deviceId ? { deviceId: { exact: deviceId } } : true,
       };
@@ -34,14 +35,18 @@ export class MicrophoneService {
       this.localStream = await navigator.mediaDevices.getUserMedia(constraints);
       this.currentDeviceId = deviceId || (await this.getDefaultDeviceId());
 
+      this.logger.log(
+        "debug",
+        `Планируем использовать микрофон с id ${deviceId}`
+      );
+
       const audioTrack = this.localStream.getAudioTracks()[0];
       audioTrack.enabled = false;
 
       if (this.audioTransceiver) {
         this.audioTransceiver.sender.replaceTrack(audioTrack);
-        this.audioTransceiver.direction = "sendrecv"; // Включаем отправку и прием
+        this.audioTransceiver.direction = "sendrecv";
       } else {
-        // Если трансивер еще не существует, создаем его
         this.audioTransceiver = peerConnection.addTransceiver(audioTrack, {
           direction: "sendrecv",
           sendEncodings: [],
@@ -51,16 +56,14 @@ export class MicrophoneService {
       this.hasAccessToMic = true;
     } catch (error) {
       this.logger.error(
-        "info",
+        "debug",
         "Не удалось получить доступ к микрофону:",
         error
       );
 
-      // Переключаем трансивер на только прием, если не удалось получить микрофон
       if (this.audioTransceiver) {
-        this.audioTransceiver.direction = "recvonly"; // Только прием аудио
+        this.audioTransceiver.direction = "recvonly";
       } else {
-        // Если трансивер еще не создан, создаем его для приема
         this.audioTransceiver = peerConnection.addTransceiver("audio", {
           direction: "recvonly",
           sendEncodings: [],
@@ -72,18 +75,19 @@ export class MicrophoneService {
       this.close();
     }
 
-    this.listenForDeviceChanges(peerConnection); // Слушаем изменения устройств
+    this.listenForDeviceChanges(peerConnection);
   }
 
-  // Отключение микрофона (мьют)
   public muteMicrophone(): void {
+    this.logger.log("debug", "Ставим микрофон на мьют");
+
     if (this.localStream) {
       this.localStream.getAudioTracks().forEach((track) => {
-        track.enabled = false; // Отключаем трек
+        track.enabled = false;
       });
 
       if (this.audioTransceiver) {
-        this.audioTransceiver.direction = "recvonly"; // Оставляем только прием
+        this.audioTransceiver.direction = "recvonly";
       }
 
       this.isMicEnabled = false;
@@ -91,15 +95,16 @@ export class MicrophoneService {
     }
   }
 
-  // Включение микрофона (анмьют)
   public unmuteMicrophone(): void {
+    this.logger.log("debug", "Включаем звук микрофона");
+
     if (this.localStream) {
       this.localStream.getAudioTracks().forEach((track) => {
-        track.enabled = true; // Включаем трек
+        track.enabled = true;
       });
 
       if (this.audioTransceiver) {
-        this.audioTransceiver.direction = "sendrecv"; // Включаем отправку и прием
+        this.audioTransceiver.direction = "sendrecv";
       }
 
       this.isMicEnabled = true;
@@ -107,50 +112,50 @@ export class MicrophoneService {
     }
   }
 
-  // Новый метод для работы микрофона по принципу "рации"
   public pushToTalk(isPressed: boolean): void {
     if (isPressed) {
-      this.unmuteMicrophone(); // Включаем микрофон при нажатии
-      this.eventBus.emit("push2Talk", true); // Приглушаем звук
+      this.logger.log("debug", "Включаем режим Push2Talk");
+
+      this.unmuteMicrophone();
+      this.eventBus.emit("push2Talk", true);
     } else {
-      this.muteMicrophone(); // Отключаем микрофон при отпускании
-      this.eventBus.emit("push2Talk", true); // Восстанавливаем звук
+      this.logger.log("debug", "Выключаем режим Push2Talk");
+
+      this.muteMicrophone();
+      this.eventBus.emit("push2Talk", true);
     }
   }
 
   private async onDeviceChange(peerConnection: RTCPeerConnection) {
+    this.logger.log("debug", "Пробуем переключиться на новый микрофон");
+
     const devices = await navigator.mediaDevices.enumerateDevices();
     const audioDevices = devices.filter(
       (device) => device.kind === "audioinput"
     );
 
-    this.logger.log("info", "Устройства ввода аудио изменены:", audioDevices);
+    this.logger.log("debug", "Устройства ввода аудио изменены:", audioDevices);
 
-    // Находим новое устройство, которое отличается от текущего
     const newDevice = audioDevices.find(
       (device) => device.deviceId !== this.currentDeviceId
     );
 
     if (newDevice) {
-      // Проверка на наличие mediaDevices тк они недоступны на незащищенном
-      // соединении и приложение может ломаться
       if (navigator.mediaDevices) {
         navigator.mediaDevices.ondevicechange = null;
       }
 
       this.logger.log(
-        "info",
+        "debug",
         "Переключаемся на новое устройство:",
         newDevice.label
       );
-      await this.enableMicrophone(peerConnection, newDevice.deviceId); // Переключаемся на новое устройство
+      await this.enableMicrophone(peerConnection, newDevice.deviceId);
     }
   }
 
-  // Обработка изменения доступных устройств (например, подключение нового микрофона)
   private listenForDeviceChanges(peerConnection: RTCPeerConnection): void {
-    // Проверка на наличие mediaDevices тк они недоступны на незащищенном
-    // соединении и приложение может ломаться
+    this.logger.log("debug", "Подписываемся на изменение устройства ввода");
 
     if (navigator.mediaDevices) {
       navigator.mediaDevices.ondevicechange = () =>
@@ -158,8 +163,9 @@ export class MicrophoneService {
     }
   }
 
-  // Получение устройства по умолчанию
   private async getDefaultDeviceId(): Promise<string | null> {
+    this.logger.log("debug", "Ищем устройство ввода по умолчанию");
+
     const devices = await navigator.mediaDevices.enumerateDevices();
     const audioDevices = devices.filter(
       (device) => device.kind === "audioinput"
@@ -167,20 +173,22 @@ export class MicrophoneService {
     return audioDevices.length > 0 ? audioDevices[0].deviceId : null;
   }
 
-  // Проверка, включен ли микрофон
   public get isMicrophoneEnabled(): boolean {
     return this.isMicEnabled;
   }
 
-  // Есть ли доступ к микрофону
   public get hasAccessToMicrophone(): boolean {
     return this.hasAccessToMic;
   }
 
-  // Работа только на прием аудио
   public async receiveOnlyAudio(
     peerConnection: RTCPeerConnection
   ): Promise<void> {
+    this.logger.log(
+      "debug",
+      "Подготавливаем аудио трансивер только на получение аудио"
+    );
+
     if (!this.audioTransceiver) {
       this.audioTransceiver = peerConnection.addTransceiver("audio", {
         direction: "recvonly",
@@ -194,38 +202,35 @@ export class MicrophoneService {
     this.hasAccessToMic = false;
   }
 
-  // Функция для переключения состояния микрофона (короткое нажатие)
   public toggleMic() {
     if (this.isMicOn) {
       this.muteMicrophone();
       this.isMicOn = false;
-      this.logger.log("info", "Микрофон выключен");
+      this.logger.log("debug", "Микрофон выключен");
     } else {
       this.unmuteMicrophone();
       this.isMicOn = true;
-      this.logger.log("info", "Микрофон включен");
+      this.logger.log("debug", "Микрофон включен");
     }
   }
 
-  // Функции для режима рации
   public startPushToTalk() {
     this.isPushToTalk = true;
-    this.pushToTalk(true); // Включаем микрофон
-    this.logger.log("info", "Рация: микрофон включен");
+    this.pushToTalk(true);
+    this.logger.log("debug", "Рация: микрофон включен");
   }
 
   public stopPushToTalk() {
     this.isPushToTalk = false;
-    this.pushToTalk(false); // Выключаем микрофон
-    this.logger.log("info", "Рация: микрофон выключен");
+    this.pushToTalk(false);
+    this.logger.log("debug", "Рация: микрофон выключен");
   }
 
   private onMouseDown() {
     if (!this.hasAccessToMic) return;
 
-    // Запускаем таймер для определения долгого нажатия (режима рации)
     this.pressTimer = setTimeout(() => {
-      this.startPushToTalk(); // Если удерживаем > 500 мс, включаем режим рации
+      this.startPushToTalk();
     }, this.PRESS_THRESHOLD);
   }
 
@@ -236,11 +241,10 @@ export class MicrophoneService {
       clearTimeout(this.pressTimer);
     }
 
-    // Если это было долгое удержание, выключаем микрофон
     if (this.isPushToTalk) {
-      this.stopPushToTalk(); // Завершаем режим рации
+      this.stopPushToTalk();
     } else {
-      this.toggleMic(); // Если короткое нажатие, переключаем состояние микрофона
+      this.toggleMic();
     }
   }
 
@@ -252,7 +256,7 @@ export class MicrophoneService {
     }
 
     if (this.isPushToTalk) {
-      this.stopPushToTalk(); // Если курсор вышел за пределы кнопки, завершаем режим рации
+      this.stopPushToTalk();
     }
   }
 
@@ -264,8 +268,11 @@ export class MicrophoneService {
     };
   }
 
-  // Завершение работы с микрофоном
   public close(): void {
+    this.logger.log(
+      "debug",
+      "Очищаем сервис, останавливаем работу с устройствами ввода, убираем подписки"
+    );
     if (this.localStream) {
       this.localStream.getTracks().forEach((track) => track.stop());
       this.localStream = null;

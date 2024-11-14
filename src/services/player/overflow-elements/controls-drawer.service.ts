@@ -6,6 +6,7 @@ import {
   SelectControlOptions,
 } from "../../../types/controls";
 import { Nullable } from "../../../types/global";
+import { Logger } from "../../logger/logger.service";
 
 type ButtonControl = Exclude<
   ControlName,
@@ -87,6 +88,7 @@ const CONTROLS_ORDER: ControlName[] = [
 ];
 
 export class ControlsOverflowDrawerService {
+  private logger: Logger;
   private readonly container!: HTMLDivElement;
 
   private hiddenButtons: Partial<Record<ControlName, boolean>> = {};
@@ -101,16 +103,26 @@ export class ControlsOverflowDrawerService {
   private controlsContainer: Nullable<HTMLDivElement> = null;
   private controls: Partial<Record<ControlName, HTMLElement>> = {};
 
-  constructor(container: HTMLDivElement, options: ControlsOptions) {
+  constructor(id: string, container: HTMLDivElement, options: ControlsOptions) {
+    this.logger = new Logger(id, "ControlsOverflowDrawerService");
     this.container = container;
     this.options = options;
   }
 
   draw(): void {
+    this.logger.log("trace", "Отрисовываем кнопки управления плеером");
+
     if (!this.controlsContainer) {
+      this.logger.log(
+        "trace",
+        "Контейнер для кнопок управления отсутствует, создаем"
+      );
+
       this.controlsContainer = document.createElement("div");
       this.controlsContainer.className = "video-player__controls__container";
       this.container.appendChild(this.controlsContainer);
+
+      this.logger.log("trace", "Контейнер для кнопок управления добавлен");
     }
 
     for (const controlName of CONTROLS_ORDER) {
@@ -126,17 +138,42 @@ export class ControlsOverflowDrawerService {
         this.updateControl(controlName);
       }
     }
+
+    this.logger.log("trace", "Отрисовка кнопок управления плеером закончена");
   }
 
   setHidden(hiddenButtons: Partial<Record<ControlName, boolean>>) {
+    this.logger.log(
+      "trace",
+      `Скрываем следующие кнопки: ${Object.keys(hiddenButtons)
+        .filter((b) => hiddenButtons[b as ControlName])
+        .join(", ")}`
+    );
+
     this.hiddenButtons = hiddenButtons;
   }
 
   setDisabled(disabledButtons: Partial<Record<ControlName, boolean>>) {
+    this.logger.log(
+      "trace",
+      `Устанавливаем disabled состояние на следующие кнопки: ${Object.keys(
+        disabledButtons
+      )
+        .filter((b) => disabledButtons[b as ControlName])
+        .join(", ")}`
+    );
+
     this.disabledButtons = disabledButtons;
   }
 
   updateControlValues(values: Record<string, string>) {
+    this.logger.log(
+      "trace",
+      `Обновляем значения кнопок управления, новые значения: ${JSON.stringify(
+        values
+      )}`
+    );
+
     this.controlValues = {
       ...this.controlValues,
       ...values,
@@ -147,8 +184,19 @@ export class ControlsOverflowDrawerService {
     controlName: ControlName,
     options: SelectControlOptions["options"]
   ) {
+    this.logger.log(
+      "trace",
+      `Обновляем опции селекта ${controlName}, новые значения: ${JSON.stringify(
+        options
+      )}`
+    );
+
     const control = this.controls[controlName];
-    if (!control) return;
+
+    if (!control) {
+      this.logger.error("trace", `Селект ${controlName} отсутствует`);
+      return;
+    }
 
     if (control instanceof HTMLSelectElement) {
       const config = this.options[controlName] as SelectControlOptions;
@@ -160,12 +208,26 @@ export class ControlsOverflowDrawerService {
   setBinaryButtonsState(
     binaryButtonsState: Partial<Record<BinaryButtonControl, boolean>>
   ) {
+    this.logger.log(
+      "trace",
+      `Устанавливаем бинарные значения кнопок: ${JSON.stringify(
+        binaryButtonsState
+      )}`
+    );
+
     this.binaryButtonsState = binaryButtonsState;
   }
 
   updateBinaryButtonsState(
     binaryButtonsState: Partial<Record<BinaryButtonControl, boolean>>
   ) {
+    this.logger.log(
+      "trace",
+      `Обновляем бинарные значения кнопок: ${JSON.stringify(
+        binaryButtonsState
+      )}`
+    );
+
     this.binaryButtonsState = {
       ...this.binaryButtonsState,
       ...binaryButtonsState,
@@ -173,6 +235,8 @@ export class ControlsOverflowDrawerService {
   }
 
   private makeControl(name: ControlName): HTMLElement {
+    this.logger.log("trace", `Создаем кнопку ${name}`);
+
     const config = this.options[name];
 
     switch (config.type) {
@@ -187,8 +251,15 @@ export class ControlsOverflowDrawerService {
     }
   }
   private updateControl(name: ControlName) {
+    this.logger.log("trace", `Пробуем обновить состояние кнопки ${name}`);
+
     const control = this.controls[name];
-    if (!control) return;
+
+    if (!control) {
+      this.logger.error("trace", `Кнопка ${name} отсутствует`);
+
+      return;
+    }
 
     const config = this.options[name];
 
@@ -201,12 +272,16 @@ export class ControlsOverflowDrawerService {
             config
           )
         ) {
+          this.logger.log(
+            "trace",
+            `Кнопка ${name} требует обновления, обновляем`
+          );
           this.updateButton(
             control as HTMLButtonElement,
             name as ButtonControl,
             config
           );
-        }
+        } else this.logger.log("trace", `Кнопка ${name} не требует обновления`);
         break;
 
       case "select":
@@ -217,15 +292,20 @@ export class ControlsOverflowDrawerService {
             config
           )
         ) {
+          this.logger.log(
+            "trace",
+            `Селект ${name} требует обновления, обновляем`
+          );
           this.updateSelect(
             control as HTMLSelectElement,
             name as ControlName,
             config
           );
-        }
+        } else this.logger.log("trace", `Селект ${name} не требует обновления`);
         break;
 
       case "range":
+        this.logger.log("trace", `Обновляем ползунок ${name}`);
         this.updateRange(
           control as HTMLDivElement,
           name as ControlName,
@@ -240,8 +320,20 @@ export class ControlsOverflowDrawerService {
     controlName: ButtonControl,
     config: ButtonControlOptions
   ): boolean {
+    this.logger.log(
+      "trace",
+      `Проверяем, требуется ли обновление кнопке ${controlName}`
+    );
+
     const image = button.querySelector("img");
-    if (!image) return true;
+    if (!image) {
+      this.logger.log(
+        "trace",
+        `В кнопке ${controlName} отсутствовала картинка, обновление требуется`
+      );
+
+      return true;
+    }
 
     if (config.binary) {
       const name = controlName as BinaryButtonControl;
@@ -249,8 +341,25 @@ export class ControlsOverflowDrawerService {
       const currentSrc = enabled
         ? BINARY_BUTTON_ICONS[name].on
         : BINARY_BUTTON_ICONS[name].off;
+
+      this.logger.log(
+        "trace",
+        `В кнопке ${controlName} обновление${
+          image.src !== currentSrc ? "" : " не"
+        } требуется`
+      );
+
       return image.src !== currentSrc;
     } else {
+      this.logger.log(
+        "trace",
+        `В кнопке ${controlName} обновление${
+          image.src !== COMMON_BUTTON_ICONS[controlName as CommonButtonControl]
+            ? ""
+            : " не"
+        } требуется`
+      );
+
       return (
         image.src !== COMMON_BUTTON_ICONS[controlName as CommonButtonControl]
       );
@@ -262,7 +371,19 @@ export class ControlsOverflowDrawerService {
     name: ControlName,
     config: SelectControlOptions
   ): boolean {
+    this.logger.log(
+      "trace",
+      `Проверяем, требуется ли обновление селекту ${name}`
+    );
     const currentValue = this.controlValues[name] ?? config.value;
+
+    this.logger.log(
+      "trace",
+      `В селекте ${name} обновление${
+        select.value !== currentValue ? "" : " не"
+      } требуется`
+    );
+
     return select.value !== currentValue;
   }
 
@@ -270,8 +391,12 @@ export class ControlsOverflowDrawerService {
     controlName: ButtonControl,
     config: ButtonControlOptions
   ): HTMLButtonElement {
+    this.logger.log("trace", `Создаем кнопку ${controlName}`);
+
     const button = document.createElement("button");
+
     this.updateButton(button, controlName, config);
+
     return button;
   }
 
@@ -280,6 +405,8 @@ export class ControlsOverflowDrawerService {
     controlName: ButtonControl,
     config: ButtonControlOptions
   ) {
+    this.logger.log("trace", `Обновляем кнопку ${controlName}`);
+
     button.className = "video-player__controls__button";
     button.disabled = Boolean(this.disabledButtons[controlName]);
 
@@ -311,8 +438,12 @@ export class ControlsOverflowDrawerService {
     name: ControlName,
     config: SelectControlOptions
   ): HTMLSelectElement {
+    this.logger.log("trace", `Создаем селект ${name}`);
+
     const select = document.createElement("select");
+
     this.updateSelect(select, name, config);
+
     return select;
   }
 
@@ -321,6 +452,8 @@ export class ControlsOverflowDrawerService {
     name: ControlName,
     config: SelectControlOptions
   ) {
+    this.logger.log("trace", `Обновляем селект ${name}`);
+
     select.innerHTML = "";
 
     const options: HTMLOptionElement[] = [];
@@ -360,8 +493,12 @@ export class ControlsOverflowDrawerService {
     name: ControlName,
     config: RangeControlOptions
   ): HTMLDivElement {
+    this.logger.log("trace", `Создаем ползунок ${name}`);
+
     const rangeContainer = document.createElement("div");
+
     this.updateRange(rangeContainer, name, config);
+
     return rangeContainer;
   }
 
@@ -370,6 +507,8 @@ export class ControlsOverflowDrawerService {
     name: ControlName,
     config: RangeControlOptions
   ) {
+    this.logger.log("trace", `Обновляем ползунок ${name}`);
+
     rangeContainer.innerHTML = "";
 
     const input = document.createElement("input");
@@ -392,7 +531,13 @@ export class ControlsOverflowDrawerService {
   }
 
   public clear() {
+    this.logger.log("trace", `Удаляем кнопки управления и очищаем сервис`);
+
     if (!this.controlsContainer) {
+      this.logger.log(
+        "trace",
+        `Кнопки управления уже отсутствуют, очистка не требуется`
+      );
       return;
     }
 

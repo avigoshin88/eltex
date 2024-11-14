@@ -10,7 +10,7 @@ const NEW_FRAGMENT_PACKAGE_DIFFERENCE = 10 * 1000;
 const RESET_PACKAGE_DIFFERENCE = 10 * 1000;
 
 export class ArchiveTimeControlService {
-  private readonly logger = new Logger("ArchiveTimeControlService");
+  private logger: Logger;
 
   private eventBus: EventBus;
   private currentCodec: Nullable<string> = null;
@@ -31,19 +31,21 @@ export class ArchiveTimeControlService {
 
   private isIgnorePackets = false;
 
-  constructor(private id: string, private webRTCClient: WebRTCService) {
-    this.eventBus = EventBus.getInstance(this.id);
+  constructor(id: string, private webRTCClient: WebRTCService) {
+    this.eventBus = EventBus.getInstance(id);
+    this.logger = new Logger(id, "ArchiveTimeControlService");
 
     this.setupListeners();
   }
 
   setSpeed(speed: number) {
+    this.logger.log("trace", `Устанавливаем скорость ${speed}`);
     this.speed = speed;
   }
 
   setFragmentStartTimestamp(fragmentStartTimestamp: number) {
     this.logger.log(
-      "info",
+      "trace",
       `Устанавливаем начальный таймстемп фрагмента:`,
       fragmentStartTimestamp
     );
@@ -54,6 +56,7 @@ export class ArchiveTimeControlService {
   }
 
   ignorePackets() {
+    this.logger.log("trace", `Пропускаем пакеты`);
     this.isIgnorePackets = true;
   }
 
@@ -74,7 +77,7 @@ export class ArchiveTimeControlService {
       return this.fragmentStartTimestamp;
     }
 
-    this.logger.log("info", "Текущий полученный rtpTimestamp:", rtpTimestamp);
+    this.logger.log("trace", "Текущий полученный rtpTimestamp:", rtpTimestamp);
 
     if (this.isIgnorePackets) {
       this.prevRTPTimestamp = rtpTimestamp;
@@ -89,7 +92,7 @@ export class ArchiveTimeControlService {
         this.rate
       );
 
-      this.logger.log("info", `Ожидаемый rtpTimestamp:`, expectedRTPTimestamp);
+      this.logger.log("trace", `Ожидаемый rtpTimestamp:`, expectedRTPTimestamp);
 
       if (
         Math.abs(expectedRTPTimestamp - rtpTimestamp) <
@@ -100,7 +103,7 @@ export class ArchiveTimeControlService {
         );
 
         this.logger.log(
-          "info",
+          "trace",
           `Новый пакет: startTimestamp=`,
           this.startTimestamp
         );
@@ -115,21 +118,21 @@ export class ArchiveTimeControlService {
       this.startTimestamp = this.getNextBaseTimestamp(this.startTimestamp);
 
       this.logger.log(
-        "info",
+        "trace",
         `Сброс: rtpTimestamp= ${rtpTimestamp} prevRTPTimestamp= ${this.prevRTPTimestamp} startTimestamp= ${this.startTimestamp}`
       );
 
       this.offset = this.rtpTimestampToTimestamp(rtpTimestamp);
 
       this.logger.log(
-        "info",
+        "trace",
         `Изменение отступа: offset= ${this.offset} oldOffset= ${oldOffset}`
       );
     } else {
       this.offset = this.rtpTimestampToTimestamp(rtpTimestamp);
 
       this.logger.log(
-        "info",
+        "trace",
         `Обычное изменение отступа: offset= ${this.offset} oldOffset= ${oldOffset}`
       );
     }
@@ -139,8 +142,8 @@ export class ArchiveTimeControlService {
 
   public getCurrentTimestamp() {
     this.logger.log(
-      "info",
-      `currentTimestamp: ${new Date(
+      "trace",
+      `Текущий Timestamp: ${new Date(
         this.startTimestamp + this.offset
       ).toUTCString()} start= ${new Date(
         this.startTimestamp
@@ -151,6 +154,8 @@ export class ArchiveTimeControlService {
   }
 
   public reset() {
+    this.logger.log("trace", `Обнуляем сервис`);
+
     this.fragmentStartTimestamp = 0;
 
     this.startTimestamp = 0;
@@ -164,6 +169,8 @@ export class ArchiveTimeControlService {
   }
 
   private init() {
+    this.logger.log("trace", `Инициализация сервиса`);
+
     const { local } = this.webRTCClient.getOffers();
 
     if (!local) {

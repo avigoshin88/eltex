@@ -12,6 +12,7 @@ import {
   TIMELINE_STEPS_OPTIONS,
 } from "../../../constants/timeline-steps";
 import { EventBus } from "../../event-bus.service";
+import { Logger } from "../../logger/logger.service";
 import { TimelineMathService } from "./timeline/timeline-math.service";
 
 const MOUSE_MICRO_MOVE_TIMEOUT = 100;
@@ -20,8 +21,7 @@ export class TimelineOverflowDrawer {
   private readonly container: HTMLDivElement;
 
   private readonly timelineElements: TimelineElementsService;
-  private readonly timelineElementsFactory =
-    new TimelineElementsFactoryService();
+  private readonly timelineElementsFactory: TimelineElementsFactoryService;
   private readonly timelineMathService = new TimelineMathService();
 
   private scale: number = 1; // Начальный масштаб
@@ -46,6 +46,7 @@ export class TimelineOverflowDrawer {
   private exportCallback: Nullable<ExportRangeCallback> = null; // Callback для экспорта
 
   private eventBus: EventBus;
+  private logger: Logger;
 
   private isShowPhantomTrack = false;
   private isMouseDown = false;
@@ -60,15 +61,17 @@ export class TimelineOverflowDrawer {
   private originalMouseMove: Nullable<EventListener> = null;
 
   constructor(
-    private id: string,
+    id: string,
     container: HTMLDivElement,
     clickCallback?: TimelineClickCallback
   ) {
-    this.eventBus = EventBus.getInstance(this.id);
+    this.eventBus = EventBus.getInstance(id);
+    this.logger = new Logger(id, "TimelineOverflowDrawer");
 
     this.clickCallback = clickCallback ?? (() => {});
     this.container = container;
 
+    this.timelineElementsFactory = new TimelineElementsFactoryService();
     const [phantomTrack, phantomTrackTimeCard, phantomTrackTimeCardText] =
       this.timelineElementsFactory.makePhantomTrack();
 
@@ -120,7 +123,10 @@ export class TimelineOverflowDrawer {
   }
 
   draw(currentTimestamp: number): void {
+    this.logger.log("trace", `Отрисовываем таймштемп ${currentTimestamp}`);
+
     if (!this.isReady || !this.timelineElements.timelineContainer) {
+      this.logger.error("trace", `Не удается отрисовать`);
       return;
     }
 
@@ -236,6 +242,8 @@ export class TimelineOverflowDrawer {
 
   // Включение режима экспорта
   enableExportMode(callback: ExportRangeCallback): void {
+    this.logger.log("trace", `Включаем экспорт мод`);
+
     this.exportMode = true;
     this.exportCallback = callback;
     this.exportStartTime = null;
@@ -247,6 +255,8 @@ export class TimelineOverflowDrawer {
 
   // Отключение режима экспорта
   disableExportMode(): void {
+    this.logger.log("trace", `Выключаем экспорт мод`);
+
     this.exportMode = false;
     this.exportCallback = null;
     this.exportStartTime = null;
@@ -257,6 +267,8 @@ export class TimelineOverflowDrawer {
   }
 
   private clearExportMarkers(): void {
+    this.logger.log("trace", `Очищаем маркеры экспорта`);
+
     const markers = this.timelineElements.timelineContainer!.querySelectorAll(
       ".video-player__timeline__export-marker"
     );
@@ -264,6 +276,8 @@ export class TimelineOverflowDrawer {
   }
 
   private addExportMarker(position: number, type: "start" | "end"): void {
+    this.logger.log("trace", `Добавляем маркер экспорта`);
+
     const marker = document.createElement("div");
 
     marker.classList.add("video-player__timeline__export-marker");
@@ -284,6 +298,8 @@ export class TimelineOverflowDrawer {
     totalTimeRange: number,
     totalRangeWidth: number
   ): void {
+    this.logger.log("trace", `Обновляем экспорт маркеры`);
+
     this.clearExportMarkers();
 
     if (this.exportStartTime !== null) {
@@ -318,11 +334,16 @@ export class TimelineOverflowDrawer {
     if (this.isUserScrolling) {
       return;
     }
+    this.logger.log(
+      "trace",
+      `Трек вышел за пределы видимости, скроллим до него`
+    );
 
     this.scrollTrackToAlign(this.timelineElements.track!, "right");
   };
 
   private onTimelineResize = () => {
+    this.logger.log("trace", `Произошло изменение размеров`);
     this.draw(this.currentTimestamp);
   };
 
@@ -331,6 +352,8 @@ export class TimelineOverflowDrawer {
     align: "center" | "left" | "right",
     offset = 0
   ) {
+    this.logger.log("trace", `Скроллируем до трека`);
+
     if (
       !this.timelineElements.scrollContainer ||
       !this.timelineElements.trackContainer
@@ -456,6 +479,11 @@ export class TimelineOverflowDrawer {
   }
 
   setOptions(ranges: RangeData[], updateScale = true): void {
+    this.logger.log(
+      "trace",
+      `Устанавливаем фрагменты: ${JSON.stringify(ranges)}`
+    );
+
     this.timelineMathService.setRanges(ranges);
 
     this.isReady = true;
@@ -483,6 +511,8 @@ export class TimelineOverflowDrawer {
   }
 
   clear(): void {
+    this.logger.log("trace", `Очищаем сервис`);
+
     if (!this.timelineElements.scrollContainer) {
       return;
     }
@@ -518,6 +548,8 @@ export class TimelineOverflowDrawer {
   }
 
   private setScale = (value: number) => {
+    this.logger.log("trace", `Устанавливаем масштаб равный ${value}`);
+
     const containerWidth = this.timelineElements.scrollContainer!.offsetWidth;
 
     this.scale = containerWidth / value;
@@ -572,10 +604,12 @@ export class TimelineOverflowDrawer {
   }
 
   private showPhantomTrack() {
+    this.logger.log("trace", `Показываем фантомный трек`);
     this.timelineElements.phantomTrack!.style.visibility = "visible";
   }
 
   private hidePhantomTrack() {
+    this.logger.log("trace", `Скрываем фантомный трек`);
     this.timelineElements.phantomTrack!.style.visibility = "hidden";
   }
 
@@ -604,6 +638,8 @@ export class TimelineOverflowDrawer {
   };
 
   private updatePhantomTrack(position: number) {
+    this.logger.log("trace", `Обновляем фантомный трек`);
+
     const time = this.getTimestampByPosition(position);
     if (!time) {
       return;
@@ -887,6 +923,8 @@ export class TimelineOverflowDrawer {
   }
 
   private registerListeners() {
+    this.logger.log("trace", `Регистрируем слушателей`);
+
     this.timelineElements.scrollContainer?.addEventListener(
       "scroll",
       this.scrollEventListener.bind(this)
@@ -930,6 +968,8 @@ export class TimelineOverflowDrawer {
   }
 
   private clearListeners() {
+    this.logger.log("trace", `Удаляем слушателей`);
+
     this.timelineElements.timelineContainer?.removeEventListener(
       "scroll",
       this.scrollEventListener

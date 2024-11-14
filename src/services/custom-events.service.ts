@@ -1,4 +1,4 @@
-import { Nullable } from "../types/global";
+import { Logger } from "./logger/logger.service";
 
 export type CustomEventListenerName =
   | "meta"
@@ -18,24 +18,22 @@ class CustomEventsService {
   static instances: Record<string, CustomEventsService> = {};
   static getInstance(id: string): CustomEventsService {
     if (!CustomEventsService.instances[id]) {
-      CustomEventsService.instances[id] = new CustomEventsService();
-      CustomEventsService.instances[id].setId(id);
+      CustomEventsService.instances[id] = new CustomEventsService(id);
     }
     return CustomEventsService.instances[id];
   }
 
-  private id: Nullable<string> = null;
-
+  private logger: Logger;
   private eventListeners: Map<string, Map<CustomEventCallback, EventListener>> =
     new Map();
 
-  constructor() {}
-
-  setId(id: string) {
-    this.id = id;
+  constructor(private id: string) {
+    this.logger = new Logger(id, "CustomEventsService");
   }
 
   on<T = any>(name: CustomEventEmitName, callback: CustomEventCallback<T>) {
+    this.logger.log("trace", `Подписываемся на событие ${name}`);
+
     const eventName = this.getEventNameWithId(name);
 
     const eventListener = (event: CustomEvent) => {
@@ -49,6 +47,8 @@ class CustomEventsService {
   }
 
   off<T = any>(name: CustomEventEmitName, callback: CustomEventCallback<T>) {
+    this.logger.log("trace", `Отписываемся от события ${name}`);
+
     const eventName = this.getEventNameWithId(name);
 
     const eventListener = this.retrieveEventListener(eventName, callback);
@@ -60,6 +60,8 @@ class CustomEventsService {
   }
 
   emit<T = any>(name: CustomEventListenerName, data?: T) {
+    this.logger.log("trace", `Вызываем событие ${name}`);
+
     const eventName = this.getEventNameWithId(name);
 
     const event = new CustomEvent(eventName, {
@@ -83,9 +85,12 @@ class CustomEventsService {
     callback: CustomEventCallback,
     eventListener: CustomEventCallback
   ) {
+    this.logger.log("trace", `Сохраняем слушателя`);
+
     if (!this.eventListeners.has(eventName)) {
       this.eventListeners.set(eventName, new Map());
     }
+
     this.eventListeners.get(eventName)!.set(callback, eventListener);
   }
 
@@ -93,6 +98,8 @@ class CustomEventsService {
     eventName: string,
     callback: CustomEventCallback
   ): EventListener | undefined {
+    this.logger.log("trace", `Получаем слушателя из памяти ${eventName}`);
+
     return this.eventListeners.get(eventName)?.get(callback);
   }
 
@@ -100,7 +107,13 @@ class CustomEventsService {
     eventName: string,
     callback: CustomEventCallback
   ) {
+    this.logger.log(
+      "trace",
+      `Удаляем сохраненного слушателя из памяти ${eventName}`
+    );
+
     this.eventListeners.get(eventName)?.delete(callback);
+
     if (this.eventListeners.get(eventName)?.size === 0) {
       this.eventListeners.delete(eventName);
     }

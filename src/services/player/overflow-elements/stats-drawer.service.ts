@@ -1,8 +1,9 @@
 import { Nullable } from "../../../types/global";
 import { Stats } from "../../../types/video";
+import { Logger } from "../../logger/logger.service";
 
 export class StatsOverflowDrawerService {
-  private readonly container!: HTMLDivElement;
+  private logger: Logger;
 
   private statsContainer: Nullable<HTMLDivElement> = null;
   private bitrate: Nullable<HTMLSpanElement> = null;
@@ -12,8 +13,8 @@ export class StatsOverflowDrawerService {
   private audioCodec: Nullable<HTMLSpanElement> = null;
   private frameRate: Nullable<HTMLSpanElement> = null;
 
-  constructor(container: HTMLDivElement) {
-    this.container = container;
+  constructor(id: string, private readonly container: HTMLDivElement) {
+    this.logger = new Logger(id, "StatsOverflowDrawerService");
   }
 
   draw(stats: Stats) {
@@ -25,7 +26,13 @@ export class StatsOverflowDrawerService {
   }
 
   clear() {
+    this.logger.log("trace", "Очищаем сервис отрисовки статистики");
+
     if (this.statsContainer === null) {
+      this.logger.log(
+        "trace",
+        "Контейнер статистики отсутствует, очистка не требуется"
+      );
       return;
     }
 
@@ -39,9 +46,18 @@ export class StatsOverflowDrawerService {
     this.videoCodec = null;
     this.audioCodec = null;
     this.frameRate = null;
+
+    this.logger.log("trace", "Сервис отрисовки статистики очищен");
   }
 
   private createElements(stats: Stats) {
+    this.logger.log(
+      "trace",
+      `Создаем контейнер со статистикой, начальная статистика: ${JSON.stringify(
+        stats
+      )}`
+    );
+
     const statsContainer = document.createElement("div");
 
     statsContainer.classList.add("video-player__stats__container");
@@ -77,6 +93,8 @@ export class StatsOverflowDrawerService {
   }
 
   private updateElements(stats: Stats) {
+    this.logger.log("trace", `Обновляем статистику: ${JSON.stringify(stats)}`);
+
     this.bitrate!.innerText = String(stats.bitrate);
     this.resolutionWidth!.innerText = String(stats.resolution.width);
     this.resolutionHeight!.innerText = String(stats.resolution.height);
@@ -93,6 +111,11 @@ export class StatsOverflowDrawerService {
     label: HTMLSpanElement;
     values: HTMLSpanElement[];
   } {
+    this.logger.log(
+      "trace",
+      `Создаем строку для отображения данных статистики ${label}`
+    );
+
     const row = document.createElement("div");
 
     row.classList.add("video-player__stats__row");

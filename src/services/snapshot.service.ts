@@ -11,7 +11,11 @@ const defaultSnapConfig: SnapConfig = {
 };
 
 export class SnapshotService {
-  private readonly logger = new Logger(SnapshotService.name);
+  private logger: Logger;
+
+  constructor(id: string) {
+    this.logger = new Logger(id, "SnapshotService");
+  }
 
   snap(
     snapWidth: number,
@@ -23,13 +27,16 @@ export class SnapshotService {
       title = defaultSnapConfig.title,
     }: SnapConfig = defaultSnapConfig
   ) {
+    this.logger.log("debug", "Делаем скриншот");
+
     const canvas = window.document.createElement("canvas");
     canvas.width = snapWidth;
     canvas.height = snapHeight;
 
     const context = canvas.getContext("2d");
+
     if (!context) {
-      this.logger.warn("info", "Скриншот невозможен: контекст не определен");
+      this.logger.warn("debug", "Скриншот невозможен: контекст не определен");
       return;
     }
 
