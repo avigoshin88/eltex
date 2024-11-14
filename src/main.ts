@@ -22,16 +22,7 @@ class VideoPlayerElement extends HTMLElement {
 
   modeService!: PlayerModeService;
 
-  connectedCallback() {
-    const id = this.getAttribute(ATTRIBUTE.ID) || "";
-
-    if (!id) throw Error();
-
-    this.logger = new Logger(id, "VideoPlayer Main Custom Element Service");
-    this.player = new VideoPlayerService(id);
-
-    this.logger.log("info", `Инициализация плеера v${version}`);
-  }
+  connectedCallback() {}
 
   disconnectedCallback() {
     this.clear();
@@ -83,7 +74,15 @@ class VideoPlayerElement extends HTMLElement {
     this.logger?.log("debug", `Пробуем инициализировать элемент`);
 
     if (!this.player) {
-      this.logger?.error("debug", "VideoPlayerService не инициализирован");
+      const id = this.getAttribute(ATTRIBUTE.ID) || "";
+
+      if (!id) throw Error();
+
+      this.logger = new Logger(id, "VideoPlayer Main Custom Element Service");
+      this.player = new VideoPlayerService(id);
+
+      this.logger.log("info", `Инициализация плеера v${version}`);
+
       return;
     }
 
