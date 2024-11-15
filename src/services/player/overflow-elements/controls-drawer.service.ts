@@ -513,6 +513,7 @@ export class ControlsOverflowDrawerService {
       option.value = optionConfig.value;
       option.selected =
         option.value === (this.controlValues[name] ?? config.value);
+      option.disabled = optionConfig.disabled ?? false;
 
       options.push(option);
     }

@@ -14,6 +14,7 @@ import {
 import { EventBus } from "../../event-bus.service";
 import { Logger } from "../../logger/logger.service";
 import { TimelineMathService } from "./timeline/timeline-math.service";
+import { SelectOption } from "../../../types/controls";
 
 const MOUSE_MICRO_MOVE_TIMEOUT = 100;
 
@@ -145,11 +146,6 @@ export class TimelineOverflowDrawer {
       this.timelineElements.timelineContainer.style.width = `${totalRangeWidth}px`; // Задаем большую ширину таймлайна
       this.timelineElements.trackContainer!.style.width = `${totalRangeWidth}px`; // Задаем большую ширину треку
     } else {
-      this.eventBus.emit(
-        "manual-scale-change",
-        String(this.timelineMathService.duration)
-      );
-
       this.timelineElements.contentContainer!.style.width = `${containerWidth}px`; // Задаем большую ширину контейнеру с контентом
       this.timelineElements.timelineContainer.style.width = `${containerWidth}px`; // Устанавливаем стандартную ширину
       this.timelineElements.trackContainer!.style.width = `${containerWidth}px`; // Устанавливаем стандартную ширину
@@ -493,11 +489,18 @@ export class TimelineOverflowDrawer {
         ranges[ranges.length - 1].end_time - ranges[0].start_time;
       const containerWidth = this.timelineElements.scrollContainer!.offsetWidth;
 
-      const options = TIMELINE_STEPS_OPTIONS.filter(
-        (step) => Number(step.value) <= totalTimeRange
-      ).sort((a, b) => Number(a.value) - Number(b.value));
+      const options: SelectOption[] = TIMELINE_STEPS_OPTIONS.map((step) => {
+        return {
+          label: step.label,
+          value: step.value,
+          disabled: Number(step.value) > totalTimeRange,
+        };
+      }).sort((a, b) => Number(a.value) - Number(b.value));
 
-      options.push({ label: "Max", value: String(totalTimeRange) });
+      options.push({
+        label: "Max",
+        value: String(totalTimeRange),
+      });
 
       this.eventBus.emit("set-timeline-scale-options", [
         options[options.length - 1].value,
@@ -871,7 +874,17 @@ export class TimelineOverflowDrawer {
         Math.max(minScale, this.scale + scaleChange)
       );
 
-      this.eventBus.emit("manual-scale-change", "");
+      const totalRangeWidth = this.timelineMathService.duration * this.scale; // totalTimeRange в масштабе
+
+      // Если ширина всех диапазонов больше ширины контейнера, включаем скролл
+      if (totalRangeWidth > containerWidth) {
+        this.eventBus.emit("manual-scale-change", "");
+      } else {
+        this.eventBus.emit(
+          "manual-scale-change",
+          String(this.timelineMathService.duration)
+        );
+      }
 
       if (this.isReady) {
         if (this.isShowPhantomTrack) {

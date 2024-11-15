@@ -44,6 +44,7 @@ export type RangeLabelBuilder = () => string;
 export type SelectOption = {
   label: string;
   value: SelectValue;
+  disabled?: boolean;
 };
 
 export type ControlListeners<T> = Partial<Record<CallbackType, T>>;
