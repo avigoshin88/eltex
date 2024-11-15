@@ -17,27 +17,10 @@ class VideoPlayerElement extends HTMLElement {
 
   player: VideoPlayerService | undefined;
 
-  modeService!: PlayerModeService;
-  private isMounted = false;
+  modeService: PlayerModeService | undefined;
+  properties: Partial<Record<ATTRIBUTE, string | null | undefined>> = {};
 
-  connectedCallback() {
-    const id = this.getAttribute(ATTRIBUTE.ID) || "";
-    const logLevel = this.getAttribute(ATTRIBUTE.LOG_LEVEL) || "";
-
-    if (!id) throw Error();
-
-    this.logger = new Logger(
-      id,
-      "VideoPlayer Main Custom Element Service",
-      logLevel as LogLevel | undefined
-    );
-    this.player = new VideoPlayerService(id);
-
-    this.logger.log("info", `Инициализация плеера v${version}`);
-
-    this.initElement();
-    this.isMounted = true;
-  }
+  connectedCallback() {}
 
   disconnectedCallback() {
     this.clear();
@@ -54,12 +37,32 @@ class VideoPlayerElement extends HTMLElement {
     ];
   }
 
+  private requiredAttrs = [
+    ATTRIBUTE.ID,
+    ATTRIBUTE.CAMERA_NAME,
+    ATTRIBUTE.ICE_SERVERS,
+    ATTRIBUTE.MODE,
+  ];
+
   async attributeChangedCallback(
-    name: string,
+    name: ATTRIBUTE,
     oldValue: string | null,
     newValue: string | undefined
   ) {
-    if (!this.isMounted) return;
+    if (name === ATTRIBUTE.ID && !!newValue) {
+      if (!this.logger) {
+        this.logger = new Logger(
+          newValue,
+          "VideoPlayer Main Custom Element Service"
+        );
+
+        this.logger.log("info", `Инициализация плеера v${version}`);
+      }
+
+      if (!this.player) {
+        this.player = new VideoPlayerService(newValue);
+      }
+    }
 
     this.logger?.log(
       "debug",
@@ -68,24 +71,30 @@ class VideoPlayerElement extends HTMLElement {
       )}", новое значение "${JSON.stringify(newValue)}"`
     );
 
-    if (oldValue === newValue) {
-      this.logger?.log(
-        "trace",
-        `Новое значение атрибута ${name} не изменилось, оставляем все как есть`
-      );
+    if (oldValue === newValue && this.properties[name] === newValue) {
+      this.logger?.log("debug", `Атрибут ${name} не изменен`);
       return;
     }
 
-    if (name === ATTRIBUTE.LOG_LEVEL) {
-      const id = this.getAttribute(ATTRIBUTE.ID);
+    this.properties[name] = newValue;
 
-      id && Logger.setLogLevel(id, newValue as LogLevel);
-    } else {
-      this.clear();
-      this.initElement();
+    switch (name) {
+      case ATTRIBUTE.LOG_LEVEL:
+        const id =
+          this.properties[ATTRIBUTE.ID] || this.getAttribute(ATTRIBUTE.ID);
+
+        id && Logger.setLogLevel(id, newValue as LogLevel);
+        break;
+      default:
+        if (
+          !this.requiredAttrs.filter((item) => !this.properties[item]).length
+        ) {
+          this.clear();
+          this.initElement();
+        }
+        break;
     }
   }
-
   private initElement() {
     this.logger?.log("debug", `Пробуем инициализировать элемент`);
 
@@ -93,26 +102,16 @@ class VideoPlayerElement extends HTMLElement {
       return;
     }
 
-    const id = this.getAttribute(ATTRIBUTE.ID);
-    const mode = this.getAttribute(ATTRIBUTE.MODE);
-    const cameraName = this.getAttribute(ATTRIBUTE.CAMERA_NAME);
-    const iceServersRaw = this.getAttribute(ATTRIBUTE.ICE_SERVERS);
+    const id = this.properties[ATTRIBUTE.ID];
+    const mode = this.properties[ATTRIBUTE.MODE];
+    const cameraName = this.properties[ATTRIBUTE.CAMERA_NAME];
+    const iceServersRaw = this.properties[ATTRIBUTE.ICE_SERVERS];
 
-    if (
-      id === null ||
-      mode === null ||
-      cameraName === null ||
-      iceServersRaw === null
-    ) {
-      const requiredAttributes = { id, mode, cameraName, iceServersRaw };
-
+    if (!id || !mode || !cameraName || !iceServersRaw) {
       this.logger?.error(
         "info",
-        `Не хватает следующих атрибутов: ${Object.keys(requiredAttributes)
-          .filter(
-            (item) =>
-              !requiredAttributes[item as keyof typeof requiredAttributes]
-          )
+        `Не хватает следующих атрибутов: ${this.requiredAttrs
+          .filter((item) => !this.properties[item])
           .join(", ")}, не удается инициализировать элемент`
       );
       return;
@@ -152,7 +151,7 @@ class VideoPlayerElement extends HTMLElement {
 
   private async clear() {
     this.logger?.log("trace", "Запускаем очистку сервиса");
-    await this.modeService.reset();
+    await this.modeService?.reset();
     this.logger?.log("trace", "Сервис очищен");
   }
 }
