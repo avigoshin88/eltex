@@ -80,6 +80,11 @@ export class VideoPlayerService {
   }
 
   play() {
+    if (!this.video.paused) {
+      this.logger.log("trace", "Видео уже воспроизводится");
+      return;
+    }
+
     this.logger.log("trace", "Запуск воспроизведения видео");
 
     this.video.play();
@@ -88,6 +93,11 @@ export class VideoPlayerService {
   }
 
   pause() {
+    if (this.video.paused) {
+      this.logger.log("trace", "Видео уже на паузе");
+      return;
+    }
+
     this.logger.log("trace", "Ставим видео на паузу");
 
     this.video.pause();

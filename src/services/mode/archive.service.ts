@@ -173,6 +173,8 @@ export class ArchiveVideoService implements ModeService {
 
     this.pause(true);
 
+    this.isStopUpdateTrackPosition = true;
+
     this.renewStartTime = this.archiveTimeControl.getCurrentTimestamp();
     this.renewFragment = {
       ...this.archiveControl.getCurrentFragment(),

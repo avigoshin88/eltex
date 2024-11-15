@@ -386,9 +386,6 @@ export class PlayerModeService {
       "trace",
       `Переключение режима воспроизведения после срабатывания коллбэка`
     );
-    if (this.player.isPlaying) {
-      return;
-    }
 
     this.player.play();
 
