@@ -57,24 +57,22 @@ export class DatachannelClientService {
           this.logger.log("debug", "Datachannel открыт");
           nativeListeners[listenerName]?.(event);
         });
-      }
-
-      if (listenerName === "close") {
+      } else if (listenerName === "close") {
         this.datachannel.addEventListener(listenerName, (event) => {
           this.logger.log("debug", "Datachannel закрыт");
           nativeListeners[listenerName]?.(event);
         });
+      } else {
+        this.datachannel.addEventListener(listenerName, (e) => {
+          this.logger.log(
+            "debug",
+            `Сработало событие типа ${listenerName}: ${JSON.stringify(e)}`
+          );
+          nativeListeners[
+            listenerName as keyof DatachannelNativeEventListeners
+          ]?.(e);
+        });
       }
-
-      this.datachannel.addEventListener(listenerName, (e) => {
-        this.logger.log(
-          "debug",
-          `Сработало событие типа ${listenerName}: ${JSON.stringify(e)}`
-        );
-        nativeListeners[
-          listenerName as keyof DatachannelNativeEventListeners
-        ]?.(e);
-      });
     }
 
     if (!Object.keys(nativeListeners).includes("open")) {

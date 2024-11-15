@@ -106,7 +106,7 @@ export class PlayerStatsService {
     try {
       const stats = await trackWebRTCStats();
 
-      this.logger.log("trace", `Новая статистика: ${stats}`);
+      this.logger.log("trace", `Новая статистика: ${JSON.stringify(stats)}`);
 
       this.eventBus.emit("current-video-codec", stats.videoCodec);
 

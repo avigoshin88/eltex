@@ -2,7 +2,7 @@ import { ATTRIBUTE } from "./constants/attributes";
 import { VideoPlayerService } from "./services/player/player.service";
 import { PlayerModeService } from "./services/player/player-mode.service";
 import { Mode } from "./constants/mode";
-import { Logger } from "./services/logger/logger.service";
+import { Logger, LogLevel } from "./services/logger/logger.service";
 import { version } from "../package.json";
 import "./style.css";
 
@@ -11,9 +11,6 @@ class VideoPlayerElement extends HTMLElement {
     super();
   }
 
-  options: Partial<Record<(typeof ATTRIBUTE)[keyof typeof ATTRIBUTE], string>> =
-    {};
-
   private logger: Logger | undefined;
 
   container!: HTMLDivElement;
@@ -21,8 +18,26 @@ class VideoPlayerElement extends HTMLElement {
   player: VideoPlayerService | undefined;
 
   modeService!: PlayerModeService;
+  private isMounted = false;
 
-  connectedCallback() {}
+  connectedCallback() {
+    const id = this.getAttribute(ATTRIBUTE.ID) || "";
+    const logLevel = this.getAttribute(ATTRIBUTE.LOG_LEVEL) || "";
+
+    if (!id) throw Error();
+
+    this.logger = new Logger(
+      id,
+      "VideoPlayer Main Custom Element Service",
+      logLevel as LogLevel | undefined
+    );
+    this.player = new VideoPlayerService(id);
+
+    this.logger.log("info", `Инициализация плеера v${version}`);
+
+    this.initElement();
+    this.isMounted = true;
+  }
 
   disconnectedCallback() {
     this.clear();
@@ -35,6 +50,7 @@ class VideoPlayerElement extends HTMLElement {
       ATTRIBUTE.CAMERA_NAME,
       ATTRIBUTE.MODE,
       ATTRIBUTE.ICE_SERVERS,
+      ATTRIBUTE.LOG_LEVEL,
     ];
   }
 
@@ -43,6 +59,8 @@ class VideoPlayerElement extends HTMLElement {
     oldValue: string | null,
     newValue: string | undefined
   ) {
+    if (!this.isMounted) return;
+
     this.logger?.log(
       "debug",
       `Атрибут ${name} изменен, предыдущее значение "${JSON.stringify(
@@ -50,61 +68,50 @@ class VideoPlayerElement extends HTMLElement {
       )}", новое значение "${JSON.stringify(newValue)}"`
     );
 
-    if (newValue === undefined || oldValue === newValue) {
+    if (oldValue === newValue) {
       this.logger?.log(
         "trace",
-        `Новое значение атрибута ${name} либо пустое, либо не изменилось, оставляем все как есть`
+        `Новое значение атрибута ${name} не изменилось, оставляем все как есть`
       );
       return;
     }
 
-    this.options = { ...this.options, [name]: newValue };
+    if (name === ATTRIBUTE.LOG_LEVEL) {
+      const id = this.getAttribute(ATTRIBUTE.ID);
 
-    if (oldValue !== null) {
-      this.logger?.log(
-        "trace",
-        `Так как предыдущее значение атрибута ${name} не пустое, перезапускаем плеер`
-      );
+      id && Logger.setLogLevel(id, newValue as LogLevel);
+    } else {
       this.clear();
+      this.initElement();
     }
-    this.initElement();
   }
 
   private initElement() {
     this.logger?.log("debug", `Пробуем инициализировать элемент`);
 
     if (!this.player) {
-      const id = this.getAttribute(ATTRIBUTE.ID) || "";
-
-      if (!id) throw Error();
-
-      this.logger = new Logger(id, "VideoPlayer Main Custom Element Service");
-      this.player = new VideoPlayerService(id);
-
-      this.logger.log("info", `Инициализация плеера v${version}`);
-
       return;
     }
 
-    const id = this.options[ATTRIBUTE.ID];
-    const mode = this.options[ATTRIBUTE.MODE];
-    const cameraName = this.options[ATTRIBUTE.CAMERA_NAME];
-    const iceServersRaw = this.options[ATTRIBUTE.ICE_SERVERS];
+    const id = this.getAttribute(ATTRIBUTE.ID);
+    const mode = this.getAttribute(ATTRIBUTE.MODE);
+    const cameraName = this.getAttribute(ATTRIBUTE.CAMERA_NAME);
+    const iceServersRaw = this.getAttribute(ATTRIBUTE.ICE_SERVERS);
 
     if (
-      id == null ||
-      mode == null ||
-      cameraName == null ||
-      iceServersRaw == null
+      id === null ||
+      mode === null ||
+      cameraName === null ||
+      iceServersRaw === null
     ) {
       const requiredAttributes = { id, mode, cameraName, iceServersRaw };
 
       this.logger?.error(
-        "debug",
+        "info",
         `Не хватает следующих атрибутов: ${Object.keys(requiredAttributes)
           .filter(
             (item) =>
-              !!requiredAttributes[item as keyof typeof requiredAttributes]
+              !requiredAttributes[item as keyof typeof requiredAttributes]
           )
           .join(", ")}, не удается инициализировать элемент`
       );

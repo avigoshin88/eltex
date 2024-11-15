@@ -305,12 +305,21 @@ export class ControlsOverflowDrawerService {
         break;
 
       case "range":
-        this.logger.log("trace", `Обновляем ползунок ${name}`);
-        this.updateRange(
-          control as HTMLDivElement,
-          name as ControlName,
-          config
-        );
+        if (
+          this.shouldUpdateRange(
+            control as HTMLDivElement,
+            name as ControlName,
+            config
+          )
+        ) {
+          this.logger.log("trace", `Обновляем ползунок ${name}`);
+          this.updateRange(
+            control as HTMLDivElement,
+            name as ControlName,
+            config
+          );
+        } else
+          this.logger.log("trace", `Ползунок ${name} не требует обновления`);
         break;
     }
   }
@@ -385,6 +394,34 @@ export class ControlsOverflowDrawerService {
     );
 
     return select.value !== currentValue;
+  }
+
+  private shouldUpdateRange(
+    range: HTMLDivElement,
+    name: ControlName,
+    config: RangeControlOptions
+  ): boolean {
+    this.logger.log(
+      "trace",
+      `Проверяем, требуется ли обновление ползунку ${name}`
+    );
+    const currentValue = this.controlValues[name] ?? config.value;
+
+    const label = range.getElementsByTagName("label")[0];
+
+    if (!label) {
+      this.logger.log("trace", `В ползунке ${name} обновление требуется`);
+      return true;
+    }
+
+    this.logger.log(
+      "trace",
+      `В ползунке ${name} обновление${
+        label.innerHTML !== currentValue ? "" : " не"
+      } требуется`
+    );
+
+    return label.innerHTML !== config.getLabel();
   }
 
   private makeButton(
@@ -509,25 +546,32 @@ export class ControlsOverflowDrawerService {
   ) {
     this.logger.log("trace", `Обновляем ползунок ${name}`);
 
-    rangeContainer.innerHTML = "";
+    const label = rangeContainer.getElementsByTagName("label")[0];
+    const input = rangeContainer.getElementsByTagName("input")[0];
 
-    const input = document.createElement("input");
-    input.type = "range";
-    input.value = this.controlValues[name] ?? config.value;
+    if (label && input) {
+      label.innerText = config.getLabel();
+      input.value = this.controlValues[name] ?? config.value;
+    } else {
+      const range = document.createElement("input");
+      range.type = "range";
+      range.value = this.controlValues[name] ?? config.value;
 
-    for (const event in config.listeners) {
-      const eventName = event as keyof ButtonControlOptions["listeners"];
-      const listener = config.listeners[eventName];
-      if (listener) {
-        input.addEventListener(eventName, listener);
+      for (const event in config.listeners) {
+        const eventName = event as keyof ButtonControlOptions["listeners"];
+        const listener = config.listeners[eventName];
+        if (listener) {
+          range.addEventListener(eventName, listener);
+        }
       }
+
+      const label = document.createElement("label");
+      label.innerText = config.getLabel();
+
+      rangeContainer.innerHTML = "";
+      rangeContainer.appendChild(range);
+      rangeContainer.appendChild(label);
     }
-
-    rangeContainer.appendChild(input);
-
-    const label = document.createElement("label");
-    label.innerText = config.getLabel();
-    rangeContainer.appendChild(label);
   }
 
   public clear() {

@@ -1,32 +1,25 @@
-import { EnvService } from "../env.service";
-
 type LogMessage = unknown;
-type LogLevel = "info" | "debug" | "trace";
-
-const LOGGER_LEVEL: LogLevel = import.meta.env.DEV
-  ? (EnvService.getENV("VITE_LOGGER_LEVEL") as LogLevel)
-  : "info";
+export type LogLevel = "info" | "debug" | "trace";
 
 class LoggerService {
   static logLevels: Record<string, LogLevel> = {};
-  static setLogLevel = (id: string, logLevel: LogLevel = LOGGER_LEVEL) => {
+  static setLogLevel = (id: string, logLevel: LogLevel = "info") => {
     LoggerService.logLevels[id] = logLevel;
   };
   private PREFIX: string;
 
-  constructor(
-    private id: string,
-    tag: string,
-    logLevel: LogLevel = LOGGER_LEVEL
-  ) {
+  constructor(private id: string, tag: string, logLevel: LogLevel = "info") {
     this.PREFIX = `[ID: ${id}] ${tag}:`;
-    LoggerService.setLogLevel(id, logLevel);
+
+    if (!LoggerService.logLevels[id]) {
+      LoggerService.setLogLevel(id, logLevel);
+    }
   }
 
   log(level: LogLevel, ...messages: LogMessage[]) {
     if (this.shouldLog(level)) {
       console.log(
-        `%c[${new Date().toISOString()}]%c %c${
+        `%c${level} [${new Date().toISOString()}]%c %c${
           this.PREFIX
         }%c ${this.makeLogMessage(messages)}`,
         "color: white; background-color: black;",
@@ -40,7 +33,7 @@ class LoggerService {
   warn(level: LogLevel, ...messages: LogMessage[]) {
     if (this.shouldLog(level)) {
       console.warn(
-        `%c[${new Date().toISOString()}]%c %c${
+        `%c${level} [${new Date().toISOString()}]%c %c${
           this.PREFIX
         }%c ${this.makeLogMessage(messages)}`,
         "color: white; background-color: black;",
@@ -54,7 +47,7 @@ class LoggerService {
   error(level: LogLevel, ...messages: LogMessage[]) {
     if (this.shouldLog(level)) {
       console.error(
-        `%c[${new Date().toISOString()}]%c %c${
+        `%c${level} [${new Date().toISOString()}]%c %c${
           this.PREFIX
         }%c ${this.makeLogMessage(messages)}`,
         "color: white; background-color: black;",
