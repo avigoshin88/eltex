@@ -495,14 +495,16 @@ export class ControlsOverflowDrawerService {
 
     const options: HTMLOptionElement[] = [];
 
-    const defaultOption = document.createElement("option");
+    if (config.placeholderLabel) {
+      const defaultOption = document.createElement("option");
 
-    defaultOption.innerText = config.placeholderLabel || "-";
-    defaultOption.value = "";
-    defaultOption.disabled = true;
-    defaultOption.selected = !config.value;
+      defaultOption.innerText = config.placeholderLabel;
+      defaultOption.value = "";
+      defaultOption.disabled = true;
+      defaultOption.selected = !config.value;
 
-    options.push(defaultOption);
+      options.push(defaultOption);
+    }
 
     for (const optionConfig of config.options) {
       const option = document.createElement("option");
