@@ -722,14 +722,27 @@ export class PlayerModeService {
     this.controlsDrawer.draw();
   };
 
+  private wasSoundEnabled: boolean | undefined;
+  // @ts-ignore
   private onPush2Talk = (push2TalkState: boolean) => {
-    this.logger.log(
-      "debug",
-      push2TalkState
-        ? `Приглушаем звук на время включения микрофона в режиме Push to talk`
-        : `Возвращаем звук после выключения микрофона в режиме Push to talk`
-    );
-    this.switchVolumeState();
+    if (typeof this.wasSoundEnabled === "boolean") {
+      this.wasSoundEnabled && this.switchVolumeState();
+      this.wasSoundEnabled &&
+        this.logger.log(
+          "debug",
+          `Возвращаем звук после выключения микрофона в режиме Push to talk`
+        );
+      this.wasSoundEnabled = undefined;
+    } else {
+      this.wasSoundEnabled = this.player.isVolumeOn;
+      this.wasSoundEnabled && this.switchVolumeState();
+      this.logger.log(
+        "debug",
+        this.wasSoundEnabled
+          ? `Приглушаем звук на время включения микрофона в режиме Push to talk`
+          : `Звук уже выключен,не требуется его приглушать на время работы режима Push to talk`
+      );
+    }
   };
 
   private setListeners() {
