@@ -15,6 +15,7 @@ import { EventBus } from "../../event-bus.service";
 import { Logger } from "../../logger/logger.service";
 import { TimelineMathService } from "./timeline/timeline-math.service";
 import { SelectOption } from "../../../types/controls";
+import { TimelineScaleService } from "./timeline/timeline-scale.service";
 
 const MOUSE_MICRO_MOVE_TIMEOUT = 100;
 
@@ -24,8 +25,8 @@ export class TimelineOverflowDrawer {
   private readonly timelineElements: TimelineElementsService;
   private readonly timelineElementsFactory: TimelineElementsFactoryService;
   private readonly timelineMathService = new TimelineMathService();
+  private readonly timelineScaleService = new TimelineScaleService();
 
-  private scale: number = 1; // Начальный масштаб
   private isReady: boolean = false; // Флаг, указывающий готовность к отрисовке
   private clickCallback: TimelineClickCallback; // Callback для кликов
 
@@ -138,7 +139,8 @@ export class TimelineOverflowDrawer {
     const containerWidth = this.timelineElements.scrollContainer!.offsetWidth; // Ширина контейнера
 
     // Рассчитываем ширину диапазонов с учетом масштаба
-    const totalRangeWidth = this.timelineMathService.duration * this.scale; // totalTimeRange в масштабе
+    const totalRangeWidth =
+      this.timelineMathService.duration * this.timelineScaleService.scale; // totalTimeRange в масштабе
 
     // Если ширина всех диапазонов больше ширины контейнера, включаем скролл
     if (totalRangeWidth > containerWidth) {
@@ -340,6 +342,11 @@ export class TimelineOverflowDrawer {
 
   private onTimelineResize = () => {
     this.logger.log("trace", `Произошло изменение размеров`);
+
+    const containerWidth = this.timelineElements.scrollContainer!.offsetWidth;
+
+    this.timelineScaleService.setContainerWidth(containerWidth);
+
     this.draw(this.currentTimestamp);
   };
 
@@ -422,6 +429,7 @@ export class TimelineOverflowDrawer {
 
     const visibleStartTime =
       startTime + (scrollLeft / totalRangeWidth) * totalTimeRange;
+
     const visibleEndTime =
       startTime +
       ((scrollLeft + containerWidth) / totalRangeWidth) * totalTimeRange;
@@ -434,7 +442,7 @@ export class TimelineOverflowDrawer {
     );
 
     // Расчет ширины одного деления в пикселях
-    const divisionWidth = divisionStep * this.scale;
+    const divisionWidth = divisionStep * this.timelineScaleService.scale;
 
     // Динамическое измерение ширины метки
     const sampleTime = startTime + firstVisibleDivision * divisionStep;
@@ -485,21 +493,19 @@ export class TimelineOverflowDrawer {
     this.isReady = true;
 
     if (updateScale) {
-      const totalTimeRange =
-        ranges[ranges.length - 1].end_time - ranges[0].start_time;
       const containerWidth = this.timelineElements.scrollContainer!.offsetWidth;
 
       const options: SelectOption[] = TIMELINE_STEPS_OPTIONS.map((step) => {
         return {
           label: step.label,
           value: step.value,
-          disabled: Number(step.value) > totalTimeRange,
+          disabled: Number(step.value) > this.timelineMathService.duration,
         };
       }).sort((a, b) => Number(a.value) - Number(b.value));
 
       options.push({
         label: "Max",
-        value: String(totalTimeRange),
+        value: String(this.timelineMathService.duration),
       });
 
       this.eventBus.emit("set-timeline-scale-options", [
@@ -508,7 +514,14 @@ export class TimelineOverflowDrawer {
       ]);
 
       // Устанавливаем начальный масштаб так, чтобы диапазоны занимали всю ширину контейнера
-      this.scale = containerWidth / totalTimeRange;
+      this.timelineScaleService.setMaxViewedTime(
+        this.timelineMathService.duration
+      );
+      this.timelineScaleService.setContainerWidth(containerWidth);
+      this.timelineScaleService.setViewedTime(
+        this.timelineMathService.duration
+      );
+
       this.draw(this.timelineMathService.startTimestamp); // Отрисовка шкалы после установки диапазонов
     }
   }
@@ -535,11 +548,11 @@ export class TimelineOverflowDrawer {
   }
 
   private formatTime(time: number): string {
-    return formatTime(time, this.scale);
+    return formatTime(time, this.timelineScaleService.scale);
   }
 
   private getStep() {
-    const scaleFactor = this.scale;
+    const scaleFactor = this.timelineScaleService.scale;
 
     const stepInfo = TIMELINE_DIVISION_STEPS.find(
       (step) => scaleFactor > step.scale
@@ -550,12 +563,13 @@ export class TimelineOverflowDrawer {
     );
   }
 
-  private setScale = (value: number) => {
-    this.logger.log("trace", `Устанавливаем масштаб равный ${value}`);
+  private setScale = (viewedTime: number) => {
+    this.logger.log("trace", `Устанавливаем масштаб равный ${viewedTime}`);
 
     const containerWidth = this.timelineElements.scrollContainer!.offsetWidth;
 
-    this.scale = containerWidth / value;
+    this.timelineScaleService.setContainerWidth(containerWidth);
+    this.timelineScaleService.setViewedTime(viewedTime);
 
     this.draw(this.currentTimestamp);
 
@@ -651,7 +665,8 @@ export class TimelineOverflowDrawer {
     const [timestamp] = time;
 
     // Рассчитываем ширину диапазонов с учетом масштаба
-    const totalRangeWidth = this.timelineMathService.duration * this.scale; // totalTimeRange в масштабе
+    const totalRangeWidth =
+      this.timelineMathService.duration * this.timelineScaleService.scale; // totalTimeRange в масштабе
 
     if (this.timelineMathService.duration === 0) {
       return;
@@ -759,7 +774,8 @@ export class TimelineOverflowDrawer {
     const scrollLeft = this.timelineElements.scrollContainer?.scrollLeft || 0;
 
     // Рассчитываем позицию клика с учётом прокрутки и масштаба
-    const totalClickPosition = (clickX + scrollLeft) / this.scale;
+    const totalClickPosition =
+      (clickX + scrollLeft) / this.timelineScaleService.scale;
 
     const clickedTimestamp =
       this.timelineMathService.startTimestamp + totalClickPosition;
@@ -814,7 +830,8 @@ export class TimelineOverflowDrawer {
       }
     }
 
-    const totalRangeWidth = this.timelineMathService.duration * this.scale;
+    const totalRangeWidth =
+      this.timelineMathService.duration * this.timelineScaleService.scale;
 
     this.timelineElements.clearDivisions();
 
@@ -855,26 +872,18 @@ export class TimelineOverflowDrawer {
         this.isUserScrolling = false;
       }, 2000);
 
-      // Ограничим максимальные изменения при каждом событии скролла
-
-      const scaleChange = Math.sign(event.deltaY) * this.getStep().amplifier; // Более мелкий шаг для плавности
+      const scaleChange = Math.sign(event.deltaY) * this.getStep().scrollStep;
 
       const containerWidth = this.timelineElements.scrollContainer!.offsetWidth;
 
-      // Рассчитаем максимальный масштаб так, чтобы диапазоны не могли выходить за пределы контейнера
-      const maxScale = 1; // Масштабирование не должно превышать единичный масштаб
-      const minScale = containerWidth / this.timelineMathService.duration; // Минимальный масштаб, при котором диапазоны занимают контейнер
-
       // Текущее значение масштаба перед изменением
-      const previousScale = this.scale;
+      const previousScale = this.timelineScaleService.scale;
 
       // Ограничиваем масштаб значениями от minScale до maxScale
-      this.scale = Math.min(
-        maxScale,
-        Math.max(minScale, this.scale + scaleChange)
-      );
+      this.timelineScaleService.addViewedTime(scaleChange);
 
-      const totalRangeWidth = this.timelineMathService.duration * this.scale; // totalTimeRange в масштабе
+      const totalRangeWidth =
+        this.timelineMathService.duration * this.timelineScaleService.scale; // totalTimeRange в масштабе
 
       // Если ширина всех диапазонов больше ширины контейнера, включаем скролл
       if (totalRangeWidth > containerWidth) {
@@ -912,7 +921,8 @@ export class TimelineOverflowDrawer {
           this.draw(this.currentTimestamp);
 
           // После перерисовки восстанавливаем позицию трека
-          const newTrackLeft = (trackLeft / previousScale) * this.scale;
+          const newTrackLeft =
+            (trackLeft / previousScale) * this.timelineScaleService.scale;
           const newScrollLeft = Math.max(0, newTrackLeft - trackOffsetFromLeft);
           this.timelineElements.scrollContainer!.scrollTo({
             left: newScrollLeft,
@@ -927,7 +937,7 @@ export class TimelineOverflowDrawer {
         this.updateExportMarkers(
           this.timelineMathService.startTimestamp,
           this.timelineMathService.duration,
-          this.timelineMathService.duration * this.scale
+          this.timelineMathService.duration * this.timelineScaleService.scale
         );
       }
 
