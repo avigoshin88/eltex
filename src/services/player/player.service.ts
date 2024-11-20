@@ -23,6 +23,8 @@ export class VideoPlayerService {
       "debug",
       `Инициализируем плеер сервис, имя камеры ${cameraName}`
     );
+    this.isPlaying = true;
+    this.isVolumeOn = false;
     this.cameraName = cameraName;
 
     const { container, videoContainer, video, placeholder } =
