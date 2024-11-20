@@ -115,6 +115,8 @@ export class LiveVideoService implements ModeService {
           this.datachannelClient = datachannelClient;
           this.webRTCClient = webRTCClient;
 
+          this.player.togglePlaceholder(false);
+
           this.logger.log(
             "debug",
             "Live соединение с новыми параметрами запущено"

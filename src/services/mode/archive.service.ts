@@ -267,6 +267,8 @@ export class ArchiveVideoService implements ModeService {
 
           this.onOpenDatachannel();
 
+          this.player.togglePlaceholder(false);
+
           this.logger.log("debug", `Перезапущено с новыми параметрами`);
         },
       },

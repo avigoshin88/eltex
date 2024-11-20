@@ -14,4 +14,5 @@ export type EventName =
   | "timeline-scale-update"
   | "archive-timeupdate"
   | "change-mic-state"
-  | "push2Talk";
+  | "push2Talk"
+  | "restart-connection";

@@ -745,6 +745,20 @@ export class PlayerModeService {
     }
   };
 
+  private restartConnection = () => {
+    this.logger.log("debug", `Перезапускаем соединение`);
+
+    this.modeConnection.reinitWithNewOptions?.(
+      {
+        ...this.options,
+        constrains: {
+          maxBitrate: quality[this.quality].bitrate,
+        },
+      },
+      this.metaEnabled
+    );
+  };
+
   private setListeners() {
     this.logger.log("debug", `Устанавливаем слушателей`);
 
@@ -758,6 +772,7 @@ export class PlayerModeService {
     this.eventBus.on("change-mic-state", this.onChangeMicState);
     this.eventBus.on("manual-scale-change", this.onManualScaleChange);
     this.eventBus.on("push2Talk", this.onPush2Talk);
+    this.eventBus.on("restart-connection", this.restartConnection);
   }
 
   private clearListeners() {
@@ -773,5 +788,6 @@ export class PlayerModeService {
     this.eventBus.off("change-mic-state", this.onChangeMicState);
     this.eventBus.off("manual-scale-change", this.onManualScaleChange);
     this.eventBus.off("push2Talk", this.onPush2Talk);
+    this.eventBus.off("restart-connection", this.restartConnection);
   }
 }

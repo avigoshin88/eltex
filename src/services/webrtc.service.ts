@@ -468,8 +468,7 @@ export class WebRTCService {
     if (this.peerConnection?.connectionState === "disconnected") {
       this.logger.log("debug", `Соединение оборвалось, перезапускаем`);
 
-      await this.reset();
-      await this.reinitPeerConnection();
+      this.eventBus.emit("restart-connection");
     }
   };
 
