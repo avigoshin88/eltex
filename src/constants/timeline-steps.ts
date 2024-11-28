@@ -8,55 +8,55 @@ const TIMELINE_DIVISION_STEPS = [
   { scale: 0.0005, step: 30 * 1000, scrollStep: 30000, label: "30 секунд" }, // 30 секунд
   {
     scale: 0.0002,
-    step: 1 * 60 * 1000,
+    step: 2 * 60 * 1000,
     scrollStep: 60000,
     label: "1 минута",
   }, // 1 минута
   {
     scale: 0.0001,
-    step: 2 * 60 * 1000,
+    step: 3 * 60 * 1000,
     scrollStep: 120000,
     label: "2 минуты",
   }, // 2 минуты
   {
     scale: 0.00005,
-    step: 5 * 60 * 1000,
+    step: 10 * 60 * 1000,
     scrollStep: 300000,
     label: "5 минут",
   }, // 5 минут
   {
     scale: 0.00002,
-    step: 10 * 60 * 1000,
+    step: 20 * 60 * 1000,
     scrollStep: 600000,
     label: "10 минут",
   }, // 10 минут
   {
     scale: 0.00001,
-    step: 15 * 60 * 1000,
+    step: 30 * 60 * 1000,
     scrollStep: 900000,
     label: "15 минут",
   }, // 15 минут
   {
     scale: 0.000005,
-    step: 30 * 60 * 1000,
+    step: 60 * 60 * 1000,
     scrollStep: 1800000,
     label: "30 минут",
   }, // 30 минут
   {
     scale: 0.000002,
-    step: 1 * 60 * 60 * 1000,
+    step: 1 * 90 * 60 * 1000,
     scrollStep: 3600000,
     label: "1 час",
   }, // 1 час
   {
     scale: 0.000001,
-    step: 6 * 60 * 60 * 1000,
+    step: 9 * 60 * 60 * 1000,
     scrollStep: 21600000,
     label: "6 часов",
   }, // 6 часов
   {
     scale: 0.0000005,
-    step: 12 * 60 * 60 * 1000,
+    step: 14 * 60 * 60 * 1000,
     scrollStep: 43200000,
     label: "12 часов",
   }, // 12 часов
@@ -160,8 +160,6 @@ const TIMELINE_STEPS_OPTIONS: SelectOption[] = [
   { label: "30мин", value: String(30 * 60 * 1000) },
   { label: "10мин", value: String(10 * 60 * 1000) },
   { label: "5м", value: String(5 * 60 * 1000) },
-  { label: "1м", value: String(1 * 60 * 1000) },
-  { label: "30s", value: String(30 * 1000) },
 ];
 
 const TIMELINE_MIN_STEP = Number(

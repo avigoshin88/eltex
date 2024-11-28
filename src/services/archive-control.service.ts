@@ -3,6 +3,7 @@ import { RangeDto, RangeFragment } from "../dto/ranges";
 import { Nullable } from "../types/global";
 import { CustomEventsService } from "./custom-events.service";
 import { EnvService } from "./env.service";
+import { EventBus } from "./event-bus.service";
 import { Logger } from "./logger/logger.service";
 
 const connectionSupportInterval = EnvService.getENVAsNumber(
@@ -25,6 +26,8 @@ type Emitter = (
 
 export class ArchiveControlService {
   private logger: Logger;
+
+  private eventBus: EventBus;
   private customEventsService: CustomEventsService;
 
   private ranges: RangeDto[] = [];
@@ -48,7 +51,10 @@ export class ArchiveControlService {
 
   constructor(private id: string, emit: Emitter, supportConnect: () => void) {
     this.logger = new Logger(id, "ArchiveControlService");
+
+    this.eventBus = EventBus.getInstance(id);
     this.customEventsService = CustomEventsService.getInstance(this.id);
+
     this.emit = emit;
     this.supportConnect = supportConnect;
   }
@@ -141,6 +147,8 @@ export class ArchiveControlService {
       false,
       true
     );
+
+    this.eventBus.emit("need-to-force-scroll-to-track");
   }
 
   toPrevFragment() {
@@ -166,6 +174,7 @@ export class ArchiveControlService {
       false,
       true
     );
+    this.eventBus.emit("need-to-force-scroll-to-track");
   }
 
   pause(currentTimestamp: number) {

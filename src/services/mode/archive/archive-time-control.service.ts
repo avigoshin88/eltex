@@ -31,8 +31,15 @@ export class ArchiveTimeControlService {
 
   private isIgnorePackets = false;
 
-  constructor(id: string, private webRTCClient: WebRTCService) {
+  private forceScrollToTrack: () => void;
+
+  constructor(
+    id: string,
+    private webRTCClient: WebRTCService,
+    forceScrollToTrack: () => void
+  ) {
     this.eventBus = EventBus.getInstance(id);
+    this.forceScrollToTrack = forceScrollToTrack;
     this.logger = new Logger(id, "ArchiveTimeControlService");
 
     this.setupListeners();
@@ -107,6 +114,8 @@ export class ArchiveTimeControlService {
           `Новый пакет: startTimestamp=`,
           this.startTimestamp
         );
+
+        this.forceScrollToTrack();
 
         this.isWaitingForNewFragment = false;
       }

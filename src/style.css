@@ -195,18 +195,21 @@ video-player {
   top: 8px;
   left: 0;
 
-  transform: translate(-50%, -100%);
+  transform: translateY(-100%);
 
-  padding: 4px;
+  padding: 2px 12px 4px 12px;
+
   border-radius: 4px;
 
   background: var(--timeline_range_track_phantom_time-card);
-  backdrop-filter: blur(8px);
+  backdrop-filter: blur(12px);
 }
 
 .video-player__timeline__track_phantom__time-card__text {
   font-size: 10px;
   color: black;
+
+  text-wrap: nowrap;
 }
 
 .video-player__timeline__export-marker {
@@ -230,6 +233,7 @@ video-player {
 
 .video-player__timeline__range,
 .video-player__timeline__period,
+.video-player__timeline__track,
 .video-player__timeline__track_phantom__container,
 .video-player__timeline__track_phantom,
 .video-player__timeline__track_phantom__time-card,

@@ -23,9 +23,8 @@ export class TimelineElementsService {
     this.divisions = divisions;
   }
 
-  clearTimeline() {
-    this.clearRanges();
-    this.clearDivisions();
+  getDivisions() {
+    return this.divisions;
   }
 
   clearRanges() {

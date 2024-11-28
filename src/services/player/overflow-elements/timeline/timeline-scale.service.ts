@@ -32,6 +32,18 @@ export class TimelineScaleService {
     this.containerWidth = 1;
   }
 
+  public getViewedTime() {
+    return this.viewedTime;
+  }
+
+  public isMinimumTime() {
+    return this.viewedTime <= MIN_VALUE;
+  }
+
+  public isMaximumTime() {
+    return this.viewedTime >= this.maxViewedTime;
+  }
+
   private processViewedTime(time: number) {
     let value = time;
 

@@ -18,6 +18,7 @@ import { SelectOption } from "../../../types/controls";
 import { TimelineScaleService } from "./timeline/timeline-scale.service";
 
 const MOUSE_MICRO_MOVE_TIMEOUT = 100;
+const SCROLL_TO_TRACK_OFFSET_PX = 5;
 
 export class TimelineOverflowDrawer {
   private readonly container: HTMLDivElement;
@@ -37,7 +38,9 @@ export class TimelineOverflowDrawer {
   private programmaticScrollTimeout: Nullable<number> = null;
   private scrollEndTimeout: Nullable<number> = null;
 
-  private trackObserver: IntersectionObserver;
+  private trackIntersectionObserver: IntersectionObserver;
+  private trackObserverId: Nullable<number> = null;
+
   private resizeTimelineObserver: ResizeObserver;
 
   private currentTimestamp: number = 0;
@@ -56,8 +59,11 @@ export class TimelineOverflowDrawer {
   private isMouseMicroMove = false;
 
   private lastMouseX: Nullable<number> = 0;
+  private phantomTrackLastPosition: Nullable<number> = 0;
+  private phantomTrackLastTime: Nullable<number> = 0;
 
   private isWheel = false;
+  private isManuallyScale = false;
 
   private originalMouseUp: Nullable<EventListener> = null;
   private originalMouseMove: Nullable<EventListener> = null;
@@ -95,6 +101,9 @@ export class TimelineOverflowDrawer {
     this.timelineElements.contentContainer!.appendChild(
       this.timelineElements.trackContainer!
     );
+
+    this.container.appendChild(phantomTrackTimeCard);
+
     this.timelineElements.contentContainer!.appendChild(
       this.timelineElements.phantomTrack!
     );
@@ -107,13 +116,25 @@ export class TimelineOverflowDrawer {
 
     this.container.appendChild(this.timelineElements.scrollContainer!);
 
-    this.trackObserver = new IntersectionObserver(this.onTrackObserve, {
-      root: this.timelineElements.scrollContainer,
-      threshold: 0,
-    });
-    this.resizeTimelineObserver = new ResizeObserver(this.onTimelineResize);
+    this.trackIntersectionObserver = new IntersectionObserver(
+      this.onTrackObserve,
+      {
+        root: this.timelineElements.scrollContainer,
+        rootMargin: `0px ${-SCROLL_TO_TRACK_OFFSET_PX}px 0px 0px`,
+        threshold: 0.1,
+      }
+    );
+    this.trackIntersectionObserver.observe(this.timelineElements.track!);
 
-    this.trackObserver.observe(this.timelineElements.track!);
+    this.trackObserverId = setInterval(() => {
+      if (this.isWheel) {
+        return;
+      }
+
+      this.tryScrollToTrack();
+    }, 100);
+
+    this.resizeTimelineObserver = new ResizeObserver(this.onTimelineResize);
     this.resizeTimelineObserver.observe(this.timelineElements.scrollContainer!);
 
     this.originalMouseMove = document.body
@@ -124,8 +145,16 @@ export class TimelineOverflowDrawer {
     this.setupEvents();
   }
 
-  draw(currentTimestamp: number): void {
+  draw(
+    currentTimestamp: number,
+    isWheelSource = false,
+    withoutDivisions = false
+  ): void {
     this.logger.log("trace", `Отрисовываем таймштемп ${currentTimestamp}`);
+
+    if (!this.isWheel && isWheelSource) {
+      return;
+    }
 
     if (!this.isReady || !this.timelineElements.timelineContainer) {
       this.logger.error("trace", `Не удается отрисовать`);
@@ -134,31 +163,23 @@ export class TimelineOverflowDrawer {
 
     this.currentTimestamp = currentTimestamp;
 
-    this.timelineElements.clearTimeline();
-
-    const containerWidth = this.timelineElements.scrollContainer!.offsetWidth; // Ширина контейнера
+    this.timelineElements.clearRanges();
 
     // Рассчитываем ширину диапазонов с учетом масштаба
     const totalRangeWidth =
       this.timelineMathService.duration * this.timelineScaleService.scale; // totalTimeRange в масштабе
 
-    // Если ширина всех диапазонов больше ширины контейнера, включаем скролл
-    if (totalRangeWidth > containerWidth) {
-      this.timelineElements.contentContainer!.style.width = `${totalRangeWidth}px`; // Задаем большую ширину контейнеру с контентом
-      this.timelineElements.timelineContainer.style.width = `${totalRangeWidth}px`; // Задаем большую ширину таймлайна
-      this.timelineElements.trackContainer!.style.width = `${totalRangeWidth}px`; // Задаем большую ширину треку
-    } else {
-      this.timelineElements.contentContainer!.style.width = `${containerWidth}px`; // Задаем большую ширину контейнеру с контентом
-      this.timelineElements.timelineContainer.style.width = `${containerWidth}px`; // Устанавливаем стандартную ширину
-      this.timelineElements.trackContainer!.style.width = `${containerWidth}px`; // Устанавливаем стандартную ширину
-    }
+    this.timelineElements.contentContainer!.style.width = `${totalRangeWidth}px`; // Задаем большую ширину контейнеру с контентом
+    this.timelineElements.timelineContainer.style.width = `${totalRangeWidth}px`; // Задаем большую ширину таймлайна
+    this.timelineElements.trackContainer!.style.width = `${totalRangeWidth}px`; // Задаем большую ширину треку
 
-    // Виртуализация делений
-    this.drawVirtualizedDivisions(
-      this.timelineMathService.startTimestamp,
-      this.timelineMathService.duration,
-      totalRangeWidth
-    );
+    if (!withoutDivisions) {
+      this.drawVirtualizedDivisions(
+        this.timelineMathService.startTimestamp,
+        this.timelineMathService.duration,
+        totalRangeWidth
+      );
+    }
 
     const rangeBlocks: HTMLDivElement[] = [];
 
@@ -315,31 +336,6 @@ export class TimelineOverflowDrawer {
     }
   }
 
-  private onTrackObserve = (entries: IntersectionObserverEntry[]) => {
-    if (this.isMouseDown && this.isMouseMove) {
-      return;
-    }
-
-    const trackEntry = entries[0];
-    if (!trackEntry) {
-      return;
-    }
-
-    if (trackEntry.isIntersecting) {
-      return;
-    }
-
-    if (this.isUserScrolling) {
-      return;
-    }
-    this.logger.log(
-      "trace",
-      `Трек вышел за пределы видимости, скроллим до него`
-    );
-
-    this.scrollTrackToAlign(this.timelineElements.track!, "right");
-  };
-
   private onTimelineResize = () => {
     this.logger.log("trace", `Произошло изменение размеров`);
 
@@ -350,10 +346,35 @@ export class TimelineOverflowDrawer {
     this.draw(this.currentTimestamp);
   };
 
+  private onTrackObserve = (entries: IntersectionObserverEntry[]) => {
+    const trackEntry = entries[0];
+
+    if (trackEntry.isIntersecting) {
+      this.logger.log("trace", `Трек в зоне видимости`);
+
+      this.isUserScrolling = false;
+
+      return;
+    }
+
+    if (this.isWheel) {
+      return;
+    }
+
+    if (this.isUserScrolling) {
+      return;
+    }
+
+    this.logger.log("trace", `Трек за пределами видимости`);
+
+    this.tryScrollToTrack();
+  };
+
   public scrollTrackToAlign(
     track: HTMLElement,
-    align: "center" | "left" | "right",
-    offset = 0
+    align: "center" | "left" | "right" | "visible",
+    offset = 0,
+    withoutDraw = false
   ) {
     this.logger.log("trace", `Скроллируем до трека`);
 
@@ -373,7 +394,18 @@ export class TimelineOverflowDrawer {
       this.timelineElements.scrollContainer.offsetWidth;
 
     let newScroll = 0;
-    if (align === "right") {
+    if (align === "visible") {
+      const isRightCorner = trackRight - offset < scrollContainerWidth;
+      const isLeftCorner = trackRight + trackWidth > scrollContainerWidth;
+
+      if (isRightCorner) {
+        newScroll = trackRight - offset;
+      } else if (isLeftCorner) {
+        newScroll = trackRight + trackWidth - scrollContainerWidth;
+      } else {
+        return;
+      }
+    } else if (align === "right") {
       newScroll = trackLeft + trackWidth - scrollContainerWidth + offset;
     } else if (align === "left") {
       newScroll = trackRight - offset;
@@ -391,16 +423,105 @@ export class TimelineOverflowDrawer {
     this.isProgrammaticScroll = true;
 
     // Используем плавную прокрутку
-    this.timelineElements.scrollContainer.scrollTo({
-      left: newScroll,
-    });
+    this.timelineElements.scrollContainer!.scrollLeft = newScroll;
 
-    setTimeout(() => {
-      this.draw(this.currentTimestamp);
-    });
+    if (!withoutDraw) {
+      setTimeout(() => {
+        this.draw(this.currentTimestamp);
+      });
+    }
 
     // Начинаем отслеживать завершение прокрутки
     this.monitorProgrammaticScrollEnd();
+  }
+
+  public forceScrollToTrack() {
+    this.isUserScrolling = false;
+  }
+
+  private tryScrollToTrack(
+    position: "left" | "right" | "center" = "right",
+    force = false,
+    onlyVisible = false
+  ) {
+    if (this.isManuallyScale && !force) {
+      return;
+    }
+
+    const isVisibleTrack = this.checkTrackVisibility(
+      this.timelineElements.track!
+    );
+
+    const totalRangeWidth =
+      this.timelineMathService.duration * this.timelineScaleService.scale;
+
+    if (isVisibleTrack && this.isUserScrolling) {
+      this.isUserScrolling = false;
+    }
+
+    const update = () => {
+      if (this.isWheel && this.wheelTimeoutId !== null) {
+        clearTimeout(this.wheelTimeoutId);
+      }
+
+      this.isWheel = true;
+
+      this.draw(this.currentTimestamp, true, true);
+
+      this.scrollTrackToAlign(
+        this.timelineElements.track!,
+        !onlyVisible ? position : "visible",
+        SCROLL_TO_TRACK_OFFSET_PX,
+        true
+      );
+
+      this.drawVirtualizedDivisions(
+        this.timelineMathService.startTimestamp,
+        this.timelineMathService.duration,
+        totalRangeWidth,
+        true
+      );
+
+      if (this.isShowPhantomTrack) {
+        this.updatePhantomTrack();
+      }
+
+      this.wheelTimeoutId = setTimeout(() => {
+        this.isWheel = false;
+      }, 250);
+    };
+
+    if (force) {
+      this.forceScrollToTrack();
+      update();
+
+      return;
+    }
+
+    if (this.isMouseDown) {
+      return;
+    }
+
+    if (!this.isUserScrolling && !this.isMouseMove && !this.isMouseDown) {
+      if (!isVisibleTrack) {
+        update();
+      } else {
+        if (this.isUserScrolling) {
+          this.isUserScrolling = false;
+        }
+      }
+    }
+  }
+
+  private checkTrackVisibility(track: HTMLDivElement): boolean {
+    const trackRect = track.getBoundingClientRect();
+    const containerRect =
+      this.timelineElements.scrollContainer!.getBoundingClientRect();
+
+    return (
+      trackRect.right >= containerRect.left &&
+      trackRect.left <= containerRect.right - SCROLL_TO_TRACK_OFFSET_PX
+    );
   }
 
   private monitorProgrammaticScrollEnd(): void {
@@ -413,14 +534,31 @@ export class TimelineOverflowDrawer {
     this.programmaticScrollTimeout = setTimeout(() => {
       // Прокрутка завершена
       this.isProgrammaticScroll = false;
-    }, 500); // Настройте время в соответствии с длительностью плавной прокрутки
+    }, 300);
   }
+
+  private prevTotalRangeWidth: Nullable<number> = null;
+  private prevScale: Nullable<number> = null;
 
   private drawVirtualizedDivisions(
     startTime: number,
     totalTimeRange: number,
-    totalRangeWidth: number
+    totalRangeWidth: number,
+    force = false
   ): void {
+    if (
+      !force &&
+      this.prevTotalRangeWidth === totalRangeWidth &&
+      this.prevScale === this.timelineScaleService.scale
+    ) {
+      return;
+    }
+
+    this.prevTotalRangeWidth = totalRangeWidth;
+    this.prevScale = this.timelineScaleService.scale;
+
+    this.timelineElements.clearDivisions();
+
     const divisionStep = this.getStep().step; // Шаг делений
 
     // Границы видимой области
@@ -534,15 +672,19 @@ export class TimelineOverflowDrawer {
     }
 
     this.currentTimestamp = 0;
+    this.phantomTrackLastPosition = null;
+    this.phantomTrackLastTime = null;
 
     this.clearEvents();
     this.clearListeners();
 
-    this.trackObserver?.disconnect();
-
     this.container.removeChild(this.timelineElements.scrollContainer!);
     this.timelineElements.scrollContainer = null;
     this.timelineElements.timelineContainer = null;
+
+    if (this.trackObserverId !== null) {
+      clearInterval(this.trackObserverId);
+    }
 
     this.isReady = false;
   }
@@ -565,15 +707,28 @@ export class TimelineOverflowDrawer {
 
   private setScale = (viewedTime: number) => {
     this.logger.log("trace", `Устанавливаем масштаб равный ${viewedTime}`);
+    this.isManuallyScale = true;
+
+    if (this.isWheel && this.wheelTimeoutId !== null) {
+      clearTimeout(this.wheelTimeoutId);
+    }
+
+    this.isWheel = true;
 
     const containerWidth = this.timelineElements.scrollContainer!.offsetWidth;
 
     this.timelineScaleService.setContainerWidth(containerWidth);
     this.timelineScaleService.setViewedTime(viewedTime);
 
-    this.draw(this.currentTimestamp);
+    setTimeout(() => {
+      this.tryScrollToTrack("center", true, false);
 
-    this.scrollTrackToAlign(this.timelineElements.track!, "center");
+      this.isManuallyScale = false;
+    });
+
+    this.wheelTimeoutId = setTimeout(() => {
+      this.isWheel = false;
+    }, 250);
   };
 
   private clickEventListener(event: MouseEvent): void {
@@ -586,12 +741,21 @@ export class TimelineOverflowDrawer {
 
     const [timestamp, clickedRange] = time;
 
+    const formattedTimestamp = Math.round(timestamp);
+    const formattedRange: RangeData = {
+      ...clickedRange,
+      start_time: Math.round(clickedRange.start_time),
+      end_time: Math.round(clickedRange.end_time),
+      duration:
+        Math.round(clickedRange.end_time) - Math.round(clickedRange.start_time),
+    };
+
     // Обработка режима экспорта
     if (this.exportMode) {
       if (this.exportStartTime === null) {
-        this.exportStartTime = timestamp;
+        this.exportStartTime = formattedTimestamp;
       } else if (this.exportEndTime === null) {
-        this.exportEndTime = timestamp;
+        this.exportEndTime = formattedTimestamp;
 
         if (this.exportStartTime > this.exportEndTime) {
           [this.exportStartTime, this.exportEndTime] = [
@@ -606,7 +770,7 @@ export class TimelineOverflowDrawer {
           duration: this.exportEndTime - this.exportStartTime,
         });
       } else {
-        this.exportStartTime = timestamp;
+        this.exportStartTime = formattedTimestamp;
         this.exportEndTime = null;
       }
 
@@ -616,18 +780,20 @@ export class TimelineOverflowDrawer {
         this.timelineElements.timelineContainer!.offsetWidth
       );
     } else {
-      this.clickCallback?.(timestamp, clickedRange);
+      this.clickCallback?.(formattedTimestamp, formattedRange);
     }
   }
 
   private showPhantomTrack() {
     this.logger.log("trace", `Показываем фантомный трек`);
     this.timelineElements.phantomTrack!.style.visibility = "visible";
+    this.timelineElements.phantomTrackTimeCard!.style.visibility = "visible";
   }
 
   private hidePhantomTrack() {
     this.logger.log("trace", `Скрываем фантомный трек`);
     this.timelineElements.phantomTrack!.style.visibility = "hidden";
+    this.timelineElements.phantomTrackTimeCard!.style.visibility = "hidden";
   }
 
   private onMouseMove = (event: MouseEvent) => {
@@ -654,15 +820,28 @@ export class TimelineOverflowDrawer {
     }
   };
 
-  private updatePhantomTrack(position: number) {
+  private updatePhantomTrack(positionX?: number) {
     this.logger.log("trace", `Обновляем фантомный трек`);
 
-    const time = this.getTimestampByPosition(position);
+    const position = positionX ?? this.phantomTrackLastPosition;
+    if (position === null) {
+      return;
+    }
+
+    const time = this.getTimestampByPosition(position, true);
     if (!time) {
       return;
     }
 
     const [timestamp] = time;
+
+    if (!this.isWheel) {
+      this.phantomTrackLastTime = timestamp;
+    }
+
+    if (positionX !== undefined) {
+      this.phantomTrackLastPosition = positionX;
+    }
 
     // Рассчитываем ширину диапазонов с учетом масштаба
     const totalRangeWidth =
@@ -678,10 +857,38 @@ export class TimelineOverflowDrawer {
       ((timestamp - this.timelineMathService.startTimestamp) /
         this.timelineMathService.duration) *
         totalRangeWidth -
-      scrollLeft;
+      scrollLeft +
+      this.timelineElements.scrollContainer!.offsetLeft;
 
     // Обновляем позицию трека
     this.timelineElements.phantomTrack!.style.left = `${trackPosition}px`;
+
+    const phantomTrackCardWidth =
+      this.timelineElements.phantomTrackTimeCard!.offsetWidth;
+    const phantomTrackTimeCardSelfLeftOffset = phantomTrackCardWidth / 2;
+
+    let phantomTrackTimeCardLeftOffset =
+      this.timelineElements.phantomTrack!.offsetLeft -
+      phantomTrackTimeCardSelfLeftOffset;
+
+    if (
+      phantomTrackTimeCardLeftOffset + phantomTrackCardWidth >=
+      this.timelineElements.scrollContainer!.offsetWidth
+    ) {
+      phantomTrackTimeCardLeftOffset =
+        this.timelineElements.scrollContainer!.offsetWidth -
+        phantomTrackCardWidth -
+        1;
+    }
+    if (phantomTrackTimeCardLeftOffset <= 0) {
+      phantomTrackTimeCardLeftOffset = 0;
+    }
+
+    this.timelineElements.phantomTrackTimeCard!.style.left = `${phantomTrackTimeCardLeftOffset}px`;
+    this.timelineElements.phantomTrackTimeCard!.style.top = `${
+      this.timelineElements.phantomTrack!.offsetTop
+    }px`;
+
     this.timelineElements.phantomTrackTimeCardText!.innerText =
       formatPhantomTime(timestamp);
   }
@@ -693,6 +900,8 @@ export class TimelineOverflowDrawer {
 
   private onMouseOut = () => {
     this.isShowPhantomTrack = false;
+    this.phantomTrackLastPosition = null;
+    this.phantomTrackLastTime = null;
     this.hidePhantomTrack();
   };
 
@@ -757,12 +966,15 @@ export class TimelineOverflowDrawer {
     this.isMouseDown = false;
     this.isMouseMove = false;
     this.isMouseMicroMove = false;
+    this.phantomTrackLastPosition = null;
+    this.phantomTrackLastTime = null;
 
     this.lastMouseX = null;
   };
 
   private getTimestampByPosition(
-    position: number
+    position: number,
+    absolute: boolean = false
   ): Nullable<[timestamp: number, range: RangeData]> {
     const containerRect =
       this.timelineElements.scrollContainer!.getBoundingClientRect();
@@ -780,6 +992,13 @@ export class TimelineOverflowDrawer {
     const clickedTimestamp =
       this.timelineMathService.startTimestamp + totalClickPosition;
 
+    if (absolute) {
+      return [
+        clickedTimestamp,
+        { start_time: 0, end_time: 0, duration: 0, type: "break" },
+      ];
+    }
+
     // Находим ближайшую временную метку
     const nearestTimestamp = this.getNearestTimestamp(clickedTimestamp);
     if (nearestTimestamp === undefined) {
@@ -789,56 +1008,51 @@ export class TimelineOverflowDrawer {
     return nearestTimestamp;
   }
 
-  private scrollEventListener() {
-    // Очищаем предыдущий таймер завершения прокрутки
-    if (!this.isWheel) {
-      if (this.scrollEndTimeout) {
-        clearTimeout(this.scrollEndTimeout);
-      }
+  private scrollEventListener = () => {
+    if (this.isWheel) {
+      return;
+    }
 
-      // Устанавливаем таймер для определения окончания прокрутки
-      this.scrollEndTimeout = setTimeout(() => {
-        if (this.isProgrammaticScroll) {
-          this.isProgrammaticScroll = false;
-        }
-      }, 100); // Настройте задержку по необходимости
+    if (this.scrollEndTimeout) {
+      clearTimeout(this.scrollEndTimeout);
+    }
 
+    if (this.isShowPhantomTrack) {
+      this.updatePhantomTrack();
+    }
+
+    if (this.isProgrammaticScroll) {
+      // Если прокрутка программная, ничего не делаем
+      return;
+    }
+
+    // Пользовательская прокрутка
+    this.isUserScrolling = true;
+
+    // Очищаем предыдущий таймер пользовательской прокрутки
+    if (this.userScrollTimeout) {
+      clearTimeout(this.userScrollTimeout);
+    }
+
+    // Устанавливаем таймер для сброса флага пользовательской прокрутки
+    this.userScrollTimeout = setTimeout(() => {
       if (this.isProgrammaticScroll) {
-        // Если прокрутка программная, ничего не делаем
-        return;
+        this.isProgrammaticScroll = false;
       }
+    }, 300);
 
-      // Пользовательская прокрутка
-      this.isUserScrolling = true;
-
-      // Очищаем предыдущий таймер пользовательской прокрутки
-      if (this.userScrollTimeout) {
-        clearTimeout(this.userScrollTimeout);
-      }
-
-      // Устанавливаем таймер для сброса флага пользовательской прокрутки
-      this.userScrollTimeout = setTimeout(() => {
-        this.isUserScrolling = false;
-
-        if (this.isProgrammaticScroll) {
-          this.isProgrammaticScroll = false;
-        }
-      }, 300);
-
-      if (this.scrollTimeout) {
-        clearTimeout(this.scrollTimeout);
-      }
+    if (this.scrollTimeout) {
+      clearTimeout(this.scrollTimeout);
     }
 
     const totalRangeWidth =
       this.timelineMathService.duration * this.timelineScaleService.scale;
 
-    this.timelineElements.clearDivisions();
-
     this.drawVirtualizedDivisions(
       this.timelineMathService.startTimestamp,
       this.timelineMathService.duration,
-      totalRangeWidth
+      totalRangeWidth,
+      true
     );
 
     this.updateTrackAndExportMarkers(
@@ -846,17 +1060,22 @@ export class TimelineOverflowDrawer {
       this.timelineMathService.duration,
       totalRangeWidth
     );
-  }
+  };
 
-  private wheelEventListener(event: WheelEvent) {
+  wheelTimeoutId: Nullable<number> = null;
+
+  private wheelEventListener = (event: WheelEvent) => {
     event.preventDefault();
 
     if (event.shiftKey) {
       // Если зажата клавиша Shift — горизонтальная прокрутка
       this.container.scrollLeft += event.deltaY;
     } else {
+      if (this.isWheel && this.wheelTimeoutId !== null) {
+        clearTimeout(this.wheelTimeoutId);
+      }
+
       this.isWheel = true;
-      // Иначе — изменение масштаба
 
       // Устанавливаем флаг пользовательского взаимодействия
       this.isUserScrolling = false;
@@ -866,71 +1085,58 @@ export class TimelineOverflowDrawer {
         clearTimeout(this.userScrollTimeout);
       }
 
-      // Устанавливаем таймер для сброса флага пользовательского взаимодействия
-      // Например, через 2 секунды после последнего масштабирования
-      this.userScrollTimeout = setTimeout(() => {
-        this.isUserScrolling = false;
-      }, 2000);
+      const oldScale = this.timelineScaleService.scale;
 
       const scaleChange = Math.sign(event.deltaY) * this.getStep().scrollStep;
-
-      const containerWidth = this.timelineElements.scrollContainer!.offsetWidth;
-
-      // Текущее значение масштаба перед изменением
-      const previousScale = this.timelineScaleService.scale;
 
       // Ограничиваем масштаб значениями от minScale до maxScale
       this.timelineScaleService.addViewedTime(scaleChange);
 
-      const totalRangeWidth =
-        this.timelineMathService.duration * this.timelineScaleService.scale; // totalTimeRange в масштабе
-
       // Если ширина всех диапазонов больше ширины контейнера, включаем скролл
-      if (totalRangeWidth > containerWidth) {
-        this.eventBus.emit("manual-scale-change", "");
-      } else {
+      if (
+        this.timelineScaleService.isMaximumTime() ||
+        this.timelineScaleService.isMinimumTime()
+      ) {
         this.eventBus.emit(
           "manual-scale-change",
-          String(this.timelineMathService.duration)
+          String(this.timelineScaleService.getViewedTime())
         );
+      } else {
+        this.eventBus.emit("manual-scale-change", "");
       }
 
       if (this.isReady) {
-        if (this.isShowPhantomTrack) {
-          this.updatePhantomTrack(event.clientX);
-        }
+        this.draw(this.currentTimestamp, true, true);
 
-        // Рассчитаем позицию трека относительно предыдущего масштаба
-        const track = this.timelineElements.track;
-        if (track) {
-          const trackLeft = track.offsetLeft; // Позиция трека до масштабирования
-          const visibleWidth =
-            this.timelineElements.scrollContainer!.offsetWidth; // Ширина видимой области
+        if (this.phantomTrackLastTime !== null) {
+          const totalRangeWidth =
+            this.timelineMathService.duration * this.timelineScaleService.scale; // totalTimeRange в масштабе
 
-          // Сохраним смещение относительно центра или границы
-          let trackOffsetFromLeft =
-            trackLeft - this.timelineElements.scrollContainer!.scrollLeft;
-
-          if (trackOffsetFromLeft > visibleWidth / 2) {
-            trackOffsetFromLeft = visibleWidth / 2; // Центрируем трек, если он далеко справа
-          } else if (trackLeft <= 0) {
-            trackOffsetFromLeft = 0; // Трек в самом начале
+          if (this.timelineMathService.duration === 0) {
+            return;
           }
 
-          // Обновляем отрисовку
-          this.draw(this.currentTimestamp);
+          const mouseX =
+            event.clientX -
+            this.timelineElements.scrollContainer!.getBoundingClientRect().left;
 
-          // После перерисовки восстанавливаем позицию трека
-          const newTrackLeft =
-            (trackLeft / previousScale) * this.timelineScaleService.scale;
-          const newScrollLeft = Math.max(0, newTrackLeft - trackOffsetFromLeft);
-          this.timelineElements.scrollContainer!.scrollTo({
-            left: newScrollLeft,
-            behavior: "auto",
-          });
-        } else {
-          // Если трека нет, просто обновляем таймлайн
-          this.draw(this.currentTimestamp);
+          const position =
+            ((this.phantomTrackLastTime -
+              this.timelineMathService.startTimestamp) /
+              this.timelineMathService.duration) *
+            totalRangeWidth;
+
+          const newScrollLeft =
+            position - mouseX * (this.timelineScaleService.scale / oldScale);
+
+          this.timelineElements.scrollContainer!.scrollLeft = newScrollLeft;
+
+          this.drawVirtualizedDivisions(
+            this.timelineMathService.startTimestamp,
+            this.timelineMathService.duration,
+            totalRangeWidth,
+            true
+          );
         }
 
         // Обновляем маркеры экспорта при изменении масштаба
@@ -941,20 +1147,23 @@ export class TimelineOverflowDrawer {
         );
       }
 
-      this.isWheel = false;
+      this.wheelTimeoutId = setTimeout(() => {
+        this.isWheel = false;
+        this.isUserScrolling = true;
+      }, 250);
     }
-  }
+  };
 
   private registerListeners() {
     this.logger.log("trace", `Регистрируем слушателей`);
 
     this.timelineElements.scrollContainer?.addEventListener(
       "scroll",
-      this.scrollEventListener.bind(this)
+      this.scrollEventListener
     );
     this.timelineElements.timelineContainer?.addEventListener(
       "wheel",
-      this.wheelEventListener.bind(this)
+      this.wheelEventListener
     );
 
     this.timelineElements.phantomTrack?.addEventListener(

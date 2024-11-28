@@ -69,10 +69,10 @@ export class TimelineElementsFactoryService {
     );
 
     phantomTrackTimeCard.appendChild(phantomTrackTimeCardText);
-    phantomTrackContainer.appendChild(phantomTrackTimeCard);
     phantomTrackContainer.appendChild(phantomTrack);
 
     phantomTrackContainer.style.visibility = "hidden";
+    phantomTrackTimeCard.style.visibility = "hidden";
 
     return [
       phantomTrackContainer,

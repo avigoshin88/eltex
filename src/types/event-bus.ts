@@ -14,5 +14,6 @@ export type EventName =
   | "timeline-scale-update"
   | "archive-timeupdate"
   | "change-mic-state"
+  | "need-to-force-scroll-to-track"
   | "push2Talk"
   | "restart-connection";

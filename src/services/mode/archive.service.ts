@@ -71,6 +71,7 @@ export class ArchiveVideoService implements ModeService {
   private archiveTimeControl!: ArchiveTimeControlService;
 
   private isStopUpdateTrackPosition = false;
+  private isNeedScrollToTrackPosition = false;
 
   private currentPlayedSubFragment: Nullable<RangeDto> = null;
 
@@ -125,6 +126,11 @@ export class ArchiveVideoService implements ModeService {
     this.setControl = setControl;
 
     this.setControl(this.archiveControl);
+
+    this.eventBus.on(
+      "need-to-force-scroll-to-track",
+      this.setNeedToForceScrollToTrack
+    );
   }
 
   async init(metaEnabled: boolean): Promise<void> {
@@ -155,7 +161,10 @@ export class ArchiveVideoService implements ModeService {
 
     this.archiveTimeControl = new ArchiveTimeControlService(
       this.id,
-      this.webRTCClient
+      this.webRTCClient,
+      () => {
+        this.forceScrollToTrack();
+      }
     );
 
     this.metaDrawer.init();
@@ -201,7 +210,10 @@ export class ArchiveVideoService implements ModeService {
     );
     const archiveTimeControl = new ArchiveTimeControlService(
       this.id,
-      webRTCClient
+      webRTCClient,
+      () => {
+        this.forceScrollToTrack();
+      }
     );
 
     metaDrawer.init();
@@ -286,6 +298,7 @@ export class ArchiveVideoService implements ModeService {
     this.metaDrawer.destroy();
     this.clearFetchRangeInterval();
     this.archiveTimeControl.reset();
+    this.isNeedScrollToTrackPosition = false;
 
     if (fullReset) {
       this.archiveControl.clear();
@@ -295,6 +308,12 @@ export class ArchiveVideoService implements ModeService {
       this.renewStartTime = null;
       this.renewFragment = null;
       this.isFirstRangesFetch = true;
+
+      this.eventBus.off(
+        "need-to-force-scroll-to-track",
+        this.setNeedToForceScrollToTrack
+      );
+      this.isNeedScrollToTrackPosition = false;
 
       this.ranges = [];
     }
@@ -348,6 +367,11 @@ export class ArchiveVideoService implements ModeService {
   private exportFragment(range: RangeDto) {
     this.logger.log("debug", `Экспортируем фрагмент ${JSON.stringify(range)}`);
 
+    if (range.duration === 0) {
+      this.logger.warn("debug", "Выбран пустой фрагмент для экспорта");
+      return;
+    }
+
     this.datachannelClient.send(
       DatachannelMessageType.GET_EXPORT_FRAGMENT_URL,
       {
@@ -369,7 +393,16 @@ export class ArchiveVideoService implements ModeService {
 
   private onRanges(data: unknown) {
     const { ranges: unsortedRanges } = data as { ranges: RangeDto[] };
-    const ranges = unsortedRanges.sort((a, b) => a.start_time - b.start_time);
+    const ranges = unsortedRanges
+      .sort((a, b) => a.start_time - b.start_time)
+      .filter(
+        (range) =>
+          range.duration > 0 &&
+          range.end_time > range.start_time &&
+          range.start_time > 0 &&
+          range.end_time > 0 &&
+          range.start_time !== range.end_time
+      );
 
     this.ranges = ranges;
 
@@ -420,12 +453,20 @@ export class ArchiveVideoService implements ModeService {
     this.datachannelClient.send(DatachannelMessageType.ARCHIVE_CONNECT_SUPPORT);
   }
 
+  isNextFragmentBelongsNewRange = false;
+
   private emitStartNewFragment(
     fragment: RangeFragment,
     isPreRequestRange = false
   ) {
     this.isPreRequestRange = isPreRequestRange;
     this.nextProcessedRange = fragment;
+
+    if (this.isNextFragmentBelongsNewRange) {
+      this.archiveControl.setFragmentIndex(fragment.fragmentIndex);
+    }
+
+    this.isNextFragmentBelongsNewRange = fragment.isLastFragment;
 
     this.logger.log(
       "trace",
@@ -657,6 +698,19 @@ export class ArchiveVideoService implements ModeService {
       on ? (this.metaDrawer.draw as DatachannelEventListener) : undefined
     );
   }
+
+  private setNeedToForceScrollToTrack = () => {
+    this.isNeedScrollToTrackPosition = true;
+  };
+
+  private forceScrollToTrack = () => {
+    if (!this.isNeedScrollToTrackPosition) {
+      return;
+    }
+
+    this.isNeedScrollToTrackPosition = false;
+    this.timelineDrawer.forceScrollToTrack();
+  };
 
   private setFetchRangesInterval() {
     // this.fetchRangesIntervalId = setInterval(() => {
